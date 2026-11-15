@@ -453,10 +453,15 @@ def ensure(
 ) -> dict[str, Any] | None:
     """First-run setup and upgrade refresh; never blocks agent commands.
 
-    Pending integrations are left for the TUI's health check to offer.
+    An interactive ``ui`` run applies the silent baseline and leaves the
+    wizard to the screen; every other run keeps the terminal wizard. Pending
+    integrations are left for the TUI's health check to offer.
     """
     if setup_skipped(cmd, args):
         return None
+    # Imported here: the trigger module reads this one's helpers.
+    from .triggers import defer_to_tui, tui_owns_setup
+
     home = home or Path.home()
     state = load_state(home)
     explicit = explicit_db(args)
@@ -469,14 +474,19 @@ def ensure(
     human = cmd in HUMAN_COMMANDS
     findings = detect_findings(cwd, home, state, None) if human else []
     can_prompt = prompt_allowed(args, interactive)
+    defer = tui_owns_setup(cmd, args, interactive)
     root = find_repo_root(cwd)
     if not first and not version_changed and not findings:
         return None
     result: dict[str, Any] | None = None
     if first or version_changed:
-        result = _run_setup_once(args, cwd, home, state, version, root, human, can_prompt, first)
+        result = _run_setup_once(
+            args, cwd, home, state, version, root, human, can_prompt, first, defer
+        )
         if result is None:
             return None
+        if defer:
+            defer_to_tui(home, version, first)
     if human and findings:
         _review_setup(args, findings, home, root, can_prompt)
     return result
@@ -492,9 +502,10 @@ def _run_setup_once(
     human: bool,
     can_prompt: bool,
     first: bool,
+    defer: bool = False,
 ) -> dict[str, Any] | None:
     choice = choice_from_args(args, cwd, home, state)
-    if human and can_prompt and first:
+    if human and can_prompt and first and not defer:
         result = run_wizard(
             cwd,
             home,
@@ -531,7 +542,7 @@ def _run_setup_once(
             allow_prompt=False,
             pointer_mode=getattr(args, "agents_pointer", None),
         )
-    if first and human and not getattr(args, "json", False):
+    if first and human and not defer and not getattr(args, "json", False):
         _announce_setup(result)
     return result
 

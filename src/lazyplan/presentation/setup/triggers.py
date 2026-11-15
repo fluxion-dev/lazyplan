@@ -7,16 +7,21 @@ broken managed profiles. ``detect`` never writes; ``mark_pending`` and
 
 from __future__ import annotations
 
+import importlib.util
+import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from lazyplan.infrastructure.repo import find_repo_root
 
+from . import ui
 from .apply import choice_from_state, profile_drift
 from .integrations import inspect
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state
 
+UI_COMMAND = "ui"
 FRESH = "fresh"
 VERSION = "version"
 INTEGRATIONS = "integrations"
@@ -120,6 +125,48 @@ def clear_pending(state: SetupState, version: str, home: Path) -> SetupState:
     state.wizard_completed = version
     save_state(state, home)
     return state
+
+
+def textual_available() -> bool:
+    """True when the optional Textual dependency can be imported."""
+    try:
+        return importlib.util.find_spec("textual") is not None
+    except (ImportError, ValueError):  # pragma: no cover - broken install
+        return False
+
+
+def _screen_terminal(interactive: bool | None) -> bool:
+    """Whether this run has the terminal the full screen needs."""
+    if interactive is not None:
+        return interactive
+    try:
+        return ui.stdin_tty() and sys.stderr.isatty() and sys.stdout.isatty()
+    except (AttributeError, ValueError):
+        return False
+
+
+def tui_owns_setup(
+    cmd: str | None,
+    args: Any,
+    interactive: bool | None = None,
+) -> bool:
+    """Whether the TUI wizard, not the terminal one, owns setup for this run.
+
+    Only an interactive ``ui`` run with Textual installed defers; every other
+    command keeps the terminal path, and ``--json`` and ``--yes`` stay silent.
+    """
+    if cmd != UI_COMMAND:
+        return False
+    if getattr(args, "json", False) or getattr(args, "yes", False):
+        return False
+    return _screen_terminal(interactive) and textual_available()
+
+
+def defer_to_tui(home: Path, version: str, fresh: bool) -> WizardNeed:
+    """Remember why the TUI wizard is pending and return the reason."""
+    reason = FRESH if fresh else VERSION
+    mark_pending(load_state(home), reason, version, home)
+    return WizardNeed(reason, version, DEFAULT_DETAILS[reason])
 
 
 def _pending_items(

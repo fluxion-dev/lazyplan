@@ -52,7 +52,15 @@ from .moves import move_repo_db
 from .session import SetupDraft, SetupSession, SetupSessionError
 from .state import SetupState, git_state, load_state, plans_in, save_state, state_path
 from .steps import Step, visible_steps
-from .triggers import WizardNeed, clear_pending, detect, mark_pending, pending_reason
+from .triggers import (
+    WizardNeed,
+    clear_pending,
+    detect,
+    mark_pending,
+    pending_reason,
+    textual_available,
+    tui_owns_setup,
+)
 from .wizard import run_wizard
 
 setup_layout = layout
@@ -113,6 +121,8 @@ __all__ = [
     "setup_layout",
     "setup_ui",
     "state_path",
+    "textual_available",
+    "tui_owns_setup",
     "ui",
     "visible_steps",
 ]

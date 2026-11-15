@@ -613,8 +613,12 @@ is written back as version 2 when a choice changes; unknown roles, hosts,
 tiers, and fields fail with the file path and key.
 
 The defaults put scout, implementer, and docs on the fast tier, qa and refactor
-on standard, and reviewer and integrator on deep. `lpui setup` seeds the map
-and installs one managed subagent file per role for each selected host:
+on standard, and reviewer and integrator on deep. A role's `effort` is one of
+`inherit`, `low`, `medium`, or `high`. Claude Code, Codex, and OpenCode render
+the level in their native field; other hosts omit it and run at their default.
+A file with an older free-form effort still loads and keeps working until that
+role is edited. `lpui setup` seeds the map and installs one managed subagent
+file per role for each selected host:
 
 | Host | Project | Global | Format |
 | --- | --- | --- | --- |

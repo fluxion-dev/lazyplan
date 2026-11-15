@@ -52,6 +52,21 @@ class HealthController:
             return
         self.app.run_worker(self._worker, thread=True, group="health")
 
+    def refresh(self) -> None:
+        """Re-run the check off the UI thread without offering anything."""
+        if self.check is None:
+            return
+        self.app.run_worker(self._refresh_worker, thread=True, group="health")
+
+    def _refresh_worker(self) -> None:
+        assert self.check is not None
+        try:
+            session = self.check()
+            report = session.report()
+        except Exception:  # noqa: BLE001 - a failed check must never break the TUI
+            return
+        self.app.call_from_thread(self.apply, session, report, False)
+
     def _worker(self) -> None:
         assert self.check is not None
         try:
@@ -61,11 +76,15 @@ class HealthController:
             return
         self.app.call_from_thread(self.apply, session, report)
 
-    def apply(self, session: HealthSession, report: HealthReport) -> None:
+    def apply(self, session: HealthSession, report: HealthReport, prompt: bool = True) -> None:
         """Store the report, update the chip, and prompt for open errors."""
         self.session = session
         self.report = report
         self.refresh_hints()
+        if not prompt:
+            return
+        if self.app.setup_controller.pending:
+            return
         if report.should_prompt:
             self._offer(report.open, review=False)
 

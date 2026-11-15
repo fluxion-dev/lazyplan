@@ -46,6 +46,7 @@ from .base import AppBase
 from .controllers.git_state import GitStateController
 from .controllers.health import HealthCheck, HealthController
 from .controllers.metrics import MetricsController
+from .controllers.setup import SetupController, WizardCheck
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
@@ -87,6 +88,7 @@ if _TEXTUAL_OK:
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
             Binding("T", "toggle_timeline", "Timeline"),
+            Binding("S", "open_setup", "Setup"),
             Binding("n", "new_context", "New"),
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),
@@ -157,6 +159,7 @@ if _TEXTUAL_OK:
             self.tree_controller = TreeController(self)
             self.update_controller = UpdateController(self)
             self.health_controller = HealthController(self)
+            self.setup_controller = SetupController(self)
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
@@ -175,6 +178,10 @@ if _TEXTUAL_OK:
         def action_health_prompt(self) -> None:
             """Open the health check with every finding, hidden ones included."""
             self.health_controller.prompt()
+
+        def action_open_setup(self) -> None:
+            """Reopen the setup wizard from the palette or the S key."""
+            self.setup_controller.open()
 
         def action_release_notes(self) -> None:
             """Open the bundled release notes for the installed version."""
@@ -241,7 +248,9 @@ if _TEXTUAL_OK:
             self.set_interval(0.25, self._poll)
             self.update_controller.start()
             self.metrics_controller.start()
-            self.health_controller.start()
+            # The setup check runs first so a pending wizard suppresses the
+            # startup health prompt instead of duplicating it.
+            self.setup_controller.start(self.health_controller.start)
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
@@ -259,6 +268,7 @@ if _TEXTUAL_OK:
         startup_notes: str = "",
         health_check: HealthCheck | None = None,
         restart_notice: str = "",
+        wizard_check: WizardCheck | None = None,
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
@@ -266,17 +276,35 @@ if _TEXTUAL_OK:
         app._startup_notes = startup_notes
         app.health_controller.check = health_check
         app.health_controller.restart_notice = restart_notice
+        app.setup_controller.check = wizard_check
         return app
+
+
+def _setup_check_off(db_path: str | None) -> bool:
+    """True when a caller-owned database or a skipped setup turns checks off."""
+    from ..setup.constants import NO_SETUP_ENV
+
+    return bool(
+        db_path or os.environ.get("LAZYPLAN_DB") or os.environ.get(NO_SETUP_ENV, "").strip()
+    )
 
 
 def _startup_health_check(db_path: str | None) -> HealthCheck | None:
     """The real check, off for a caller-owned database or a skipped setup."""
-    from ..setup.constants import NO_SETUP_ENV
     from ..setup.health import current
 
-    if db_path or os.environ.get("LAZYPLAN_DB") or os.environ.get(NO_SETUP_ENV, "").strip():
+    if _setup_check_off(db_path):
         return None
     return lambda: current(Path.cwd(), version=package_version())
+
+
+def _startup_wizard_check(db_path: str | None) -> WizardCheck | None:
+    """The read-only wizard trigger, off for the same runs health skips."""
+    from .controllers.setup import current
+
+    if _setup_check_off(db_path):
+        return None
+    return current(Path.cwd(), version=package_version())
 
 
 def run(db_path: str | None = None) -> int:
@@ -292,8 +320,9 @@ def run(db_path: str | None = None) -> int:
         db_path,
         startup_notice,
         launch_notes(),
-        _startup_health_check(db_path),
-        take_restart_notice(),
+        health_check=_startup_health_check(db_path),
+        restart_notice=take_restart_notice(),
+        wizard_check=_startup_wizard_check(db_path),
     )
     result = app.run()
     if isinstance(result, Restart):

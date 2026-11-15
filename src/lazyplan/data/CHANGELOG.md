@@ -35,6 +35,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Changed
 
+- **`agents.json` moves to schema 2.** Existing version 1 maps load without
+  change and are written back with their role tiers and overrides intact the
+  next time setup updates the map. Managed profiles are refreshed; an
+  unmarked file is still left alone.
 - Plan, milestone, and task writes accept the lane flags, plan documents and
   recipes carry them, and `list --tree`, `plan show`, and the TUI preview render
   them.

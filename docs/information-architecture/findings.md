@@ -5,6 +5,11 @@ section that proves it. The inventory is generated; this file is reviewed by
 hand. The registry, keymap, hub, and parity work landed with releases v0.36
 through v0.44; every finding below is closed and kept as the audit trail.
 
+The setup wizard and the taskbar version badge arrived after that audit. They
+are not gaps: the inventory covers the wizard steps, the `S` and `U` bindings,
+and the update screen, and the reachability report places both one interaction
+from the tree. IA-010 records that check as closed.
+
 | ID | Severity | Finding | Evidence | Target |
 | --- | --- | --- | --- | --- |
 | IA-001 | Closed | Fourteen keys ran different actions on different screens, so muscle memory did not transfer between the tree and detail/source screens. | `inventory.md` → TUI key conflicts (`a`, `d`, `e`, `q`, `s`, `x`, and others). | Closed |
@@ -16,3 +21,4 @@ through v0.44; every finding below is closed and kept as the audit trail.
 | IA-007 | Closed | The palette exposed actions with no parity decision against CLI or MCP; there was no exception list. | `inventory.md` → Palette commands vs MCP tools. | Closed |
 | IA-008 | Closed | Retained docs, man pages, site, and skills used separate heading taxonomies. | `inventory.md` → Documentation headings. | Closed |
 | IA-009 | Closed | Stale paths and stale key claims from earlier releases. | `inventory.md` → Stale claims: zero found after P137. | Closed |
+| IA-010 | Closed | The setup wizard and the taskbar version badge were not in the audited surface set, so `S`, `U`, and the update screen could drift without a gate noticing. | `inventory.md` → TUI screens, TUI bindings, Setup steps; `reachability.md` → `app.setup` and `app.update` at depth 1. | Closed |

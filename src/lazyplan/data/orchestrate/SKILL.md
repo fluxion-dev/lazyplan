@@ -23,7 +23,10 @@ while implementing; you dispatch the plan the human checked off.
 ## Dispatch a worker
 
 For each dispatchable item, start one worker in its lane worktree, on its
-branch, with its role profile and the printed prompt. The worker must:
+branch, with its role profile and the printed prompt. Each lane reports its
+role, tier, effort, and per-host model in `dispatch --json`; start the worker
+with the host's matching managed profile instead of picking a model by hand.
+The worker must:
 
 - claim exactly the named task with the printed `lpui claim` command;
 - keep one task doing in the lane;

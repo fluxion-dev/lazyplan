@@ -42,14 +42,39 @@ On Windows the shared home is `%LOCALAPPDATA%/lazyplan/`, and the default actor
 is `%USERNAME%` (`$USER` elsewhere). Plan text is read as UTF-8 or UTF-16 with a
 BOM and written as UTF-8.
 
-Setup runs on first use: it detects agents, installs or refreshes their skills,
-and remembers the result in `~/.lazyplan/setup.json`. The default is the shared
-home database and no repo files. `lpui setup --placement repo` opts the current
-checkout into `.agents/lazyplan/` plus repo skills, templates, an `AGENTS.md`
-pointer, and gitignore entries. `--db` and `$LAZYPLAN_DB` always win and are
-never moved. `lpui doctor` reports the resolved layout and findings without
-writing (exit 0 clean, 1 misplaced). Agent commands never prompt; only `lpui`,
-`lpui setup`, and `lpui upgrade` do. Don't override `--db` unless asked.
+Setup runs on first use: it detects agents, installs their skills, seeds the
+role map, and remembers the result in `~/.lazyplan/setup.json`. The default is
+the shared home database and no repo files. On a terminal the first `lpui`
+applies that baseline and then opens a setup wizard before normal use; **finish
+later** writes nothing and asks again at the next applicable launch. `lpui
+setup --placement repo` opts the current checkout into `.agents/lazyplan/` plus
+repo skills, templates, an `AGENTS.md` pointer, and gitignore entries. `--db`
+and `$LAZYPLAN_DB` always win, are never moved, and keep setup out of the way.
+`lpui doctor` reports the resolved layout and findings without writing (exit 0
+clean, 1 misplaced). Agent commands never prompt; only the wizard, `lpui setup`,
+and `lpui upgrade` do. Don't override `--db` unless asked.
+
+## Roles, models, and effort
+
+A milestone names its lane role and a task names its own role. Roles name a
+capability tier, and `agents.json` beside the database maps each tier to a model
+per host; a role may also carry an `effort` of `inherit`, `low`, `medium`, or
+`high`, which only hosts with a native field render. Resolution is the role's
+per-host model, its all-host model, the tier target, the host default, then
+inherit.
+
+```bash
+lpui --porcelain dispatch --plan P --json   # per-host tier, effort, and model
+lpui setup --agent-tier qa=deep --agent-tier docs=standard
+lpui setup --tier-model opencode:fast=provider/tiny
+lpui setup --role-model claude:reviewer=opus --no-model-review
+```
+
+Setup seeds the map and writes one managed subagent file per role for each
+selected host; the wizard edits the same map. `--yes`, `--json`, a version
+upgrade, and every agent command apply the saved map without prompting. Read
+`agents.json`, not source, when a model or effort looks wrong; `lpui doctor`
+lists missing or drifted profiles.
 
 ## Linked repos
 
@@ -415,7 +440,10 @@ On Windows, `lpui upgrade` stages and hands off to a detached helper after lpui
 exits, then relaunches the TUI. The full command and output are logged under
 `%LOCALAPPDATA%\lazyplan\logs\`; `lpui upgrade --diagnose` prints the detected
 method, owning Python, and log path. A failed apply leaves the old version
-runnable and the next launch shows the log path.
+runnable and the next launch shows the log path. The screen pins the running
+version in its taskbar, with an arrow to a newer cached release; `U` or the
+badge opens the update screen, and `lpui upgrade --check` is the headless
+equivalent.
 
 ## Templates
 

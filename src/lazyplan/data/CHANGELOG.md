@@ -18,6 +18,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   the `S` key open the same screen from any view, and the in-app help lists the
   wizard keys. **Finish later** writes nothing and keeps the wizard due at the
   next applicable launch.
+- **The bottom bar names the running version.** The version pins to the right
+  edge of the taskbar on the tree and on the source, hub, plan diff, and setup
+  views. A newer release already in the update cache adds an arrow to it, and a
+  click on the badge or `U` opens the update screen.
 - **Roles get curated effort levels.** Each role names `inherit`, `low`,
   `medium`, or `high`; the level renders only into hosts with a native effort
   field and every other host stays at inherit.

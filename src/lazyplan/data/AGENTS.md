@@ -4,6 +4,9 @@ Repo plan of record: plans > milestones > tasks in `.agents/lazyplan/lazyplan.db
 Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 
 - New plan? Interview the human first: vision, scope in and out, deliverables, constraints, metrics, acceptance criteria. Scout the codebase during the interview.
+- Setup: the first `lpui` applies a baseline (database, skills, role map) and, on a terminal, opens the setup wizard before normal use; finish later writes nothing and asks again next launch. `lpui setup --placement repo` opts a checkout into `.agents/lazyplan/`; `lpui doctor` reports the resolved layout without writing.
+- Roles and models: roles name a tier (fast, standard, deep) and an optional effort (`inherit`, `low`, `medium`, `high`). `agents.json` beside the database maps each tier to a host model; setup writes one managed profile per role and `dispatch --json` reports each lane's resolved tier, effort, and model. Read that file rather than guessing.
+- Version: the screen pins the running version in its taskbar, with an arrow once a newer release is cached; `U` or the badge opens the update screen. Headless: `lpui upgrade --check|--diagnose`.
 - Read: `lpui --porcelain list --tree`, `lpui --porcelain next`, `lpui --porcelain claims`, `lpui --porcelain context --max-chars 4000`, `lpui --porcelain plan show --id N`, `lpui --porcelain audit --since 7.days`, `lpui --porcelain feed --limit 20` (`--json` for full fidelity)
 - Porcelain rows are `kind<TAB>id<TAB>status<TAB>title<TAB>parent<TAB>extra`; parse by tabs, not by scraping text. Set `LAZYPLAN_PORCELAIN=1` for a whole session.
 - MCP: hosts that support it can call `lpui mcp` for typed tools/resources; `--read-only` hides writes.

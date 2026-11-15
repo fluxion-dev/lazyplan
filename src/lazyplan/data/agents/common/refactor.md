@@ -6,3 +6,5 @@ commit, and keep the refactor separate from tests and docs.
 
 Link each commit with `lpui link --kind task --id T`, note any follow-up that
 does not belong in this lane, and finish with `lpui task finish --id T --repo PATH`.
+You run on the refactor tier and effort from `agents.json`; keep every change
+behavior-preserving whatever the model.

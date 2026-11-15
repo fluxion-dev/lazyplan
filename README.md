@@ -39,10 +39,16 @@ For system packages, the one-line installer, or installs from source, see
 
 ```bash
 cd ~/my-plan
-lpui                     # detects agents and creates the plan store
+lpui                     # applies setup, then opens the setup wizard
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 lpui
 ```
+
+The first `lpui` applies a baseline setup, then opens a wizard before normal
+use. **Finish later** writes nothing, and `S` reopens the wizard from any
+screen; a run without a terminal, or with `--json` or `--yes`, applies the same
+defaults without asking. See [setup and scope](docs/usage.md#setup-and-scope)
+for the steps.
 
 Keep the plan in the repo with `lpui setup --placement repo`, or try the demo
 data with `lpui seed`.
@@ -70,6 +76,9 @@ lpui criterion edit --id 1 --done # mark an acceptance item done
 lpui feed                         # recent activity
 ```
 
+The bottom bar pins the running version, with an arrow beside it when a newer
+release is cached; click the badge or press `U` to update.
+
 ## For your agent
 
 The first run installs the agent skills. Agents read and write the same plan
@@ -83,8 +92,12 @@ lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
 ```
 
-Parallel plans use the orchestration skill; `lpui dispatch --plan P` prints the
-waves, lane worktrees, and one worker prompt per ready task.
+Parallel plans are lanes: a milestone gets a wave, a role, and its own
+registered worktree, and roles name a capability tier and an effort level.
+[Agent profiles](docs/usage.md#agent-profiles) and [lanes and
+waves](docs/usage.md#lanes-and-waves) cover the model map and the worktree
+commands; `lpui dispatch --plan P` prints the waves, worktrees, and one worker
+prompt per ready task.
 
 See the [agent contract](docs/usage.md#agents) for claims, agents, evidence,
 and MCP. For your data, back up with `lpui export --format json` and restore

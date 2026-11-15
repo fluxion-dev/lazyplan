@@ -616,8 +616,19 @@ The defaults put scout, implementer, and docs on the fast tier, qa and refactor
 on standard, and reviewer and integrator on deep. `lpui setup` seeds the map
 and installs one managed subagent file per role for each selected host:
 
-- OpenCode: `.opencode/agent/lazyplan-*.md` or `~/.config/opencode/agent/`.
-- Claude Code: `.claude/agents/lazyplan-*.md` or `~/.claude/agents/`.
+| Host | Project | Global | Format |
+| --- | --- | --- | --- |
+| OpenCode | `.opencode/agent/` | `~/.config/opencode/agent/` | Markdown |
+| Claude Code | `.claude/agents/` | `~/.claude/agents/` | Markdown |
+| Codex | `.codex/agents/` | `~/.codex/agents/` | TOML |
+| Gemini CLI | `.gemini/agents/` | `~/.gemini/agents/` | Markdown |
+| Cursor | `.cursor/agents/` | `~/.cursor/agents/` | Markdown |
+| Copilot CLI | `.github/agents/` | `~/.copilot/agents/` | `.agent.md` |
+
+Scout and reviewer stay read-only per host: OpenCode denies edits, Claude uses
+its tool allowlist and plan mode, Codex sets a read-only sandbox, Gemini and
+Copilot restrict tools, and Cursor sets `readonly`. Write roles inherit the
+host's normal tool access.
 
 Model discovery stays local. OpenCode reads `opencode models` and its
 `model`/`small_model` config; Codex reads `codex debug models --bundled` and

@@ -15,12 +15,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 - **`lpui dispatch` is the read-only orchestration manifest.** It prints waves,
   lane state, capacity, exact worktree commands, and a bounded prompt per ready
   task, and creates no row, worktree, or feed event.
-- **Roles get host profiles.** `lpui setup` writes managed OpenCode and Claude
-  Code subagent files for scout, implementer, QA, refactor, docs, reviewer, and
-  integrator, with an `agents.json` schema 2 map beside the database. Roles
-  name fast, standard, or deep; each host maps that tier to its own model, and
-  version 1 files migrate on write. Other hosts receive role, tier, effort, and
-  prompt hints in the dispatch manifest.
+- **Roles get host profiles.** `lpui setup` writes managed subagent files for
+  scout, implementer, QA, refactor, docs, reviewer, and integrator to OpenCode,
+  Claude Code, Codex, Gemini CLI, Cursor, and Copilot CLI, with an
+  `agents.json` schema 2 map beside the database. Roles name fast, standard, or
+  deep; each host maps that tier to its own model, and version 1 files migrate
+  on write. Scout and reviewer stay read-only in every host's native format.
 - **Setup reviews model targets before writing.** The wizard shows one row per
   tier and role, lets the human edit tiers or host models in place, and backs
   up the map before a rewrite. Deselecting a host removes only its marked

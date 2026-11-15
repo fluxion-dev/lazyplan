@@ -31,7 +31,7 @@ class RepeatRunnerTest(unittest.TestCase):
 
     def test_all_tests_are_flattened(self) -> None:
         ids = [test.id() for test in self.tool.all_tests()]
-        self.assertTrue(any(test.startswith("tests.presentation.test_taskbar.") for test in ids))
+        self.assertTrue(any(test.startswith("tests.architecture.") for test in ids))
         self.assertEqual(len(ids), len(set(ids)))
 
     def test_no_tui_excludes_presentation(self) -> None:

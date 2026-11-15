@@ -29,9 +29,80 @@ class ProfileMapTest(unittest.TestCase):
         self.assertEqual(set(loaded), set(AGENT_ROLES))
         self.assertEqual(loaded["implementer"].tier, "fast")
         self.assertEqual(loaded["reviewer"].tier, "deep")
+        tiers = profiles.default_tiers()
+        self.assertEqual(tiers["fast"]["claude"], "haiku")
+        self.assertEqual(tiers["deep"]["claude"], "opus")
 
     def test_missing_file_keeps_the_defaults(self) -> None:
         self.assertEqual(profiles.load(self.db), profiles.defaults())
+        self.assertEqual(profiles.load_all(self.db)[1], profiles.default_tiers())
+
+    def test_v1_file_migrates_to_schema_two(self) -> None:
+        self._write(
+            {
+                "profiles": {
+                    "implementer": {"tier": "fast", "model": "provider/small", "effort": "low"}
+                }
+            }
+        )
+        loaded = profiles.load(self.db)
+        self.assertEqual(loaded["implementer"].model, "provider/small")
+        profiles.save(self.db, loaded, profiles.load_all(self.db)[1])
+        written = json.loads(Path(self.path).read_text(encoding="utf-8"))
+        self.assertEqual(written["schema"], 2)
+        self.assertEqual(written["profiles"]["implementer"]["model"], "provider/small")
+        self.assertEqual(written["tiers"]["fast"]["claude"], "haiku")
+
+    def test_tier_and_per_host_overrides_resolve_in_order(self) -> None:
+        loaded = {
+            "qa": profiles.Profile(
+                role="qa",
+                tier="deep",
+                model="all/host",
+                models={"claude": "claude/role"},
+            )
+        }
+        tiers = {"deep": {"claude": "claude/tier", "opencode": "tier/model"}}
+        self.assertEqual(
+            profiles.resolve(loaded["qa"], "claude", tiers=tiers)["model"],
+            "claude/role",
+        )
+        self.assertEqual(
+            profiles.resolve(loaded["qa"], "opencode", tiers=tiers)["model"],
+            "all/host",
+        )
+        plain = {"qa": profiles.Profile(role="qa", tier="deep")}
+        self.assertEqual(
+            profiles.resolve(plain["qa"], "opencode", tiers=tiers)["model"],
+            "tier/model",
+        )
+        self.assertEqual(
+            profiles.resolve(plain["qa"], "codex", tiers=tiers)["model"],
+            "",
+        )
+
+    def test_unknown_top_level_tier_and_host_are_rejected(self) -> None:
+        cases = (
+            {"profiles": {}, "extra": True},
+            {"profiles": {}, "tiers": {"turbo": {"claude": "x"}}},
+            {"profiles": {}, "tiers": {"fast": {"wizard": "x"}}},
+            {"profiles": {"qa": {"tier": "fast", "models": {"wizard": "x"}}}},
+        )
+        for payload in cases:
+            with self.subTest(payload=payload):
+                self._write(payload)
+                with self.assertRaises(profiles.ProfileError):
+                    profiles.load(self.db)
+
+    def test_save_is_idempotent_and_keeps_every_host(self) -> None:
+        loaded, tiers = profiles.load_all(self.db)
+        profiles.save(self.db, loaded, tiers)
+        first = Path(self.path).read_text(encoding="utf-8")
+        profiles.save(self.db, loaded, tiers)
+        self.assertEqual(Path(self.path).read_text(encoding="utf-8"), first)
+        written = json.loads(first)
+        for tier in profiles.TIERS:
+            self.assertEqual(set(written["tiers"][tier]), set(profiles.HOSTS))
 
     def test_partial_file_merges_with_defaults(self) -> None:
         self._write(

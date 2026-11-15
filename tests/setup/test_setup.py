@@ -127,6 +127,52 @@ class TestChoice(unittest.TestCase):
         self.assertEqual(choice.agents, ["opencode"])
         self.assertEqual(choice.skills_dir, "/tmp/skills")
 
+    def test_model_flags_build_tier_and_role_overrides(self):
+        import argparse
+
+        args = argparse.Namespace(
+            db="",
+            placement="home",
+            agents="opencode",
+            skills_dir=None,
+            no_skills=False,
+            agent_tier=[("qa", "deep"), ("docs", "standard")],
+            tier_model=[("opencode", "fast", "provider/tiny")],
+            role_model=[("claude", "reviewer", "opus")],
+            model_review=False,
+        )
+        choice = setup.choice_from_args(args, self.repo, self.home)
+        self.assertEqual(choice.role_tiers, {"qa": "deep", "docs": "standard"})
+        self.assertEqual(choice.tier_models, {"opencode": {"fast": "provider/tiny"}})
+        self.assertEqual(choice.role_models, {"claude": {"reviewer": "opus"}})
+        self.assertFalse(choice.model_review)
+
+    def test_model_flag_parsers_reject_unknown_values(self):
+        import argparse
+
+        from lazyplan.presentation.cli.parser import system
+
+        self.assertEqual(system._role_tier("qa=fast"), ("qa", "fast"))
+        self.assertEqual(
+            system._tier_model("codex:deep=gpt-6.1-sol"),
+            ("codex", "deep", "gpt-6.1-sol"),
+        )
+        self.assertEqual(
+            system._role_model("claude:reviewer=opus"),
+            ("claude", "reviewer", "opus"),
+        )
+        for parser, value in (
+            (system._role_tier, "wizard=fast"),
+            (system._role_tier, "qa=turbo"),
+            (system._tier_model, "wizard:fast=x"),
+            (system._tier_model, "codex:turbo=x"),
+            (system._role_model, "claude:wizard=x"),
+            (system._tier_model, "codex:fast"),
+        ):
+            with self.subTest(value=value):
+                with self.assertRaises(argparse.ArgumentTypeError):
+                    parser(value)
+
 
 class TestFindings(unittest.TestCase):
     def setUp(self):

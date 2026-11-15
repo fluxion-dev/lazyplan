@@ -17,56 +17,21 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..core.policies.agents import (
+    CLAUDE_MODELS,
+    DEFAULT_MODELS,
+    DEFAULT_ROLE_TIERS,
+    HOSTS,
+    TIERS,
+)
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
 
+DEFAULT_TIERS = DEFAULT_ROLE_TIERS
+
 FILE_NAME = "agents.json"
 SCHEMA = 2
-HOSTS: tuple[str, ...] = ("opencode", "claude", "codex", "gemini", "cursor", "copilot")
-TIERS: tuple[str, ...] = ("fast", "standard", "deep")
-DEFAULT_TIERS: dict[str, str] = {
-    "scout": "fast",
-    "implementer": "fast",
-    "qa": "standard",
-    "refactor": "standard",
-    "docs": "fast",
-    "reviewer": "deep",
-    "integrator": "deep",
-}
-CLAUDE_MODELS: dict[str, str] = {
-    "fast": "haiku",
-    "standard": "sonnet",
-    "deep": "opus",
-}
-
-#: Packaged tier targets: host-specific defaults that a user file can override.
-DEFAULT_MODELS: dict[str, dict[str, str]] = {
-    "fast": {
-        "opencode": "",
-        "claude": "haiku",
-        "codex": "",
-        "gemini": "",
-        "cursor": "",
-        "copilot": "",
-    },
-    "standard": {
-        "opencode": "",
-        "claude": "sonnet",
-        "codex": "",
-        "gemini": "",
-        "cursor": "",
-        "copilot": "",
-    },
-    "deep": {
-        "opencode": "",
-        "claude": "opus",
-        "codex": "",
-        "gemini": "",
-        "cursor": "",
-        "copilot": "",
-    },
-}
 _PROFILE_FIELDS = {"tier", "model", "effort", "models"}
 _TOP_FIELDS = {"schema", "tiers", "profiles"}
 

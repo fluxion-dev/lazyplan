@@ -76,6 +76,14 @@ def parse_agents(raw: str, home: Path) -> list[str]:
     return parse_tool_selection(text, hosts)
 
 
+def _group_host_keys(raw: Any) -> dict[str, dict[str, str]]:
+    """Group HOST:KEY=MODEL tuples into nested dictionaries."""
+    out: dict[str, dict[str, str]] = {}
+    for host, key, model in raw or []:
+        out.setdefault(host, {})[key] = model
+    return out
+
+
 def choice_from_args(
     args: Any,
     cwd: Path,
@@ -112,6 +120,10 @@ def choice_from_args(
         skills_dir=skills_dir,
         no_skills=bool(getattr(args, "no_skills", False)),
         explicit_db=explicit,
+        role_tiers=dict(getattr(args, "agent_tier", []) or []) or None,
+        tier_models=_group_host_keys(getattr(args, "tier_model", [])) or None,
+        role_models=_group_host_keys(getattr(args, "role_model", [])) or None,
+        model_review=bool(getattr(args, "model_review", True)),
     )
 
 

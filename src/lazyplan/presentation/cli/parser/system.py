@@ -4,6 +4,45 @@ from __future__ import annotations
 
 import argparse
 
+from lazyplan.core.policies.agents import HOSTS, TIERS
+from lazyplan.core.policies.lanes import AGENT_ROLES
+
+
+def _role_tier(value: str) -> tuple[str, str]:
+    """Parse ROLE=TIER for --agent-tier."""
+    role, sep, tier = value.partition("=")
+    if not sep or not role or not tier:
+        raise argparse.ArgumentTypeError("expected ROLE=TIER")
+    if role not in AGENT_ROLES:
+        raise argparse.ArgumentTypeError(f"role must be {'|'.join(AGENT_ROLES)}")
+    if tier not in TIERS:
+        raise argparse.ArgumentTypeError(f"tier must be {'|'.join(TIERS)}")
+    return role, tier
+
+
+def _host_key(value: str, roles: bool) -> tuple[str, str, str]:
+    """Parse HOST:TIER=MODEL or HOST:ROLE=MODEL."""
+    key, sep, model = value.partition("=")
+    host, colon, name = key.partition(":")
+    if not sep or not colon or not host or not name or not model:
+        label = "ROLE" if roles else "TIER"
+        raise argparse.ArgumentTypeError(f"expected HOST:{label}=MODEL")
+    if host not in HOSTS:
+        raise argparse.ArgumentTypeError(f"host must be {'|'.join(HOSTS)}")
+    allowed = AGENT_ROLES if roles else TIERS
+    if name not in allowed:
+        label = "role" if roles else "tier"
+        raise argparse.ArgumentTypeError(f"{label} must be {'|'.join(allowed)}")
+    return host, name, model
+
+
+def _tier_model(value: str) -> tuple[str, str, str]:
+    return _host_key(value, roles=False)
+
+
+def _role_model(value: str) -> tuple[str, str, str]:
+    return _host_key(value, roles=True)
+
 
 def add_setup(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
@@ -25,6 +64,37 @@ def add_setup(
         default="",
         metavar="LIST",
         help="which agents to install for (space/comma list, 'all', or 'none')",
+    )
+    setup.add_argument(
+        "--agent-tier",
+        action="append",
+        type=_role_tier,
+        default=[],
+        metavar="ROLE=TIER",
+        help="set one role's tier (fast, standard, deep); repeatable",
+    )
+    setup.add_argument(
+        "--tier-model",
+        action="append",
+        type=_tier_model,
+        default=[],
+        metavar="HOST:TIER=MODEL",
+        help="set one host's model for a tier; repeatable",
+    )
+    setup.add_argument(
+        "--role-model",
+        action="append",
+        type=_role_model,
+        default=[],
+        metavar="HOST:ROLE=MODEL",
+        help="override one host model for a role; repeatable",
+    )
+    setup.add_argument(
+        "--no-model-review",
+        dest="model_review",
+        action="store_false",
+        default=True,
+        help="keep the current model map without asking",
     )
     setup.add_argument(
         "--skills-dir",

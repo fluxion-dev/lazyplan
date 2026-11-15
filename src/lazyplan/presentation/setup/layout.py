@@ -52,6 +52,10 @@ class SetupChoice:
     skills_dir: str | None = None
     no_skills: bool = False
     explicit_db: str | None = None
+    role_tiers: dict[str, str] | None = None
+    tier_models: dict[str, dict[str, str]] | None = None
+    role_models: dict[str, dict[str, str]] | None = None
+    model_review: bool = True
 
 
 @dataclass(frozen=True)

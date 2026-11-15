@@ -38,7 +38,7 @@ export const SCREENS = {
     file: "lpui-update",
     width: 1604,
     height: 904,
-    alt: "Update dialog showing the installed version, the latest release, the install method, and Download, Restart, and Later buttons.",
+    alt: "Update dialog showing the installed version, the latest release, the install method, and the Download and Later buttons.",
     caption: "The taskbar badge opens a verified update.",
   },
   detail: {

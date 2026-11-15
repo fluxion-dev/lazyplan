@@ -76,6 +76,7 @@ class SetupWizardExtrasTest(unittest.IsolatedAsyncioTestCase):
         return screen
 
     async def settle(self, pilot: Any) -> None:
+        await pilot.pause()
         await pilot.app.workers.wait_for_complete()
         await pilot.pause()
 

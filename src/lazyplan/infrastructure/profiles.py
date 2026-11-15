@@ -158,7 +158,9 @@ def resolve_all(
     return out
 
 
-def dispatch_profiles(db_path: str | Path, home: Path | None = None) -> dict[str, dict[str, object]]:
+def dispatch_profiles(
+    db_path: str | Path, home: Path | None = None
+) -> dict[str, dict[str, object]]:
     """Resolved role profiles for the dispatch manifest."""
     profiles, tiers = load_all(db_path)
     return resolve_all(profiles, tiers, opencode_models(home or Path.home()))

@@ -13,6 +13,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, TextIO
 
+from lazyplan.core.policies import effort as effort_policy
 from lazyplan.core.policies.agents import HOSTS, TIERS
 from lazyplan.core.policies.hooks import MODES
 from lazyplan.infrastructure import host_models, profiles, skills
@@ -217,11 +218,15 @@ class SetupSession:
         self.draft.profiles_map[role] = replace(profile, tier=tier)
 
     def set_role_effort(self, role: str, effort: str) -> None:
-        """Set one role's effort level; an empty value means inherit."""
+        """Set one role's curated effort level; inherit stores an empty value."""
         profile = self.draft.profiles_map.get(role)
         if profile is None:
             raise SetupSessionError(f"unknown role {role!r}")
-        self.draft.profiles_map[role] = replace(profile, effort=effort.strip())
+        try:
+            level = effort_policy.check(effort)
+        except ValueError as exc:
+            raise SetupSessionError(str(exc)) from exc
+        self.draft.profiles_map[role] = replace(profile, effort=level)
 
     def set_tier_model(self, host: str, tier: str, model: str) -> None:
         """Set or clear one host's model for a tier."""

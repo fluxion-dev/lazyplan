@@ -73,7 +73,7 @@ class TestSetupWizard(unittest.TestCase):
     def test_wizard_creates_home_database_and_skill_with_color(self):
         code, text = run_pty(
             [str(LPUI), "setup"],
-            ["1\n", "\n", "y\n"],
+            ["1\n", "\n", "\n", "y\n"],
             self.env,
             self.repo,
         )
@@ -83,8 +83,20 @@ class TestSetupWizard(unittest.TestCase):
         self.assertIn("plugins", text)
         self.assertIn("lazyplan.js", text)
         self.assertTrue((self.home / ".lazyplan/lazyplan.db").is_file())
+        self.assertTrue((self.home / ".lazyplan/agents.json").is_file())
         self.assertTrue((self.home / ".lazyplan/setup.json").is_file())
         self.assertIn("Setup complete", text)
+
+    def test_wizard_model_edit_reaches_the_map(self):
+        code, text = run_pty(
+            [str(LPUI), "setup"],
+            ["1\n", "\n", "t qa deep\n", "\n", "y\n"],
+            self.env,
+            self.repo,
+        )
+        self.assertEqual(code, 0, text)
+        written = json.loads((self.home / ".lazyplan/agents.json").read_text(encoding="utf-8"))
+        self.assertEqual(written["profiles"]["qa"]["tier"], "deep")
 
     def test_interrupt_writes_nothing(self):
         code, text = run_pty([str(LPUI), "setup"], ["\x04"], self.env, self.repo)
@@ -107,7 +119,7 @@ class TestSetupWizard(unittest.TestCase):
     def test_placement_flag_seeds_the_wizard(self):
         code, text = run_pty(
             [str(LPUI), "setup", "--placement", "repo"],
-            ["\n", "\n", "y\n"],
+            ["\n", "\n", "\n", "y\n"],
             self.env,
             self.repo,
         )
@@ -118,7 +130,7 @@ class TestSetupWizard(unittest.TestCase):
     def test_no_hooks_flag_hides_plugins_and_installs_none(self):
         code, text = run_pty(
             [str(LPUI), "setup", "--no-hooks"],
-            ["\n", "\n", "y\n"],
+            ["\n", "\n", "\n", "y\n"],
             self.env,
             self.repo,
         )

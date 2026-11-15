@@ -74,6 +74,26 @@ which agents to install for (space/comma list, 'all', or 'none')
 .RE
 .RS
 .TP
+.B \-\-agent\-tier ROLE=TIER
+set one role's tier (fast, standard, deep); repeatable Default: []\.
+.RE
+.RS
+.TP
+.B \-\-tier\-model HOST:TIER=MODEL
+set one host's model for a tier; repeatable Default: []\.
+.RE
+.RS
+.TP
+.B \-\-role\-model HOST:ROLE=MODEL
+override one host model for a role; repeatable Default: []\.
+.RE
+.RS
+.TP
+.B \-\-no\-model\-review
+keep the current model map without asking
+.RE
+.RS
+.TP
 .B \-\-skills\-dir PATH
 put the skill in this folder instead of the detected ones
 .RE

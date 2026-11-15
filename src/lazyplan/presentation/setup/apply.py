@@ -118,17 +118,10 @@ def _install_agent_profiles(
     return results, files
 
 
-def apply_choice(
-    choice: SetupChoice,
-    root: Path | None,
-    home: Path | None = None,
-    version: str = "",
-    write: Any = None,
-) -> dict[str, Any]:
-    """Write the database, templates, skills, and remembered state."""
-    home = home or Path.home()
-    out = write or sys.stderr
-    previous = load_state(home)
+def _maybe_cleanup(
+    choice: SetupChoice, root: Path | None, home: Path, previous: SetupState
+) -> None:
+    """Remove repo resources after a switch back to home placement."""
     if (
         not choice.explicit_db
         and root is not None
@@ -136,6 +129,18 @@ def apply_choice(
         and choice.placement != REPO
     ):
         cleanup_repo_artifacts(root, home)
+
+
+def _apply_layout(
+    choice: SetupChoice,
+    root: Path | None,
+    home: Path,
+    out: Any,
+    previous: SetupState,
+) -> tuple[
+    layout.SetupLayout, skills.SkillPlan, Store, skills.InstallResult, list[Path], list[Path]
+]:
+    """Resolve and write the database, templates, and skill files."""
     skill_plan = skills.plan_choice(choice, root, home)
     resolved = layout.resolve_choice(choice, root, skill_plan, home)
     layout.apply_layout(resolved, interactive=False, read=None, write=out)
@@ -148,7 +153,24 @@ def apply_choice(
         home,
         only_existing=bool(previous.last_version and previous.skills_enabled),
     )
-    agents = choice.agents or [host.key for host in skills.detect_agents(home) if host.detected]
+    return resolved, skill_plan, store, result, refreshed, backups
+
+
+def _install_selected(
+    choice: SetupChoice,
+    root: Path | None,
+    home: Path,
+    resolved: layout.SetupLayout,
+    skill_plan: skills.SkillPlan,
+    previous: SetupState,
+    backups: list[Path],
+) -> tuple[list[str], Path | None, list[agent_install.AgentInstallResult], list[str], list[str]]:
+    """Seed the map, install profiles, and remove hosts that were dropped."""
+    agents = (
+        list(choice.agents)
+        if choice.agents is not None
+        else [host.key for host in skills.detect_agents(home) if host.detected]
+    )
     profile_map: Path | None = None
     if skill_plan.scope != "none":
         profile_map, profile_backup = _seed_profile_map(choice, root, home, resolved.db, agents)
@@ -157,10 +179,31 @@ def apply_choice(
     profile_results, profile_files = _install_agent_profiles(
         skill_plan, root, home, resolved.db, agents
     )
-    removed_profiles = _remove_deselected_profiles(previous, agents, root, home, skill_plan.scope)
+    removed = _remove_deselected_profiles(previous, agents, root, home, skill_plan.scope)
     if root is not None and choice.placement == REPO and not choice.explicit_db:
         for entry in resolved.gitignore_entries:
             skills.append_gitignore(root, entry)
+    return agents, profile_map, profile_results, profile_files, removed
+
+
+def apply_choice(
+    choice: SetupChoice,
+    root: Path | None,
+    home: Path | None = None,
+    version: str = "",
+    write: Any = None,
+) -> dict[str, Any]:
+    """Write the database, templates, skills, and remembered state."""
+    home = home or Path.home()
+    out = write or sys.stderr
+    previous = load_state(home)
+    _maybe_cleanup(choice, root, home, previous)
+    resolved, skill_plan, store, result, refreshed, backups = _apply_layout(
+        choice, root, home, out, previous
+    )
+    agents, profile_map, profile_results, profile_files, removed_profiles = _install_selected(
+        choice, root, home, resolved, skill_plan, previous, backups
+    )
     state = _remember_choice(home, choice, resolved, skill_plan, version, profile_files)
     return {
         "db": str(store.path),
@@ -176,7 +219,7 @@ def apply_choice(
         "backups": [str(path) for path in backups],
         "state": str(state_path(home)),
         "placement": state.placement,
-        "agents": list(choice.agents or []),
+        "agents": agents,
         "explicit": bool(choice.explicit_db),
     }
 

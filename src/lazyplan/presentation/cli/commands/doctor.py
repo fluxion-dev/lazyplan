@@ -162,12 +162,15 @@ def _doctor_data(
     return layout, skill_files, report
 
 
-def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], report: dict) -> None:
+def _print_layout(layout: setup_layout.SetupLayout, skill_files: list[Path]) -> None:
     print(f"database:  {layout.db}")
     print(f"templates: {layout.templates_dir}")
     print(f"config:    {layout.config or '-'}")
     for skill in skill_files:
         print(f"skill:     {skill}")
+
+
+def _print_hooks(report: dict) -> None:
     hooks = report["hooks"]
     print(f"hooks:     {hooks['mode'] if hooks['enabled'] else 'none'}")
     for path in hooks["files"]:
@@ -176,18 +179,25 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
     print(f"hook check:{' ok' if probe['ok'] else ' ' + str(probe['reason'])}")
     for path in hooks["missing"]:
         print(f"hook miss: {path}")
+
+
+def _profile_state(path: str, profile_report: dict) -> str:
+    if path in profile_report.get("missing", []):
+        return "missing"
+    if path in profile_report.get("drifted", []):
+        return "drifted"
+    if path in profile_report.get("unmanaged", []):
+        return "unmanaged"
+    return "ok"
+
+
+def _print_profiles(report: dict) -> None:
     profile_report = report.get("profiles", {})
     for path in profile_report.get("files", []):
-        if path in profile_report.get("missing", []):
-            state_word = "missing"
-        elif path in profile_report.get("drifted", []):
-            state_word = "drifted"
-        elif path in profile_report.get("unmanaged", []):
-            state_word = "unmanaged"
-        else:
-            state_word = "ok"
-        print(f"profile:   {path} ({state_word})")
-    print(f"clean:     {'yes' if report['clean'] else 'no'}")
+        print(f"profile:   {path} ({_profile_state(path, profile_report)})")
+
+
+def _print_notes(report: dict) -> None:
     for item in report["misplaced"]:
         print(f"misplaced: {item}")
     for item in report["missing"]:
@@ -203,6 +213,14 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
         print(f"worktree:  plan {item['plan_id']} {item['state']} ({item['detail']})")
     for note in report["notes"]:
         print(f"note:      {note}")
+
+
+def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], report: dict) -> None:
+    _print_layout(layout, skill_files)
+    _print_hooks(report)
+    _print_profiles(report)
+    print(f"clean:     {'yes' if report['clean'] else 'no'}")
+    _print_notes(report)
 
 
 def _cmd_doctor(store: object | None, args: argparse.Namespace, actor: str) -> int:

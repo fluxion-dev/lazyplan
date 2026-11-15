@@ -3,19 +3,16 @@ import {
   LICENSE_URL,
   REPO_URL,
   RELEASES_URL,
+  SECTION_LINKS,
   VERSION,
 } from "@/data/site"
+
+const PRODUCT_LINKS = SECTION_LINKS.filter((link) => link.id !== "faq")
 
 const GROUPS = [
   {
     title: "Product",
-    links: [
-      { href: "#first-run", label: "First run" },
-      { href: "#story", label: "Plan" },
-      { href: "#dispatch", label: "Dispatch" },
-      { href: "#proof", label: "Proof" },
-      { href: "#screens", label: "Screenshots" },
-    ],
+    links: PRODUCT_LINKS,
   },
   {
     title: "Docs",

@@ -3,6 +3,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { COPY, SCREENS } from "@/data/site"
 
 import { Reveal } from "./reveal"
+import { ScreenshotFigure } from "./screenshot-figure"
 import { Section, SectionHeading } from "./section"
 
 const SETUP_STEPS = [
@@ -62,32 +63,7 @@ export function FirstRun() {
         </Reveal>
 
         <Reveal delay={100} className="lg:order-1">
-          <figure className="relative m-0">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-6 rounded-[2rem] bg-brand-gold/10 blur-3xl"
-            />
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
-              <picture>
-                <source
-                  srcSet={`./screens/${SETUP.file}.webp`}
-                  type="image/webp"
-                />
-                <img
-                  src={`./screens/${SETUP.file}.png`}
-                  width={SETUP.width}
-                  height={SETUP.height}
-                  loading="lazy"
-                  decoding="async"
-                  alt={SETUP.alt}
-                  className="block h-auto w-full rounded-xl"
-                />
-              </picture>
-            </div>
-            <figcaption className="mt-3 text-sm text-muted-foreground">
-              {SETUP.caption}
-            </figcaption>
-          </figure>
+          <ScreenshotFigure screen={SETUP} glow="gold" />
         </Reveal>
       </div>
     </Section>

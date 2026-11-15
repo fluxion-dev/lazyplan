@@ -2,6 +2,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { COPY, SCREENS } from "@/data/site"
 
 import { Reveal } from "./reveal"
+import { ScreenshotFigure } from "./screenshot-figure"
 import { Section, SectionHeading } from "./section"
 
 const DISPATCH = SCREENS.dispatch
@@ -37,32 +38,7 @@ export function Dispatch() {
         </Reveal>
 
         <Reveal delay={100}>
-          <figure className="relative m-0">
-            <div
-              aria-hidden="true"
-              className="absolute -inset-6 rounded-[2rem] bg-brand-cyan/10 blur-3xl"
-            />
-            <div className="relative overflow-hidden rounded-2xl border border-border bg-card/70 p-1.5 shadow-cinema">
-              <picture>
-                <source
-                  srcSet={`./screens/${DISPATCH.file}.webp`}
-                  type="image/webp"
-                />
-                <img
-                  src={`./screens/${DISPATCH.file}.png`}
-                  width={DISPATCH.width}
-                  height={DISPATCH.height}
-                  loading="lazy"
-                  decoding="async"
-                  alt={DISPATCH.alt}
-                  className="block h-auto w-full rounded-xl"
-                />
-              </picture>
-            </div>
-            <figcaption className="mt-3 text-sm text-muted-foreground">
-              {DISPATCH.caption}
-            </figcaption>
-          </figure>
+          <ScreenshotFigure screen={DISPATCH} glow="cyan" />
         </Reveal>
       </div>
     </Section>

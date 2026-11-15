@@ -5,7 +5,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from lazyplan.infrastructure import agent_install
+from lazyplan.core.policies.lanes import AGENT_ROLES
+from lazyplan.infrastructure import agent_install, host_models, profiles
 from lazyplan.infrastructure.repo import find_repo_root
 from lazyplan.presentation import setup
 from lazyplan.services import hooks as hook_service
@@ -86,32 +87,69 @@ def _worktree_findings(store: AppPort | None) -> list[dict]:
 
 
 def _profile_report(
-    choice: setup.SetupChoice, state: setup.SetupState, root: Path | None, home: Path
+    choice: setup.SetupChoice,
+    state: setup.SetupState,
+    root: Path | None,
+    home: Path,
+    db_path: Path,
 ) -> dict:
-    """Missing and unmarked agent profiles for the remembered setup."""
+    """Missing, drifted, and unmarked profiles for the remembered setup."""
     profile_agents = (
         [] if choice.explicit_db or not state.profile_files else list(choice.agents or state.agents)
     )
     scope = "project" if state.placement == "repo" and root is not None else "global"
+    loaded, _saved = profiles.load_all(db_path)
+    tiers = host_models.effective_tiers(db_path, home, root, profile_agents)
     files = agent_install.profile_paths(scope, root, home, profile_agents)
-    missing = [str(path) for path in files if not path.is_file()]
-    unmanaged = []
+    missing: list[str] = []
+    drifted: list[str] = []
+    unmanaged: list[str] = []
+    models: dict[str, dict[str, str]] = {}
+    for host in profile_agents:
+        models[host] = {}
+        for role in AGENT_ROLES:
+            profile = loaded.get(role)
+            if profile is None:
+                continue
+            try:
+                resolved = profiles.resolve(profile, host, tiers=tiers)
+            except profiles.ProfileError:
+                continue
+            models[host][role] = resolved["model"]
+    owners = {
+        path: host for host in profile_agents for path in _host_paths(home, root, scope, host)
+    }
     for path in files:
         if not path.is_file():
+            missing.append(str(path))
             continue
         try:
             text = path.read_text(encoding="utf-8")
         except OSError:
             continue
-        if agent_install.MARKER not in text:
+        if "managed by lazyplan:" not in text:
             unmanaged.append(str(path))
+            continue
+        host = owners.get(path, "")
+        role = agent_install.role_for(path)
+        if not host or role not in loaded:
+            continue
+        expected = agent_install.render_profile(host, role, loaded, None, tiers)
+        if text != expected:
+            drifted.append(str(path))
     return {
         "scope": scope,
         "agents": profile_agents,
         "files": [str(path) for path in files],
         "missing": missing,
+        "drifted": drifted,
         "unmanaged": unmanaged,
+        "models": models,
     }
+
+
+def _host_paths(home: Path, root: Path | None, scope: str, host: str) -> list[Path]:
+    return agent_install.profile_paths(scope, root, home, [host])
 
 
 def _doctor_data(
@@ -132,7 +170,7 @@ def _doctor_data(
         "files": list(state.hook_files),
         "missing": missing_hooks,
     }
-    report["profiles"] = _profile_report(choice, state, root, home)
+    report["profiles"] = _profile_report(choice, state, root, home, layout.db)
     report["state"] = state.to_dict()
     report["skills"] = [str(path) for path in skill_files]
     report["worktrees"] = _worktree_findings(store)
@@ -145,6 +183,7 @@ def _doctor_data(
     issues = bool(report["findings"]) or bool(missing_hooks)
     issues = issues or bool(report["pending_integrations"]) or bool(report["worktrees"])
     issues = issues or bool(report["profiles"]["missing"])
+    issues = issues or bool(report["profiles"]["drifted"])
     issues = issues or (state.hooks and not state.hook_files)
     issues = issues or state.version != setup.SETUP_VERSION
     report["clean"] = bool(report["clean"] and not issues)
@@ -165,8 +204,16 @@ def _print_doctor(layout: setup_layout.SetupLayout, skill_files: list[Path], rep
     print(f"hook check:{' ok' if probe['ok'] else ' ' + str(probe['reason'])}")
     for path in hooks["missing"]:
         print(f"hook miss: {path}")
-    for path in report.get("profiles", {}).get("files", []):
-        state_word = "missing" if path in report["profiles"]["missing"] else "ok"
+    profile_report = report.get("profiles", {})
+    for path in profile_report.get("files", []):
+        if path in profile_report.get("missing", []):
+            state_word = "missing"
+        elif path in profile_report.get("drifted", []):
+            state_word = "drifted"
+        elif path in profile_report.get("unmanaged", []):
+            state_word = "unmanaged"
+        else:
+            state_word = "ok"
         print(f"profile:   {path} ({state_word})")
     print(f"clean:     {'yes' if report['clean'] else 'no'}")
     for item in report["misplaced"]:

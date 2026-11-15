@@ -241,7 +241,7 @@ def _markdown_file(role: str, host: str, front: list[str], body: str) -> str:
     return "\n".join(lines)
 
 
-def _role_for(path: Path) -> str:
+def role_for(path: Path) -> str:
     """Recover the role from a managed profile filename."""
     name = path.name
     prefix = "lazyplan-"
@@ -264,7 +264,7 @@ def _install_host(
     """Shared install loop: render one file per role and record its status."""
     result = AgentInstallResult(host, scope)
     for dest in targets:
-        role = _role_for(dest)
+        role = role_for(dest)
         written, status = _install_file(dest, render(role, profiles[role]))
         line = f"{dest} ({status})"
         if written:
@@ -478,3 +478,23 @@ INSTALLERS: dict[str, Callable[..., AgentInstallResult]] = {
     "cursor": install_cursor,
     "copilot": install_copilot,
 }
+
+RENDERERS: dict[str, Callable[..., str]] = {
+    "opencode": render_opencode,
+    "claude": render_claude,
+    "codex": render_codex,
+    "gemini": render_gemini,
+    "cursor": render_cursor,
+    "copilot": render_copilot,
+}
+
+
+def render_profile(
+    host: str,
+    role: str,
+    profiles_map: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """Render one managed profile without writing it."""
+    return RENDERERS[host](role, profiles_map[role], models, tiers)

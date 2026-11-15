@@ -12,6 +12,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from ..core.policies.effort import supports as effort_supported
 from ..core.policies.lanes import AGENT_ROLES
 from . import textfile
 from .data_text import data_text
@@ -309,7 +310,7 @@ def render_claude(
     ]
     if resolved["model"]:
         front.append(f"model: {resolved['model']}")
-    if resolved["effort"]:
+    if resolved["effort"] and effort_supported("claude"):
         front.append(f"effort: {resolved['effort']}")
     if meta["edit"] == "deny":
         front.append("permissionMode: plan")
@@ -400,7 +401,7 @@ def render_codex(
     ]
     if resolved["model"]:
         lines.append(f"model = {_toml_string(resolved['model'])}")
-    if resolved["effort"]:
+    if resolved["effort"] and effort_supported("codex"):
         lines.append(f"model_reasoning_effort = {_toml_string(resolved['effort'])}")
     if meta["edit"] == "deny":
         lines.append('sandbox_mode = "read-only"')
@@ -429,7 +430,7 @@ def render_opencode(
     ]
     if resolved["model"]:
         front.append(f"model: {resolved['model']}")
-    if resolved["effort"]:
+    if resolved["effort"] and effort_supported("opencode"):
         front.append(f"variant: {resolved['effort']}")
     front.extend(
         [

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import replace
 from pathlib import Path
 
 from lazyplan.infrastructure import host_models, profiles
+from lazyplan.infrastructure.host_models import HostCatalog
+
+Discover = Callable[[Iterable[str], Path, Path | None], dict[str, HostCatalog]]
 
 
 def initial_maps(
@@ -14,10 +17,15 @@ def initial_maps(
     home: Path,
     root: Path | None,
     agents: list[str],
+    discover: Discover | None = None,
 ) -> tuple[dict[str, profiles.Profile], dict[str, dict[str, str]]]:
     """The saved map plus discovered defaults for the selected hosts."""
-    loaded, _saved = profiles.load_all(db_path)
-    tiers = host_models.effective_tiers(db_path, home, root, agents)
+    loaded, tiers = profiles.load_all(db_path)
+    finder = discover or host_models.discover_all
+    for host, catalog in finder(agents, home, root).items():
+        for tier, model in catalog.tier_defaults.items():
+            if model and not tiers.get(tier, {}).get(host):
+                tiers.setdefault(tier, {})[host] = model
     return loaded, tiers
 
 

@@ -12,6 +12,8 @@ from lazyplan.infrastructure import agent_install, hook_install, profiles, skill
 from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
     find_repo_root,
+    repo_plan_db_path,
+    shared_db_path,
 )
 
 from ...store import Store
@@ -325,7 +327,7 @@ def install_integrations(
     result: dict[str, Any],
     home: Path,
     root: Path | None,
-    hook_mode: bool | None = None,
+    hook_mode: str | bool | None = None,
     pointer_mode: bool | None = None,
 ) -> dict[str, Any]:
     """Install hooks and the optional pointer for a completed layout."""
@@ -415,6 +417,23 @@ def choice_from_state(state: SetupState) -> SetupChoice:
     )
 
 
+def profile_drift(
+    choice: SetupChoice,
+    state: SetupState,
+    root: Path | None,
+    home: Path,
+) -> agent_install.ProfileState | None:
+    """Compare managed profiles with their render, or None when none are tracked."""
+    agents = choice.agents or state.agents
+    if not (state.skills_enabled and state.profile_files and agents):
+        return None
+    scope = "project" if state.placement == REPO and root is not None else "global"
+    db_path = (
+        repo_plan_db_path(root) if scope == "project" and root is not None else shared_db_path(home)
+    )
+    return agent_install.inspect_profiles(scope, root, home, agents, db_path)
+
+
 def record_finding(state: SetupState, finding: Finding, decision: str) -> None:
     state.decisions[finding.fingerprint] = {
         "decision": decision,
@@ -434,10 +453,15 @@ def ensure(
 ) -> dict[str, Any] | None:
     """First-run setup and upgrade refresh; never blocks agent commands.
 
-    Pending integrations are left for the TUI's health check to offer.
+    An interactive ``ui`` run applies the silent baseline and leaves the
+    wizard to the screen; every other run keeps the terminal wizard. Pending
+    integrations are left for the TUI's health check to offer.
     """
     if setup_skipped(cmd, args):
         return None
+    # Imported here: the trigger module reads this one's helpers.
+    from .triggers import defer_to_tui, tui_owns_setup
+
     home = home or Path.home()
     state = load_state(home)
     explicit = explicit_db(args)
@@ -450,14 +474,19 @@ def ensure(
     human = cmd in HUMAN_COMMANDS
     findings = detect_findings(cwd, home, state, None) if human else []
     can_prompt = prompt_allowed(args, interactive)
+    defer = tui_owns_setup(cmd, args, interactive)
     root = find_repo_root(cwd)
     if not first and not version_changed and not findings:
         return None
     result: dict[str, Any] | None = None
     if first or version_changed:
-        result = _run_setup_once(args, cwd, home, state, version, root, human, can_prompt, first)
+        result = _run_setup_once(
+            args, cwd, home, state, version, root, human, can_prompt, first, defer
+        )
         if result is None:
             return None
+        if defer:
+            defer_to_tui(state, version, home)
     if human and findings:
         _review_setup(args, findings, home, root, can_prompt)
     return result
@@ -473,9 +502,10 @@ def _run_setup_once(
     human: bool,
     can_prompt: bool,
     first: bool,
+    defer: bool = False,
 ) -> dict[str, Any] | None:
     choice = choice_from_args(args, cwd, home, state)
-    if human and can_prompt and first:
+    if human and can_prompt and first and not defer:
         result = run_wizard(
             cwd,
             home,
@@ -512,7 +542,7 @@ def _run_setup_once(
             allow_prompt=False,
             pointer_mode=getattr(args, "agents_pointer", None),
         )
-    if first and human and not getattr(args, "json", False):
+    if first and human and not defer and not getattr(args, "json", False):
         _announce_setup(result)
     return result
 

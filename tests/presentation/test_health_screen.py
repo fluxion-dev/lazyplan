@@ -17,11 +17,12 @@ from lazyplan.presentation.setup.health import (
 from lazyplan.presentation.setup.integrations import ReviewResult
 
 try:
-    from textual.widgets import Label, Static
+    from textual.widgets import Static
 
     from lazyplan.presentation.tui import create_app, launch
     from lazyplan.presentation.tui.launch import Restart
     from lazyplan.presentation.tui.screens import HealthScreen, TextScreen
+    from lazyplan.presentation.tui.widgets.taskbar import Taskbar
 except ImportError:  # pragma: no cover - textual not installed
     create_app = HealthScreen = None  # type: ignore[assignment]
 
@@ -122,7 +123,7 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
         app = self.app(HealthReport(findings=(hidden, GH)))
         async with app.run_test(size=(140, 40)) as pilot:
             await self.settle(pilot)
-            hints = str(app.query_one("#hints", Label).render())
+            hints = str(app.query_one("#hints", Taskbar).render())
             self.assertIn("health", hints)
             self.assertIn("2 issues", hints)
 
@@ -149,7 +150,7 @@ class HealthScreenTest(unittest.IsolatedAsyncioTestCase):
             app.action_health_prompt()
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), 1)
-            hints = str(app.query_one("#hints", Label).render())
+            hints = str(app.query_one("#hints", Taskbar).render())
             self.assertNotIn("health", hints)
 
     async def test_install_and_restart_installs_fixable_findings_then_exits(self) -> None:

@@ -5,14 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Protocol
 
-from textual.widgets import Label
-
 from ...setup.health import HealthFinding, HealthReport, items_of
 from ...setup.integrations import ReviewResult
 from ...shared.help import hint_bar
 from ..launch import Restart
 from ..screens import TextScreen
 from ..screens.health import INSTALL, LATER, NEVER, HealthScreen
+from ..widgets.taskbar import Taskbar
+from .background import run_off_thread
 
 if TYPE_CHECKING:
     from ..app import LazyplanApp
@@ -50,22 +50,36 @@ class HealthController:
             self.app.push_screen(TextScreen("RESTART YOUR AGENTS", self.restart_notice))
         if self.check is None:
             return
-        self.app.run_worker(self._worker, thread=True, group="health")
+        run_off_thread(self.app, self._check, self._apply, "health")
 
-    def _worker(self) -> None:
-        assert self.check is not None
-        try:
-            session = self.check()
-            report = session.report()
-        except Exception:  # noqa: BLE001 - a failed check must never break the TUI
+    def refresh(self) -> None:
+        """Re-run the check off the UI thread without offering anything."""
+        if self.check is None:
             return
-        self.app.call_from_thread(self.apply, session, report)
+        run_off_thread(
+            self.app,
+            self._check,
+            lambda pair: self.apply(*pair, prompt=False),
+            "health",
+        )
 
-    def apply(self, session: HealthSession, report: HealthReport) -> None:
+    def _check(self) -> tuple[HealthSession, HealthReport]:
+        assert self.check is not None
+        session = self.check()
+        return session, session.report()
+
+    def _apply(self, result: tuple[HealthSession, HealthReport]) -> None:
+        self.apply(*result)
+
+    def apply(self, session: HealthSession, report: HealthReport, prompt: bool = True) -> None:
         """Store the report, update the chip, and prompt for open errors."""
         self.session = session
         self.report = report
         self.refresh_hints()
+        if not prompt:
+            return
+        if self.app.setup_controller.pending:
+            return
         if report.should_prompt:
             self._offer(report.open, review=False)
 
@@ -112,7 +126,9 @@ class HealthController:
         return f" · [reverse] health [/]{count} {'issue' if count == 1 else 'issues'}"
 
     def refresh_hints(self) -> None:
-        """Repaint the key hints with the health chip on the end."""
-        chip = self.chip()
-        width = max(10, self.app.size.width - 2 - len(chip))
-        self.app.query_one("#hints", Label).update(hint_bar(width, markup=True) + chip)
+        """Repaint the key hints, health chip, and version badge."""
+        width = max(10, self.app.size.width - 4)
+        self.app.query_one("#hints", Taskbar).set_for_app(
+            hint_bar(width, markup=True),
+            health=self.chip(),
+        )

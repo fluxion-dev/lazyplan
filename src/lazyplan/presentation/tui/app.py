@@ -10,7 +10,6 @@ plus a live_fingerprint() poll that the feed toast summarizes.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -20,12 +19,13 @@ try:
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
     from textual.reactive import reactive
-    from textual.widgets import Label, Static, Tree
+    from textual.widgets import Static, Tree
     from textual.widgets.tree import TreeNode
 
     from ..shared.tree_nav import NavTree  # noqa: F401
     from .navigation import NAV_BINDINGS
     from .query import query_one_opt
+    from .widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -46,6 +46,7 @@ from .base import AppBase
 from .controllers.git_state import GitStateController
 from .controllers.health import HealthCheck, HealthController
 from .controllers.metrics import MetricsController
+from .controllers.setup import SetupController, WizardCheck
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
@@ -54,7 +55,7 @@ from .metrics import MetricsSection
 from .preview import PreviewMixin
 from .screens import ReleaseNotesScreen
 from .state import AppState
-from .theme import register_themes
+from .theme import register_themes, remembered_theme
 from .tree import TreeMixin
 from .widgets.agents_panel import AgentsPanel
 from .widgets.git_panel import GitPanel
@@ -87,6 +88,7 @@ if _TEXTUAL_OK:
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
             Binding("T", "toggle_timeline", "Timeline"),
+            Binding("S", "open_setup", "Setup"),
             Binding("n", "new_context", "New"),
             Binding("e", "edit_selection", "Edit"),
             Binding("s", "toggle_status", "Status"),
@@ -147,7 +149,7 @@ if _TEXTUAL_OK:
 
         def __init__(self, store: Store) -> None:
             super().__init__()
-            register_themes(self)
+            register_themes(self, remembered_theme())
             self.store = store
             self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()
@@ -157,6 +159,7 @@ if _TEXTUAL_OK:
             self.tree_controller = TreeController(self)
             self.update_controller = UpdateController(self)
             self.health_controller = HealthController(self)
+            self.setup_controller = SetupController(self)
             self.git_state_controller = GitStateController(self)
             self.metrics_controller = MetricsController(self)
             self._fp: Any = store.fingerprint()
@@ -175,6 +178,20 @@ if _TEXTUAL_OK:
         def action_health_prompt(self) -> None:
             """Open the health check with every finding, hidden ones included."""
             self.health_controller.prompt()
+
+        def refresh_taskbar(self) -> None:
+            """Push the current update state into every visible taskbar."""
+            latest = self.update_controller.latest
+            for screen in self.screen_stack:
+                try:
+                    for bar in screen.query(Taskbar):
+                        bar.set_latest(latest)
+                except Exception:  # noqa: BLE001 - a closing screen may race a poll
+                    continue
+
+        def action_open_setup(self) -> None:
+            """Reopen the setup wizard from the palette or the S key."""
+            self.setup_controller.open()
 
         def action_release_notes(self) -> None:
             """Open the bundled release notes for the installed version."""
@@ -208,7 +225,7 @@ if _TEXTUAL_OK:
                     with Vertical(id="side"):
                         yield PreviewPanel()
                 yield MetricsSection()
-            yield Label("", id="hints")
+            yield Taskbar("", id="hints")
 
         async def _on_resize(self, event: events.Resize) -> None:
             """Textual stops Resize at the App; re-apply the shell after it."""
@@ -230,7 +247,7 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help"):
+            if len(self.screen_stack) > 1 and action not in ("quit", "help", "update_prompt"):
                 return False
             return True
 
@@ -241,7 +258,9 @@ if _TEXTUAL_OK:
             self.set_interval(0.25, self._poll)
             self.update_controller.start()
             self.metrics_controller.start()
-            self.health_controller.start()
+            # The setup check runs first so a pending wizard suppresses the
+            # startup health prompt instead of duplicating it.
+            self.setup_controller.start(self.health_controller.start)
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
@@ -259,6 +278,7 @@ if _TEXTUAL_OK:
         startup_notes: str = "",
         health_check: HealthCheck | None = None,
         restart_notice: str = "",
+        wizard_check: WizardCheck | None = None,
     ) -> LazyplanApp:
         """Build the app bound to a store."""
         app = LazyplanApp(Store(db_path))
@@ -266,17 +286,26 @@ if _TEXTUAL_OK:
         app._startup_notes = startup_notes
         app.health_controller.check = health_check
         app.health_controller.restart_notice = restart_notice
+        app.setup_controller.check = wizard_check
         return app
 
 
-def _startup_health_check(db_path: str | None) -> HealthCheck | None:
-    """The real check, off for a caller-owned database or a skipped setup."""
-    from ..setup.constants import NO_SETUP_ENV
-    from ..setup.health import current
+def _startup_checks(
+    db_path: str | None,
+) -> tuple[HealthCheck | None, WizardCheck | None]:
+    """The two read-only startup checks, built once from one cwd and version."""
+    from ..setup.triggers import setup_off
 
-    if db_path or os.environ.get("LAZYPLAN_DB") or os.environ.get(NO_SETUP_ENV, "").strip():
-        return None
-    return lambda: current(Path.cwd(), version=package_version())
+    if setup_off(db_path):
+        return None, None
+    from ..setup.health import current as health_check
+    from .controllers.setup import current as wizard_check
+
+    cwd, version = Path.cwd(), package_version()
+    return (
+        lambda: health_check(cwd, version=version),
+        wizard_check(cwd, version=version),
+    )
 
 
 def run(db_path: str | None = None) -> int:
@@ -288,12 +317,14 @@ def run(db_path: str | None = None) -> int:
     startup_notice, exit_now = launch_update()
     if exit_now:
         return 0
+    health_check, wizard_check = _startup_checks(db_path)
     app = create_app(
         db_path,
         startup_notice,
         launch_notes(),
-        _startup_health_check(db_path),
-        take_restart_notice(),
+        health_check=health_check,
+        restart_notice=take_restart_notice(),
+        wizard_check=wizard_check,
     )
     result = app.run()
     if isinstance(result, Restart):

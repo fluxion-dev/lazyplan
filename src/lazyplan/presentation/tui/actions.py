@@ -30,7 +30,7 @@ from .screens import (
     PaletteScreen,
 )
 from .status_actions import StatusMixin
-from .theme import next_theme
+from .theme import next_theme, remember_theme
 
 _TEXTUAL_OK = True
 
@@ -144,7 +144,8 @@ if _TEXTUAL_OK:
             """Cycle mocha, void, and latte; the chart redraws after the CSS."""
             selected = next_theme(self.theme)
             self.theme = selected
-            self.notify(f"theme: {selected.removeprefix('lazyplan-')}", timeout=2)
+            stored = remember_theme(selected)
+            self.notify(f"theme: {stored.removeprefix('lazyplan-')}", timeout=2)
             self.call_after_refresh(self.metrics_controller.refresh)
 
         def action_command_palette(self) -> None:

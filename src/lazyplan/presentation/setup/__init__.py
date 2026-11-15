@@ -49,7 +49,19 @@ from .integrations import (
 )
 from .layout import SetupChoice, SetupLayout
 from .moves import move_repo_db
+from .session import SetupDraft, SetupSession, SetupSessionError
 from .state import SetupState, git_state, load_state, plans_in, save_state, state_path
+from .steps import Step, visible_steps
+from .triggers import (
+    WizardNeed,
+    clear_pending,
+    detect,
+    mark_pending,
+    pending_reason,
+    setup_off,
+    textual_available,
+    tui_owns_setup,
+)
 from .wizard import run_wizard
 
 setup_layout = layout
@@ -71,13 +83,20 @@ __all__ = [
     "Inspection",
     "ReviewResult",
     "SetupChoice",
+    "SetupDraft",
     "SetupLayout",
+    "SetupSession",
+    "SetupSessionError",
     "SetupState",
+    "Step",
+    "WizardNeed",
     "apply_choice",
     "choice_from_args",
     "choice_from_state",
     "cleanup_repo_artifacts",
+    "clear_pending",
     "default_choice",
+    "detect",
     "detect_findings",
     "ensure",
     "git_state",
@@ -87,7 +106,9 @@ __all__ = [
     "install_pointer",
     "layout",
     "load_state",
+    "mark_pending",
     "move_repo_db",
+    "pending_reason",
     "plans_in",
     "preview",
     "refresh_installed_hooks",
@@ -100,6 +121,10 @@ __all__ = [
     "save_state",
     "setup_layout",
     "setup_ui",
+    "setup_off",
     "state_path",
+    "textual_available",
+    "tui_owns_setup",
     "ui",
+    "visible_steps",
 ]

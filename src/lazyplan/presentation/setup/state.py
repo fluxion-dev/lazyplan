@@ -49,6 +49,10 @@ class SetupState:
     agents_file: str = ""
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
     integration_choices: dict[str, dict[str, Any]] = field(default_factory=dict)
+    theme: str = ""
+    wizard_pending: str = ""
+    wizard_version: str = ""
+    wizard_completed: str = ""
 
     def effective_mode(self) -> str:
         """Installed mode, forced to off when hooks are disabled."""
@@ -72,6 +76,10 @@ class SetupState:
             "agents_file": self.agents_file,
             "decisions": self.decisions,
             "integration_choices": self.integration_choices,
+            "theme": self.theme,
+            "wizard_pending": self.wizard_pending,
+            "wizard_version": self.wizard_version,
+            "wizard_completed": self.wizard_completed,
         }
 
     @classmethod
@@ -79,43 +87,65 @@ class SetupState:
         """Tolerant parse: unknown shapes fall back to defaults."""
         if not isinstance(raw, dict):
             return cls()
+        hooks_enabled, hooks_mode = _hooks(raw)
         placement = raw.get("placement")
-        agents = raw.get("agents")
         decisions = raw.get("decisions")
-        hooks_enabled = bool(raw.get("hooks_enabled", raw.get("hooks", True)))
-        stored_mode = raw.get("hooks_mode")
-        hooks_mode = (
-            normalize_mode(stored_mode, "")
-            if str(stored_mode or "").strip()
-            else ("strict" if hooks_enabled else "off")
-        )
-        if hooks_mode not in MODES:
-            hooks_mode = "strict" if hooks_enabled else "off"
+        agents = raw.get("agents")
         return cls(
             version=int(raw.get("version", SETUP_VERSION) or SETUP_VERSION),
             placement=placement if placement in (HOME, REPO) else HOME,
-            agents=[str(a) for a in agents] if isinstance(agents, list) else [],
-            skills_dir=str(raw.get("skills_dir", "") or ""),
-            explicit_db=bool(raw.get("explicit_db", False)),
-            last_version=str(raw.get("last_version", "") or ""),
-            hooks=bool(raw.get("hooks", False)),
-            hooks_enabled=hooks_enabled and hooks_mode != "off",
+            agents=[str(agent) for agent in agents] if isinstance(agents, list) else [],
+            skills_dir=_text(raw, "skills_dir"),
+            explicit_db=_flag(raw, "explicit_db"),
+            last_version=_text(raw, "last_version"),
+            hooks=_flag(raw, "hooks"),
+            hooks_enabled=hooks_enabled,
             hooks_mode=hooks_mode,
-            hook_files=[str(p) for p in raw.get("hook_files", [])]
-            if isinstance(raw.get("hook_files"), list)
-            else [],
-            profile_files=[str(p) for p in raw.get("profile_files", [])]
-            if isinstance(raw.get("profile_files"), list)
-            else [],
-            skills_enabled=bool(raw.get("skills_enabled", True)),
-            agents_pointer=bool(raw.get("agents_pointer", False)),
-            agents_file=str(raw.get("agents_file", "") or ""),
+            hook_files=_texts(raw, "hook_files"),
+            profile_files=_texts(raw, "profile_files"),
+            skills_enabled=_flag(raw, "skills_enabled", True),
+            agents_pointer=_flag(raw, "agents_pointer"),
+            agents_file=_text(raw, "agents_file"),
             decisions=decisions if isinstance(decisions, dict) else {},
             integration_choices=_integration_choices(raw.get("integration_choices")),
+            theme=_text(raw, "theme"),
+            wizard_pending=_text(raw, "wizard_pending"),
+            wizard_version=_text(raw, "wizard_version"),
+            wizard_completed=_text(raw, "wizard_completed"),
         )
 
 
 INTEGRATION_DECISIONS = ("installed", "deferred", "never")
+
+
+def _text(raw: dict[str, Any], key: str) -> str:
+    """Read one string field, mapping missing and null values to empty."""
+    return str(raw.get(key, "") or "")
+
+
+def _flag(raw: dict[str, Any], key: str, default: bool = False) -> bool:
+    """Read one boolean field, keeping the stored default when absent."""
+    return bool(raw.get(key, default))
+
+
+def _texts(raw: dict[str, Any], key: str) -> list[str]:
+    """Read a list of paths, ignoring anything that is not a list."""
+    values = raw.get(key, [])
+    return [str(value) for value in values] if isinstance(values, list) else []
+
+
+def _hooks(raw: dict[str, Any]) -> tuple[bool, str]:
+    """Normalize the stored hook mode and whether hooks stay enabled."""
+    enabled = bool(raw.get("hooks_enabled", raw.get("hooks", True)))
+    stored = raw.get("hooks_mode")
+    mode = (
+        normalize_mode(stored, "")
+        if str(stored or "").strip()
+        else ("strict" if enabled else "off")
+    )
+    if mode not in MODES:
+        mode = "strict" if enabled else "off"
+    return enabled and mode != "off", mode
 
 
 def _integration_choices(raw: object) -> dict[str, dict[str, Any]]:

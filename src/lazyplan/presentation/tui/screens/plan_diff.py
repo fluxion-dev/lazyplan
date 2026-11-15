@@ -9,6 +9,8 @@ try:
     from textual.screen import Screen  # noqa: F401
     from textual.widgets import Label, Static  # noqa: F401
 
+    from ..widgets.taskbar import Taskbar
+
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
     _TEXTUAL_OK = False
@@ -26,6 +28,7 @@ if _TEXTUAL_OK:
         BINDINGS = [
             Binding("escape", "back", "Back", priority=True),
             Binding("q", "back", "Quit", priority=True),
+            Binding("U", "update_prompt", "Update", show=False),
         ]
 
         def __init__(self, result: DiffResult) -> None:
@@ -37,7 +40,7 @@ if _TEXTUAL_OK:
                 yield Static("", id="plan-diff-head")
                 with VerticalScroll(id="plan-diff-scroll"):
                     yield Static("", id="plan-diff-body")
-                yield Label("", id="plan-diff-hints")
+                yield Taskbar("", id="plan-diff-hints")
 
         def on_mount(self) -> None:
             self.query_one("#plan-diff-page").border_title = " plan diff "
@@ -47,10 +50,14 @@ if _TEXTUAL_OK:
             )
             self.query_one("#plan-diff-head", Static).update(head)
             self.query_one("#plan-diff-body", Static).update(body)
-            self.query_one("#plan-diff-hints", Label).update(
-                action_bar(None, [("↑↓", "scroll"), ("esc", "back")])
+            self.query_one("#plan-diff-hints", Taskbar).set_for_app(
+                action_bar(None, [("↑↓", "scroll"), ("esc", "back")]),
             )
             self.query_one("#plan-diff-scroll", VerticalScroll).focus()
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen without leaving this view."""
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
 
         def action_back(self) -> None:
             """Return to the plan tree."""

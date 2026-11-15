@@ -12,7 +12,6 @@ const SETUP_STEPS = [
   "Hooks and the pointer",
   "Model targets",
   "Role tiers and effort",
-  "New integrations",
   "Appearance and checks",
   "Review and apply",
 ] as const

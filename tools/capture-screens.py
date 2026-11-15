@@ -65,6 +65,24 @@ TRANSCRIPT_SIZE = (120, 22)
 CLI_SIZE = (130, 22)
 DEFAULT_OUT = ROOT / "site" / "public" / "screens"
 FIXTURE_ROOT = Path(tempfile.gettempdir()) / "lpui-fixtures"
+
+#: Scenes the site itself publishes. The full review surface lives in
+#: ``site/public/ux``; running with ``--only`` still writes any scene anywhere.
+SITE_SCENES = frozenset(
+    {
+        "lpui-control-room",
+        "lpui-detail",
+        "lpui-dispatch",
+        "lpui-git-pane",
+        "lpui-setup",
+        "lpui-setup-review",
+        "lpui-source-trail",
+        "lpui-timeline",
+        "lpui-trace",
+        "lpui-update",
+        "lpui-worktrees",
+    }
+)
 DATE = "2026-10-01T09:00:00+00:00"
 AUTHOR = "Ada Lovelace"
 EMAIL = "ada@acme.dev"
@@ -149,9 +167,20 @@ def build_source_fixture(tmp: Path) -> Store:
     git(repo, "remote", "add", "origin", REMOTE)
 
     store = Store(str(tmp / "plan.db"))
-    plan = store.add_plan("Ship the source trail")
+    plan = store.add_plan(
+        "Ship the source trail",
+        "Read the commits, changed files, and pull requests behind each task"
+        " without leaving the plan.",
+        goal="Know where a task landed and whether its evidence is current.",
+    )
+    store.add_criteria("plan", plan.id, "Every task links the commit it shipped")
+    store.add_criteria("plan", plan.id, "Missing proof is marked stale, never hidden")
     milestone = store.add_milestone(plan.id, "Read diffs in place")
-    task = store.add_task(milestone.id, "Render unified diffs")
+    task = store.add_task(
+        milestone.id,
+        "Render unified diffs",
+        "Show additions and removals inline for the selected commit.",
+    )
     store.add_repo_link("task", task.id, str(repo), REMOTE, branch="main", base_sha=base)
     for subject, sha, files in linked:
         store.link_commit(
@@ -1236,6 +1265,8 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
     os.environ.setdefault("LAZYPLAN_NO_SETUP", "1")
     os.environ.setdefault("LAZYPLAN_NO_UPDATE_CHECK", "1")
     names = only or list(SCENES)
+    if not only and out_dir == DEFAULT_OUT.resolve():
+        names = [name for name in names if name in SITE_SCENES]
     unknown = [name for name in names if name not in SCENES]
     if unknown:
         raise SystemExit(f"error: unknown scene(s): {', '.join(unknown)}")

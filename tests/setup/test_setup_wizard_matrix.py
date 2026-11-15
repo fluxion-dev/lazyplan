@@ -66,6 +66,11 @@ class WizardSplitCase(unittest.TestCase):
         self.old_cwd = os.getcwd()
         sandbox_home(self, self.home)
         os.chdir(self.repo)
+        # The deferral contract needs Textual installed; the fallback is
+        # covered separately by `test_the_terminal_wizard_stays_without_textual`.
+        available = mock.patch.object(triggers, "textual_available", return_value=True)
+        available.start()
+        self.addCleanup(available.stop)
 
     def tearDown(self) -> None:
         os.chdir(self.old_cwd)

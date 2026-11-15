@@ -45,6 +45,11 @@ class TuiDeferCase(unittest.TestCase):
         subprocess.run(["git", "init", "-q", self.repo], check=True)
         self.old_db = os.environ.pop("LAZYPLAN_DB", None)
         sandbox_home(self, str(self.home))
+        # The deferral contract needs Textual installed; the fallback is
+        # covered separately by the matrix without-textual case.
+        available = mock.patch.object(triggers, "textual_available", return_value=True)
+        available.start()
+        self.addCleanup(available.stop)
 
     def tearDown(self) -> None:
         if self.old_db is not None:

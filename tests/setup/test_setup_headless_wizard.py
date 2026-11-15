@@ -52,6 +52,11 @@ class HeadlessWizardCase(unittest.TestCase):
         self.old_cwd = os.getcwd()
         sandbox_home(self, self.home)
         os.chdir(self.repo)
+        # The deferral contract needs Textual installed; the fallback is
+        # covered separately by the matrix without-textual case.
+        available = mock.patch.object(triggers, "textual_available", return_value=True)
+        available.start()
+        self.addCleanup(available.stop)
 
     def tearDown(self) -> None:
         os.chdir(self.old_cwd)
@@ -166,6 +171,7 @@ class HeadlessWizardCase(unittest.TestCase):
         self.assertTrue(report["wizard"]["due"])
         self.assertEqual(report["wizard"]["reason"], triggers.FRESH)
 
+    @unittest.skipUnless(triggers.textual_available(), "textual not installed")
     def test_doctor_never_opens_the_wizard(self) -> None:
         with (
             mock.patch("lazyplan.presentation.tui.run") as run,

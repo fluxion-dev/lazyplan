@@ -9,13 +9,14 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan.presentation.setup.state import SetupState, load_state, save_state
-from lazyplan.presentation.tui.theme import themes
 from tests.support.home import sandbox_home
 
 try:
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.theme import themes
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
+    themes = None  # type: ignore[assignment]
 
 
 class FakeApp:
@@ -29,6 +30,7 @@ class FakeApp:
         self.registered.append(str(getattr(theme, "name", theme)))
 
 
+@unittest.skipUnless(create_app is not None, "textual not installed")
 class ThemeChoiceTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()

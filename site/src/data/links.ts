@@ -17,8 +17,9 @@ export type NavLink = Readonly<{
 }>
 
 export const NAV_LINKS: readonly NavLink[] = [
-  { href: "#story", label: "Story" },
-  { href: "#features", label: "Features" },
+  { href: "#first-run", label: "First run" },
+  { href: "#story", label: "Plan" },
+  { href: "#dispatch", label: "Dispatch" },
   { href: "#proof", label: "Proof" },
   { href: "#screens", label: "Screenshots" },
   { href: "#faq", label: "FAQ" },

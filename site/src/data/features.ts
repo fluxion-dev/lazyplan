@@ -6,8 +6,10 @@ export type FeatureIcon =
   | "activity"
   | "bot"
   | "database"
+  | "download"
   | "git-branch"
   | "keyboard"
+  | "layers"
   | "list-checks"
   | "lock"
   | "messages-square"
@@ -17,6 +19,8 @@ export type FeatureIcon =
   | "route"
   | "search"
   | "shield-check"
+  | "sliders"
+  | "sparkles"
   | "timer"
 
 export type Feature = Readonly<{

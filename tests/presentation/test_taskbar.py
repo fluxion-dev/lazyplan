@@ -9,17 +9,37 @@ from pathlib import Path
 try:
     from textual.content import Content
 
+    from lazyplan.core.entities import PlanRevision
     from lazyplan.presentation.cli.parser import package_version
     from lazyplan.presentation.setup.health import HealthFinding, HealthReport
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.screens import UpdateScreen
+    from lazyplan.presentation.tui.screens.plan_diff import PlanDiffScreen
     from lazyplan.presentation.tui.widgets.taskbar import (
         Taskbar,
-        badge_markup,
+        badge_start,
         taskbar_markup,
         version_text,
     )
+    from lazyplan.services.revisions import DiffResult
 except ImportError as exc:  # pragma: no cover - textual not installed
     raise unittest.SkipTest(f"textual not installed: {exc}") from None
+
+REVISION = PlanRevision(
+    id=1,
+    plan_id=1,
+    revision=1,
+    approved_at=0.0,
+    digest="b" * 64,
+    snapshot="{}",
+)
+EMPTY_DIFF = DiffResult(
+    plan_id=1,
+    from_revision=REVISION,
+    to_revision=None,
+    entries=(),
+    summary={"add": 0, "remove": 0, "change": 0, "move": 0, "total": 0},
+)
 
 
 def plain(markup: str) -> str:
@@ -43,8 +63,10 @@ class VersionTextTest(unittest.TestCase):
         self.assertEqual(version_text(""), "")
         self.assertEqual(version_text("  "), "")
 
-    def test_the_badge_is_a_clickable_update_action(self) -> None:
-        self.assertIn("@click=app.action_update_prompt", badge_markup("v0.47.0"))
+    def test_the_badge_starts_at_the_right_edge(self) -> None:
+        line = taskbar_markup(" ? help", running="0.47.0", width=40)
+        start = badge_start(running="0.47.0", width=40)
+        self.assertTrue(plain(line)[start:].startswith("v0.47.0"))
 
 
 class TaskbarMarkupTest(unittest.TestCase):
@@ -135,3 +157,39 @@ class TaskbarPilotTest(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             text = str(app.query_one("#hints", Taskbar).render())
             self.assertLess(text.index("health"), text.index("v"))
+
+    async def test_clicking_the_badge_opens_the_update_screen(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.update_controller.latest = "99.0.0"
+            app.refresh_taskbar()
+            bar = app.query_one("#hints", Taskbar)
+            await pilot.click(bar, offset=(bar.size.width - 2, 0))
+            await pilot.pause()
+            self.assertIsInstance(app.screen, UpdateScreen)
+
+    async def test_u_opens_updates_from_a_stacked_screen(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.update_controller.latest = "99.0.0"
+            app.push_screen(PlanDiffScreen(EMPTY_DIFF))
+            await pilot.pause()
+            await pilot.press("U")
+            await pilot.pause()
+            self.assertIsInstance(app.screen, UpdateScreen)
+
+    async def test_a_poll_refreshes_every_visible_bar(self) -> None:
+        app = create_app(self.db)
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.push_screen(PlanDiffScreen(EMPTY_DIFF))
+            await pilot.pause()
+            app.update_controller.latest = "99.0.0"
+            app.refresh_taskbar()
+            await pilot.pause()
+            main = str(app.screen_stack[0].query_one("#hints", Taskbar).render())
+            diff = str(app.screen.query_one("#plan-diff-hints", Taskbar).render())
+            self.assertIn("→ v99.0.0", main)
+            self.assertIn("→ v99.0.0", diff)

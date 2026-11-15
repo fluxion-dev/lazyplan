@@ -28,6 +28,7 @@ if _TEXTUAL_OK:
         BINDINGS = [
             Binding("escape", "back", "Back", priority=True),
             Binding("q", "back", "Quit", priority=True),
+            Binding("U", "update_prompt", "Update", show=False),
         ]
 
         def __init__(self, result: DiffResult) -> None:
@@ -54,6 +55,10 @@ if _TEXTUAL_OK:
                 latest=str(getattr(getattr(self.app, "update_controller", None), "latest", "")),
             )
             self.query_one("#plan-diff-scroll", VerticalScroll).focus()
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen without leaving this view."""
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
 
         def action_back(self) -> None:
             """Return to the plan tree."""

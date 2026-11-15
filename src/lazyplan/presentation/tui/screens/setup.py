@@ -83,6 +83,7 @@ if _TEXTUAL_OK:
             Binding("b", "previous", "Back"),
             Binding("n", "next", NEXT_LABEL),
             Binding("l", "later", LATER_LABEL),
+            Binding("U", "update_prompt", "Update", show=False),
         ]
 
         def __init__(
@@ -387,6 +388,10 @@ if _TEXTUAL_OK:
             """Put the preview back when the run ends without applying."""
             if self._initial_theme and getattr(self.app, "theme", "") != self._initial_theme:
                 self.app.theme = self._initial_theme
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen without leaving this view."""
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
 
         def action_cancel(self) -> None:
             """Ask before discarding edits, then close without writing."""

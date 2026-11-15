@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from textual import events
 from textual.content import Content
 from textual.widgets import Static
 
@@ -36,10 +37,29 @@ def version_text(running: str, latest: str = "") -> str:
 
 
 def badge_markup(text: str) -> str:
-    """The clickable badge; an empty version renders nothing."""
-    if not text:
-        return ""
-    return f"[@click=app.action_update_prompt]{escape_markup(text)}[/]"
+    """The badge text; the taskbar handles its click."""
+    return escape_markup(text) if text else ""
+
+
+def _right_markup(health: str, running: str, latest: str) -> str:
+    """Health first, then the version badge, joined by the shared gap."""
+    return VERSION_GAP.join(
+        part for part in (health, badge_markup(version_text(running, latest))) if part
+    )
+
+
+def badge_start(
+    *,
+    health: str = "",
+    running: str = "",
+    latest: str = "",
+    width: int = 80,
+) -> int:
+    """The column where the clickable badge begins."""
+    right = _right_markup(health, running, latest)
+    if not right:
+        return 0
+    return max(0, width - Content.from_markup(right).cell_length)
 
 
 def taskbar_markup(
@@ -51,9 +71,7 @@ def taskbar_markup(
     width: int = 80,
 ) -> str:
     """Compose one right-aligned taskbar line within *width* columns."""
-    right = VERSION_GAP.join(
-        part for part in (health, badge_markup(version_text(running, latest))) if part
-    )
+    right = _right_markup(health, running, latest)
     if not right:
         return hints
     right_len = Content.from_markup(right).cell_length
@@ -80,6 +98,7 @@ class Taskbar(Static):
         self._health = ""
         self._version_running = ""
         self._version_latest = ""
+        self._badge_start = 0
         super().__init__(content, markup=True, **kwargs)
 
     def set_line(
@@ -101,12 +120,29 @@ class Taskbar(Static):
         self._version_latest = latest
         self._repaint()
 
+    def set_latest(self, latest: str) -> None:
+        """Repaint after an update poll names or clears a newer release."""
+        self._version_latest = latest
+        self._repaint()
+
     def on_resize(self) -> None:
         """Keep the badge pinned after a terminal resize."""
         self._repaint()
 
+    def on_click(self, event: events.Click) -> None:
+        """Open updates when the click lands on the version badge."""
+        if self._badge_start and event.x >= self._badge_start:
+            event.stop()
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
+
     def _repaint(self) -> None:
         width = max(10, self.size.width or 80)
+        self._badge_start = badge_start(
+            health=self._health,
+            running=self._version_running,
+            latest=self._version_latest,
+            width=width,
+        )
         self.update(
             taskbar_markup(
                 self._hints,

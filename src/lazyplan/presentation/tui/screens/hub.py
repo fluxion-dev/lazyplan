@@ -59,6 +59,7 @@ if _TEXTUAL_OK:
             Binding("o", "open_value", "Open"),
             Binding("g", "source_hub", "Source"),
             Binding("r", "refresh", "Refresh"),
+            Binding("U", "update_prompt", "Update", show=False),
         ]
 
         def __init__(self, store: Any) -> None:
@@ -220,6 +221,10 @@ if _TEXTUAL_OK:
             from .source import SourceScreen
 
             self.app.push_screen(SourceScreen(self.store, parent[0], parent[1]))
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen without leaving this view."""
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
 
         def action_back(self) -> None:
             handler = getattr(self.app, "action_history_back", None)

@@ -84,6 +84,7 @@ if _TEXTUAL_OK:
             Binding("y", "copy", "Copy"),
             Binding("slash", "filter", "Filter"),
             Binding("r", "refresh", "Refresh", show=False),
+            Binding("U", "update_prompt", "Update", show=False),
         ]
 
         def __init__(self, store: ProvenancePort, kind: str, oid: int) -> None:
@@ -475,6 +476,10 @@ if _TEXTUAL_OK:
             """Fold or unfold long unchanged runs."""
             self._view.fold = not self._view.fold
             self._rerender_modes()
+
+        def action_update_prompt(self) -> None:
+            """Open the update screen without leaving this view."""
+            self.app.action_update_prompt()  # type: ignore[attr-defined]
 
         def action_back(self) -> None:
             """Close the source view and restore the prior selection."""

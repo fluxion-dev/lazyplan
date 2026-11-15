@@ -104,14 +104,13 @@ def _remove_deselected_profiles(
 
 
 def _install_agent_profiles(
-    choice: SetupChoice,
     skill_plan: skills.SkillPlan,
     root: Path | None,
     home: Path,
     db_path: str | Path,
+    agents: list[str],
 ) -> tuple[list[agent_install.AgentInstallResult], list[str]]:
     """Install selected-host profiles and list every target file."""
-    agents = choice.agents or [host.key for host in skills.detect_agents(home) if host.detected]
     results = agent_install.install_profiles(skill_plan.scope, root, home, agents, db_path)
     files = [
         str(path) for path in agent_install.profile_paths(skill_plan.scope, root, home, agents)
@@ -156,7 +155,7 @@ def apply_choice(
         if profile_backup is not None:
             backups.append(profile_backup)
     profile_results, profile_files = _install_agent_profiles(
-        choice, skill_plan, root, home, resolved.db
+        skill_plan, root, home, resolved.db, agents
     )
     removed_profiles = _remove_deselected_profiles(previous, agents, root, home, skill_plan.scope)
     if root is not None and choice.placement == REPO and not choice.explicit_db:

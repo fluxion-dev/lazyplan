@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -69,34 +70,15 @@ def run_wizard_flow(
         default_placement = HOME
     placement = ui.ask_placement(write, read, root, home, default_placement, color)
     base_agents = seeded.agents if seeded.agents is not None else state.agents
-    choice = SetupChoice(
+    choice = replace(
+        seeded,
         placement=placement,
         agents=base_agents or parse_agents("", home),
         skills_dir=seeded.skills_dir or state.skills_dir or None,
-        no_skills=seeded.no_skills,
-        explicit_db=seeded.explicit_db,
-        role_tiers=seeded.role_tiers,
-        tier_models=seeded.tier_models,
-        role_models=seeded.role_models,
-        model_review=seeded.model_review,
-        profiles_map=seeded.profiles_map,
-        tiers_map=seeded.tiers_map,
     )
     hosts = skills.detect_agents(home)
     selected = ui.ask_agents(write, read, hosts, list(choice.agents or []), color)
-    choice = SetupChoice(
-        placement=placement,
-        agents=selected,
-        skills_dir=choice.skills_dir,
-        no_skills=choice.no_skills,
-        explicit_db=choice.explicit_db,
-        role_tiers=choice.role_tiers,
-        tier_models=choice.tier_models,
-        role_models=choice.role_models,
-        model_review=choice.model_review,
-        profiles_map=choice.profiles_map,
-        tiers_map=choice.tiers_map,
-    )
+    choice = replace(choice, agents=selected)
     layout, skill_files = preview(choice, root, home)
     if choice.model_review and not choice.no_skills and selected:
         loaded, tiers = models.initial_maps(layout.db, home, root, selected)
@@ -109,13 +91,12 @@ def run_wizard_flow(
         )
         catalogs = host_models.discover_all(selected, home, root)
         loaded, tiers = ui.ask_models(write, read, selected, loaded, tiers, catalogs, color)
-        choice = SetupChoice(
-            placement=choice.placement,
-            agents=choice.agents,
-            skills_dir=choice.skills_dir,
-            no_skills=choice.no_skills,
-            explicit_db=choice.explicit_db,
+        choice = replace(
+            choice,
             model_review=False,
+            role_tiers=None,
+            tier_models=None,
+            role_models=None,
             profiles_map=loaded,
             tiers_map=tiers,
         )

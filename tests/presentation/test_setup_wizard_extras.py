@@ -18,13 +18,13 @@ try:
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.screens import SetupWizardScreen
-    from lazyplan.presentation.tui.screens.setup import _widget_id
     from lazyplan.presentation.tui.theme.themes import THEME_NAMES
+    from lazyplan.presentation.tui.widgets.setup_controls import widget_id
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
     SetupWizardScreen = None  # type: ignore[assignment]
 
-    def _widget_id(text: str) -> str:  # pragma: no cover - textual not installed
+    def widget_id(text: str) -> str:  # pragma: no cover - textual not installed
         return text
 
     Input = Select = Static = None  # type: ignore[assignment,misc]
@@ -97,9 +97,9 @@ class SetupWizardExtrasTest(unittest.IsolatedAsyncioTestCase):
         app = create_app(self.db)
         async with app.run_test(size=(120, 40)) as pilot:
             screen = await self.offer(app, pilot, session, "integrations")
-            screen.query_one(f"#setup-integration-{_widget_id(first.id)}", Select).value = "defer"
+            screen.query_one(f"#setup-integration-{widget_id(first.id)}", Select).value = "defer"
             await pilot.pause()
-            screen.query_one(f"#setup-integration-{_widget_id(second.id)}", Select).value = "never"
+            screen.query_one(f"#setup-integration-{widget_id(second.id)}", Select).value = "never"
             await pilot.pause()
             self.assertEqual(session.draft.integrations[first.id], "defer")
             self.assertEqual(session.draft.integrations[second.id], "never")

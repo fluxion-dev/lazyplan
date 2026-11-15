@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import copy
 import io
-import re
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -52,6 +51,14 @@ try:
     from ..navigation import NAV_BINDINGS, NavigationMixin
     from ..query import query_one_opt
     from ..theme.themes import THEME_NAMES
+    from ..widgets.setup_controls import (
+        first_focusable,
+        host_label,
+        list_block,
+        note,
+        row,
+        widget_id,
+    )
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - stdlib-only interpreter
@@ -250,22 +257,6 @@ def _managed_profile(path: Any) -> bool:
         return False
 
 
-def _widget_id(text: str) -> str:
-    """Turn a catalog id into a Textual widget id."""
-    return re.sub(r"[^A-Za-z0-9_-]+", "-", text).strip("-")
-
-
-def _first_focusable(node: Any) -> Any:
-    """The first widget in *node* that can take focus, depth first."""
-    for child in getattr(node, "children", ()):
-        if getattr(child, "can_focus", False) and not getattr(child, "disabled", False):
-            return child
-        found = _first_focusable(child)
-        if found is not None:
-            return found
-    return None
-
-
 if _TEXTUAL_OK:
 
     class SetupWizardScreen(NavigationMixin, Screen[WizardResult]):
@@ -443,21 +434,20 @@ if _TEXTUAL_OK:
             options = [Option(f"{label} — {path}", id=key) for key, label, path, _note in choices]
             widgets: list[Any] = [
                 OptionList(*options, id="setup-placement-list"),
-                Static(
+                note(
                     "Choose where the plan journal lives. Both choices keep the"
-                    " database out of version control when it sits in a checkout.",
-                    classes="setup-note",
+                    " database out of version control when it sits in a checkout."
                 ),
             ]
-            for _key, label, path, note in choices:
+            for _key, label, path, tradeoff in choices:
                 widgets.append(
                     Static(
                         f"[b]{escape_markup(label)}[/] [dim]{escape_markup(str(path))}[/]\n"
-                        f"{escape_markup(note)}",
+                        f"{escape_markup(tradeoff)}",
                         classes="setup-choice",
                     )
                 )
-            widgets.append(Static(f"Current: {draft.placement}", classes="setup-note"))
+            widgets.append(note(f"Current: {draft.placement}"))
             return widgets
 
         def _agents_panel(self) -> list[Any]:
@@ -465,10 +455,9 @@ if _TEXTUAL_OK:
             draft = self.session.draft
             detected = {host.key: host for host in skills.detect_agents(self.session.home)}
             widgets: list[Any] = [
-                Static(
+                note(
                     "Selected hosts receive the lazyplan skill and managed role"
-                    " profiles. Detection is local and read-only.",
-                    classes="setup-note",
+                    " profiles. Detection is local and read-only."
                 )
             ]
             for host in HOSTS:
@@ -496,10 +485,9 @@ if _TEXTUAL_OK:
                 )
             )
             widgets.append(
-                Static(
+                note(
                     "Turning skills off leaves the hosts selected but writes no"
-                    " skill files, profiles, or model map.",
-                    classes="setup-note",
+                    " skill files, profiles, or model map."
                 )
             )
             return widgets
@@ -516,11 +504,10 @@ if _TEXTUAL_OK:
                     allow_blank=False,
                     id="setup-hooks-mode",
                 ),
-                Static(
+                note(
                     "Hooks record agent sessions, inject the active plan, and check"
                     " commits and stops. Off removes the managed hooks and asks for"
-                    " no session tracking.",
-                    classes="setup-note",
+                    " no session tracking."
                 ),
                 Checkbox(
                     "Add the lazyplan pointer to this checkout's AGENTS.md",
@@ -529,13 +516,12 @@ if _TEXTUAL_OK:
                     id="setup-pointer",
                     disabled=not pointer_ready,
                 ),
-                Static(
+                note(
                     "The pointer names the shared database so agents in this"
                     " checkout know where the plans live."
                     if pointer_ready
                     else "The pointer applies only with home placement in a git"
-                    " checkout; repo placement sets it up with the repo resources.",
-                    classes="setup-note",
+                    " checkout; repo placement sets it up with the repo resources."
                 ),
             ]
             return widgets
@@ -544,37 +530,26 @@ if _TEXTUAL_OK:
             """One tier target per selected host, with catalog options and manual entry."""
             draft = self.session.draft
             widgets: list[Any] = [
-                Static(
+                note(
                     "Each host maps the fast, standard, and deep tiers to one of its"
                     " own models. Type any model id the host accepts, or leave a"
-                    " target empty to inherit the host's configured default.",
-                    classes="setup-note",
+                    " target empty to inherit the host's configured default."
                 )
             ]
             for host in draft.agents:
                 catalog = self.session.catalogs.get(host)
                 label = catalog.label if catalog is not None else host.title()
-                widgets.append(Static(f"[b]{escape_markup(label)}[/]", classes="setup-host"))
+                widgets.append(host_label(f"[b]{escape_markup(label)}[/]"))
                 if catalog is not None:
                     source = catalog.source or "defaults"
-                    widgets.append(
-                        Static(
-                            f"[dim]source: {escape_markup(source)}[/]",
-                            classes="setup-note",
-                        )
-                    )
+                    widgets.append(note(f"[dim]source: {escape_markup(source)}[/]"))
                     if catalog.warning:
-                        widgets.append(
-                            Static(
-                                f"[yellow]{escape_markup(catalog.warning)}[/]",
-                                classes="setup-note",
-                            )
-                        )
+                        widgets.append(note(f"[yellow]{escape_markup(catalog.warning)}[/]"))
                 for tier in TIERS:
                     current = str((draft.tiers_map.get(tier) or {}).get(host, "") or "").strip()
                     widgets.append(
-                        Horizontal(
-                            Label(tier, classes="setup-row-label"),
+                        row(
+                            tier,
                             Select(
                                 self._model_options(catalog, current),
                                 value=current or INHERIT,
@@ -586,7 +561,6 @@ if _TEXTUAL_OK:
                                 placeholder="model id, empty for inherit",
                                 id=f"setup-model-{host}-{tier}",
                             ),
-                            classes="setup-row",
                         )
                     )
             return widgets
@@ -605,27 +579,22 @@ if _TEXTUAL_OK:
             draft = self.session.draft
             supported = [host for host in draft.agents if effort_policy.supports(host)]
             widgets: list[Any] = [
-                Static(
+                note(
                     "Every role names a capability tier and an optional effort"
                     " level. Effort is written only into hosts that have a native"
-                    " field; every other host stays at inherit.",
-                    classes="setup-note",
+                    " field; every other host stays at inherit."
                 )
             ]
             if not supported:
                 widgets.append(
-                    Static(
+                    note(
                         "None of the selected hosts has an effort field, so the"
-                        " effort selectors are disabled and roles stay at inherit.",
-                        classes="setup-note",
+                        " effort selectors are disabled and roles stay at inherit."
                     )
                 )
             else:
                 widgets.append(
-                    Static(
-                        f"[dim]effort renders into: {escape_markup(', '.join(supported))}[/]",
-                        classes="setup-note",
-                    )
+                    note(f"[dim]effort renders into: {escape_markup(', '.join(supported))}[/]")
                 )
             for role in AGENT_ROLES:
                 profile = draft.profiles_map.get(role)
@@ -634,8 +603,8 @@ if _TEXTUAL_OK:
                 stored = effort_policy.normalize(profile.effort)
                 level = stored if stored in effort_policy.LEVELS else effort_policy.INHERIT
                 widgets.append(
-                    Horizontal(
-                        Label(role, classes="setup-row-label"),
+                    row(
+                        role,
                         Select(
                             [(tier, tier) for tier in TIERS],
                             value=profile.tier if profile.tier in TIERS else "standard",
@@ -652,16 +621,14 @@ if _TEXTUAL_OK:
                             disabled=not supported,
                             id=f"setup-role-effort-{role}",
                         ),
-                        classes="setup-row",
                     )
                 )
                 if profile.effort and stored not in effort_policy.LEVELS:
                     widgets.append(
-                        Static(
+                        note(
                             f"[yellow]{escape_markup(role)} keeps the stored effort"
                             f" {escape_markup(profile.effort)} until you choose a"
-                            " level; choosing inherit clears it.[/]",
-                            classes="setup-note",
+                            " level; choosing inherit clears it.[/]"
                         )
                     )
             widgets.append(Button("Reset roles to tier defaults", id="setup-roles-reset"))
@@ -671,19 +638,18 @@ if _TEXTUAL_OK:
             """One install, not now, or never decision per pending item."""
             draft = self.session.draft
             widgets: list[Any] = [
-                Static(
+                note(
                     "A release can add a skill or hook surface. Install writes it"
                     " now; not now asks again next launch; never stops asking for"
-                    " this exact item.",
-                    classes="setup-note",
+                    " this exact item."
                 )
             ]
             if not self.session.pending:
-                widgets.append(Static("Nothing is pending right now.", classes="setup-note"))
+                widgets.append(note("Nothing is pending right now."))
                 return widgets
             for item in self.session.pending:
-                widget_id = _widget_id(item.id)
-                self._integration_ids[widget_id] = item.id
+                ident = widget_id(item.id)
+                self._integration_ids[ident] = item.id
                 widgets.append(
                     Static(
                         f"[b]{escape_markup(item.label)}[/] [dim]{escape_markup(item.kind)}[/]",
@@ -695,7 +661,7 @@ if _TEXTUAL_OK:
                         list(INTEGRATION_CHOICES),
                         value=draft.integrations.get(item.id, "install"),
                         allow_blank=False,
-                        id=f"setup-integration-{widget_id}",
+                        id=f"setup-integration-{ident}",
                     )
                 )
             return widgets
@@ -717,19 +683,17 @@ if _TEXTUAL_OK:
                     allow_blank=False,
                     id="setup-theme",
                 ),
-                Static(
+                note(
                     "The preview applies immediately and is remembered when you"
-                    " apply. LAZYPLAN_THEME still wins over the remembered choice.",
-                    classes="setup-note",
+                    " apply. LAZYPLAN_THEME still wins over the remembered choice."
                 ),
                 Label("Checks", classes="setup-label"),
                 Static(self._checks_text(), id="setup-checks-body", classes="setup-checks"),
                 Button("Recheck", id="setup-recheck"),
-                Static(
+                note(
                     "The checks are read-only. They name the missing tool or login"
                     " and the command that fixes it; the wizard never asks for or"
-                    " stores a token.",
-                    classes="setup-note",
+                    " stores a token."
                 ),
             ]
             return widgets
@@ -805,20 +769,14 @@ if _TEXTUAL_OK:
         def _review_panel(self) -> list[Any]:
             """Exact writes, refreshes, removals, and state changes."""
             widgets: list[Any] = [
-                Static(
+                note(
                     "Apply writes these exact files through the same setup path as"
-                    " `lpui setup`. Nothing has been written yet.",
-                    classes="setup-note",
+                    " `lpui setup`. Nothing has been written yet."
                 )
             ]
             for label, items in review_sections(self.session):
-                widgets.append(Static(f"[b]{label}[/]", classes="setup-host"))
-                widgets.append(
-                    Static(
-                        "\n".join(f"  {escape_markup(item)}" for item in items),
-                        classes="setup-list",
-                    )
-                )
+                widgets.append(host_label(f"[b]{label}[/]"))
+                widgets.append(list_block([escape_markup(item) for item in items]))
             widgets.append(Static("", id="setup-apply-status", classes="setup-apply-status"))
             return widgets
 
@@ -941,7 +899,7 @@ if _TEXTUAL_OK:
             """Focus the first control in the panel, or the Next button."""
             panel = query_one_opt(self, "#setup-panel")
             if panel is not None:
-                first = _first_focusable(panel)
+                first = first_focusable(panel)
                 if first is not None:
                     first.focus()
                     return

@@ -10,11 +10,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from lazyplan.infrastructure import agent_install
-from lazyplan.infrastructure.repo import find_repo_root, repo_plan_db_path, shared_db_path
+from lazyplan.infrastructure.repo import find_repo_root
 
-from .apply import choice_from_state
-from .constants import REPO
+from .apply import choice_from_state, profile_drift
 from .integrations import inspect
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state
@@ -142,12 +140,5 @@ def _profile_drift(
     home: Path,
 ) -> bool:
     """True when managed profiles are missing or no longer match their render."""
-    agents = choice.agents or state.agents
-    if not (state.skills_enabled and state.profile_files and agents):
-        return False
-    scope = "project" if state.placement == REPO and root is not None else "global"
-    db_path = (
-        repo_plan_db_path(root) if scope == "project" and root is not None else shared_db_path(home)
-    )
-    disk = agent_install.inspect_profiles(scope, root, home, agents, db_path)
-    return disk.broken
+    disk = profile_drift(choice, state, root, home)
+    return bool(disk and disk.broken)

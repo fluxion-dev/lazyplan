@@ -12,6 +12,8 @@ from lazyplan.infrastructure import agent_install, hook_install, profiles, skill
 from lazyplan.infrastructure.integrations import HOOK
 from lazyplan.infrastructure.repo import (
     find_repo_root,
+    repo_plan_db_path,
+    shared_db_path,
 )
 
 from ...store import Store
@@ -413,6 +415,23 @@ def choice_from_state(state: SetupState) -> SetupChoice:
         no_skills=not state.skills_enabled,
         explicit_db=None,
     )
+
+
+def profile_drift(
+    choice: SetupChoice,
+    state: SetupState,
+    root: Path | None,
+    home: Path,
+) -> agent_install.ProfileState | None:
+    """Compare managed profiles with their render, or None when none are tracked."""
+    agents = choice.agents or state.agents
+    if not (state.skills_enabled and state.profile_files and agents):
+        return None
+    scope = "project" if state.placement == REPO and root is not None else "global"
+    db_path = (
+        repo_plan_db_path(root) if scope == "project" and root is not None else shared_db_path(home)
+    )
+    return agent_install.inspect_profiles(scope, root, home, agents, db_path)
 
 
 def record_finding(state: SetupState, finding: Finding, decision: str) -> None:

@@ -16,7 +16,13 @@ CLI or the docs; write journeys start directly on the tree.
 | Ship | tree → plan detail → palette **Show plan diff** | Diff path is reachable; the CLI remains the export/file path |
 | Inspect | tree → task detail → `g` | Source trail opens; `escape` restores detail and tree |
 | Coordinate | tree → task detail → `k` / `m` | Claims, touch-points, comments, and notes are selectable |
-| Administer | `?` help, `c` palette | Help and palette open above any screen |
+| Administer | `S` setup wizard, `U` update screen | Wizard steps and the update screen open above the tree; `l` or `escape` writes nothing |
+| Learn | `W` release notes, `?` help | Notes and help open without leaving the screen |
+
+The taskbar stays readable at both sizes: the health count, when present, sits
+left of the pinned version, and the version keeps its full `vX.Y.Z` label when
+the hint line has to give up items. A cached newer release widens the badge with
+an arrow instead of truncating the version.
 
 ## Friction found and fixed
 
@@ -25,11 +31,14 @@ CLI or the docs; write journeys start directly on the tree.
   callback is now the screen dismiss handler, so link and filter actions work.
 - Criteria and comments had no edit path. Both gained an `e` key whose prompt
   pre-fills the current text.
+- The setup wizard reached only the first-run path. It now reopens from the
+  palette and `S`, still starts at Welcome so the whole contract is read once,
+  and keeps every choice when the human finishes later.
 
 ## Accepted friction
 
-- Export and setup stay CLI-only on purpose. The parity matrix records them as
-  approved exceptions.
+- Export and the release workflows stay CLI-only on purpose. Setup and update
+  now have both a screen surface and a headless command.
 
 ## Gate evidence
 

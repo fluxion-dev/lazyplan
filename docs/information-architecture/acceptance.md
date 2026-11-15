@@ -4,6 +4,11 @@
 > see `CONTRIBUTING.md`. The registry and inventory checks now cover the
 > surfaces those tests exercised.
 
+> Addendum, 2026-11-15: the setup wizard and the taskbar version badge landed
+> after this record. The inventory and reachability reports were regenerated for
+> them, the [walkthrough](walkthrough.md) records their journeys, and no P138
+> criterion changes. IA-010 in [findings](findings.md) records the check.
+
 Final validation for plan 138. Evidence is reproducible from the tree; every
 command below was run from the repository root.
 
@@ -43,10 +48,11 @@ surfaces remain pinned by the inventory and reachability reports.
 
 ## Known approved exceptions
 
-Setup, upgrade, doctor, export files, theme, fold, mark, and bulk remain on one
-surface by design. `presentation/shared/registry_surfaces.py` lists each
-exception with a reason, and `tests/ia/test_surface_parity.py` rejects an
-untracked gap.
+Export files, the release workflows, theme, fold, mark, and bulk remain on one
+surface by design; setup, update, and doctor are on both the screen and the CLI,
+but the MCP surface has no tool for them. `presentation/shared/registry_surfaces.py`
+lists each exception with a reason, and `tests/ia/test_surface_parity.py` rejects
+an untracked gap.
 
 ## Deprecations
 

@@ -36,8 +36,10 @@ The gate runs:
 - `ruff check` and `ruff format --check`
 - `mypy` in strict mode
 - `vulture` for dead code and `xenon` for complexity
+- the packaged Textual skill coverage check (`tools/gen_textual_skills.py --check`)
 - the man-page sync check (`tools/gen-man.py --check`)
 - the docs allowlist and link gate (`tools/check-docs.py`)
+- the packaged changelog sync check (`tools/check-changelog.py`)
 - the site build and discoverability check (`site/`, `tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
 - the performance budgets (`tools/perf_bench.py --check`: exact query ceilings on a deterministic fixture)
@@ -54,13 +56,23 @@ the failing unittest module names.
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.
 
-## UX review board
+## Screenshots and the UX review board
 
-`site/ux/` reviews every captured TUI, CLI, and setup screen in one place.
-Regenerate the screenshots, build the site, and serve it:
+Two capture tools build every screenshot from deterministic fixtures — fixed
+dates, synthetic actors, and a fictional `acme/web` remote — so a rerun produces
+the same images and no personal data. Both need git, ImageMagick 7 with librsvg
+and WebP, and Textual in the venv:
 
 ```bash
-.venv/bin/python tools/capture-ux-review.py
+.venv/bin/python tools/capture-screens.py      # marketing gallery
+.venv/bin/python tools/capture-ux-review.py    # every screen, plus scenes.json
+```
+
+The first writes `site/public/screens/`; the second writes
+`site/public/ux/`, where the review page reads `scenes.json`. Build the site and
+serve the board:
+
+```bash
 cd site && npm run build && cd ..
 python tools/ux-review-server.py
 ```
@@ -105,6 +117,13 @@ gh pr create --base main --fill
 Wait for the `gates` check from `.github/workflows/ci.yml`, then merge with
 merge, squash, or rebase. A pull request does not need an approving review, but
 it cannot merge without `gates`.
+
+Bigger feature sets land in two pull requests. The feature branches merge into
+one integration branch first, and that pull request carries the code and its
+gates. Docs, screenshots, and site copy follow as a second pull request cut from
+the merged `main`, so each review stays small and the marketing text is written
+against what actually shipped. Both pull requests wait for `gates`; the merge to
+`main` owns deployment.
 
 Only repository admins bypass the ruleset, for emergencies and for the first
 apply. Release automation does not: the `bump` workflow opens a release pull

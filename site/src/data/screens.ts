@@ -25,13 +25,13 @@ export const SCREENS = {
     alt: "Setup wizard on its welcome step, with the step rail on the left, the placement and agent summary in the panel, and Back, Next, and Finish later buttons.",
     caption: "First run asks, then shows every file before it writes.",
   },
-  "setup-roles": {
-    name: "setup-roles",
-    file: "lpui-setup-roles",
+  "setup-review": {
+    name: "setup-review",
+    file: "lpui-setup-review",
     width: 1604,
     height: 904,
-    alt: "Setup wizard on the role tiers step, listing each agent role with its tier selector and an effort selector beside the step rail.",
-    caption: "Every role names a tier and, where the host supports it, an effort.",
+    alt: "Setup wizard on the review step, listing every database, config, skill, pointer, and agent profile file that Apply will write before anything changes.",
+    caption: "Review lists every file before Apply writes a byte.",
   },
   update: {
     name: "update",
@@ -52,16 +52,16 @@ export const SCREENS = {
   dispatch: {
     name: "dispatch",
     file: "lpui-dispatch",
-    width: 1482,
-    height: 782,
+    width: 1604,
+    height: 587,
     alt: "Terminal transcript of lpui dispatch showing waves, lane roles, registered worktrees, the capacity line, and the claim and worktree commands to run.",
     caption: "Waves, lane capacity, worktrees, and one prompt per task.",
   },
   worktrees: {
     name: "worktrees",
     file: "lpui-worktrees",
-    width: 1482,
-    height: 782,
+    width: 1604,
+    height: 587,
     alt: "Terminal transcript of lpui plan worktree list and print showing the registered lane checkouts and the git worktree command for a new lane.",
     caption: "Every lane gets its own checkout, registered by you.",
   },
@@ -93,7 +93,7 @@ export const SCREENS = {
     name: "trace",
     file: "lpui-trace",
     width: 1482,
-    height: 782,
+    height: 587,
     alt: "Terminal transcript of lpui trace and lpui lint --strict linking acceptance criteria to tasks, commits, and pull requests, with a finding for a criterion that has no proving task.",
     caption: "Every criterion keeps its proof.",
   },
@@ -115,7 +115,7 @@ export function screen(name: ScreenName): Screen {
 
 /** Gallery order: setup, updates, the plan, lanes, and the proof trail. */
 export const GALLERY: readonly ScreenName[] = [
-  "setup-roles",
+  "setup-review",
   "update",
   "detail",
   "worktrees",

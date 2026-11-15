@@ -20,8 +20,8 @@ import importlib.util
 import io
 import json
 import os
+import shutil
 import sys
-import tempfile
 from collections.abc import Callable
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
@@ -61,14 +61,12 @@ from lazyplan.presentation.tui.screens import (  # noqa: E402
     PlanDiffScreen,
     RefScreen,
     SourceScreen,
-    TextScreen,
     UpdateScreen,
 )
 from lazyplan.presentation.tui.screens.forms import CriterionScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.hub_coordination import (  # noqa: E402
     ClaimsHub,
     CommentsHub,
-    SessionsHub,
 )
 from lazyplan.presentation.tui.screens.hub_kinds import (  # noqa: E402
     CriteriaHub,
@@ -85,6 +83,7 @@ from lazyplan.store import Store  # noqa: E402
 SIZE = cs.SIZE
 TRANSCRIPT_SIZE = (120, 30)
 DEFAULT_OUT = ROOT / "site" / "public" / "ux"
+FIXTURE_ROOT = cs.FIXTURE_ROOT / "ux"
 VERSION = package_version()
 
 
@@ -191,6 +190,7 @@ def build_ux_fixture(tmp: Path) -> Store:
         "Lin",
         ttl_seconds=10 * 365 * 24 * 3600,
         note="Reviewing flow health",
+        force=True,
     )
 
     c1 = store.add_criteria("plan", plan.id, "Claims never overlap silently", actor="Ada")
@@ -290,6 +290,7 @@ async def _capture_shell(
     theme: str | None = None,
     timeline: bool = False,
     filter_text: str = "",
+    latest: str = "",
 ) -> None:
     patch = (
         cs.mock.patch.dict(os.environ, {"LAZYPLAN_THEME": theme})
@@ -313,6 +314,9 @@ async def _capture_shell(
                 tree.focus()
             if timeline:
                 app.action_toggle_timeline()
+            if latest:
+                app.update_controller.latest = latest
+                app.refresh_taskbar()
             await pilot.pause(0.55)
             app.save_screenshot(str(target))
 
@@ -413,6 +417,34 @@ def _modal_scene(
         await _capture_modal(store, target, make(store))
 
     return Scene(id, "forms", title, state, description, look_for, keys, build, capture)
+
+
+def _setup_scene(
+    id: str,
+    title: str,
+    state: str,
+    description: str,
+    look_for: tuple[str, ...],
+    keys: str,
+    start: str = "",
+) -> Scene:
+    """One wizard step over the deterministic first-run draft."""
+
+    async def capture(store: Store | None, target: Path) -> None:
+        assert store is not None
+        await cs.capture_setup_step(store, target, start)
+
+    return Scene(
+        id,
+        "setup",
+        title,
+        state,
+        description,
+        look_for,
+        keys,
+        build_empty_fixture,
+        capture,
+    )
 
 
 # -- source captures ------------------------------------------------------
@@ -544,6 +576,12 @@ def _cli_text(store: Store, *args: str) -> str:
     if err.getvalue():
         text += "\n" + err.getvalue()
     return text.rstrip() + "\n"
+
+
+def _cli_script(store: Store, *commands: tuple[str, ...]) -> str:
+    """Several real CLI invocations, each under its own prompt line."""
+    blocks = [f"$ lpui {' '.join(args)}\n{_cli_text(store, *args)}" for args in commands]
+    return "\n".join(blocks)
 
 
 # -- scenes ---------------------------------------------------------------
@@ -755,6 +793,23 @@ def scenes() -> list[Scene]:
                 kind="task",
                 oid_of=lambda store: 1,
             ),
+            _shell_scene(
+                "shell-version",
+                "shell",
+                "Version badge with an update",
+                "Taskbar badge shows the next release",
+                "The shell taskbar with the running version at the right edge and an arrow to a newer cached release that a click or U opens.",
+                (
+                    "Is the version readable without competing with the hints?",
+                    "Does the arrow explain itself, or does it need a legend?",
+                    "Is the badge a big enough target for a mouse?",
+                ),
+                "click the badge · U update",
+                ux,
+                kind="task",
+                oid_of=lambda store: _task_id(store, "Claim the release queue (v2)"),
+                latest=cs.next_minor(VERSION),
+            ),
         ]
     )
 
@@ -846,21 +901,6 @@ def scenes() -> list[Scene]:
                     task_id=_task_id(store, "Claim the release queue (v2)"),
                     plan_id=_plan_id(store),
                 ),
-            ),
-            _hub_scene(
-                "hub-sessions",
-                "coordination",
-                "Sessions and handoffs hub",
-                "Active and ended sessions",
-                "The sessions hub: actor, host, branch, age, idle time, summary, handoff, and the recent event trail.",
-                (
-                    "Can you tell which agent needs you?",
-                    "Is idle time more useful than start time?",
-                    "Is the handoff easy to find?",
-                ),
-                "a start · d end · x end",
-                ux,
-                lambda store: SessionsHub(store, _plan_id(store)),
             ),
             _hub_scene(
                 "hub-comments",
@@ -1287,7 +1327,7 @@ def scenes() -> list[Scene]:
                 "enter download · esc close",
                 ux,
                 lambda store: UpdateScreen(
-                    "0.35.0", "0.36.0", InstallInfo(method="pip", upgradeable=True)
+                    VERSION, cs.next_minor(VERSION), InstallInfo(method="pipx", upgradeable=True)
                 ),
             ),
             Scene(
@@ -1439,12 +1479,44 @@ def scenes() -> list[Scene]:
                 lambda store: _cli_text(store, "feed", "--limit", "12"),
                 ux,
             ),
+            _transcript_scene(
+                "cli-dispatch",
+                "CLI dispatch",
+                "`lpui dispatch --plan 1`",
+                "The read-only orchestration view: waves, lane state, capacity, registered worktrees, and the claim command for each ready task.",
+                (
+                    "Does the lane block read as a plan you can act on?",
+                    "Is capacity obvious when nothing is running?",
+                    "Are the worktree paths scannable at 120 columns?",
+                ),
+                "lpui dispatch --plan 1",
+                lambda store: _cli_text(store, "dispatch", "--plan", "1"),
+                cs.build_dispatch_fixture,
+            ),
+            _transcript_scene(
+                "cli-worktrees",
+                "CLI worktrees",
+                "`lpui plan worktree list|print|add`",
+                "The worktree registry: the registered lane checkouts, the git command for a new lane, and the registration result.",
+                (
+                    "Is the branch visible beside each checkout?",
+                    "Is it clear that lazyplan never creates a worktree?",
+                    "Do the long paths wrap usefully?",
+                ),
+                "lpui plan worktree list|print|add",
+                lambda store: _cli_script(
+                    store,
+                    ("plan", "worktree", "list", "--id", "1"),
+                    ("plan", "worktree", "print", "--id", "1", "--milestone", "2"),
+                ),
+                cs.build_dispatch_fixture,
+            ),
             Scene(
                 "setup-wizard",
                 "cli",
-                "Setup wizard",
-                "Placement, agents, and review",
-                "The first-run setup wizard: where plans live, which agents get the skill, and the review of everything installation will write.",
+                "Setup transcript",
+                "Placement, agents, and review at the shell",
+                "The terminal setup flow: where plans live, which agents get the skill, and the review of everything installation will write.",
                 (
                     "Does the wizard explain the placement tradeoff?",
                     "Are detected agents obvious?",
@@ -1453,6 +1525,57 @@ def scenes() -> list[Scene]:
                 "lpui setup",
                 ux,
                 _capture_setup,
+            ),
+            _setup_scene(
+                "setup-welcome",
+                "Wizard welcome",
+                "First step, repo placement",
+                "The TUI setup wizard's welcome step with the resolved database, templates, config, pointer, and state paths, and the step rail.",
+                (
+                    "Is the whole wizard's scope clear on the first screen?",
+                    "Does the rail order match the mental model?",
+                    "Is Finish later easy to trust?",
+                ),
+                "b back · n next · l later",
+            ),
+            _setup_scene(
+                "setup-models",
+                "Model targets",
+                "Tier targets per host",
+                "One select and one free-text field per host and capability tier.",
+                (
+                    "Do the selects show their current value?",
+                    "Is inherit distinguishable from empty?",
+                    "Is the source line useful or noise?",
+                ),
+                "tab between targets",
+                "models",
+            ),
+            _setup_scene(
+                "setup-roles",
+                "Role tiers and effort",
+                "Every role's tier and effort",
+                "One row per role with a tier selector and an effort selector, plus the reset action.",
+                (
+                    "Do the selectors render their stored values?",
+                    "Is effort visibly optional?",
+                    "Is the host field name worth showing?",
+                ),
+                "tab between roles",
+                "roles",
+            ),
+            _setup_scene(
+                "setup-review",
+                "Wizard review",
+                "Every file before Apply",
+                "The review step listing every file the apply will write, ending with the Apply and Finish later actions.",
+                (
+                    "Is the list complete enough to approve?",
+                    "Does it read as a write plan, not a summary?",
+                    "Is Apply clearly the last step?",
+                ),
+                "n apply · l later",
+                "review",
             ),
         ]
     )
@@ -1580,12 +1703,15 @@ async def _capture_setup(store: Store, target: Path) -> None:
 GROUPS = [
     ("shell", "Main shell", "The tree, overview, panes, themes, and terminal widths."),
     ("trust", "Trust hubs", "Criteria, evidence, questions, and references."),
-    ("coordination", "Coordination hubs", "Claims, sessions, comments, and handoffs."),
+    ("coordination", "Coordination hubs", "Claims, comments, and handoffs."),
     ("provenance", "Provenance hubs", "Pull requests and the activity feed."),
     ("source", "Source trail", "Repos, commits, files, diffs, and empty states."),
     ("forms", "Dialogs and forms", "Create, edit, prove, confirm, export, update, and overlays."),
-    ("cli", "CLI and setup", "The shell surfaces that share the same journal."),
+    ("setup", "Setup wizard", "First run: placement, agents, models, roles, and review."),
+    ("cli", "CLI and transcripts", "The shell surfaces that share the same journal."),
 ]
+
+GENERATED = "2026-11-15"
 
 
 def _manifest_row(scene: Scene, out_dir: Path) -> dict[str, Any]:
@@ -1631,7 +1757,7 @@ def write_manifest(names: list[str], out_dir: Path) -> None:
     ]
     manifest = {
         "version": VERSION,
-        "generated": "2026-11-10",
+        "generated": GENERATED,
         "groups": groups,
         "scenes": rows,
     }
@@ -1657,14 +1783,15 @@ def run(out_dir: Path, only: list[str]) -> None:
     with (
         cs.mock.patch("lazyplan.store.base.time.time", return_value=cs.STAMP),
         cs.mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot),
-        tempfile.TemporaryDirectory(prefix="lpui-ux-") as tmp,
     ):
+        shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
+        FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)
         for name in names:
             scene = by_id[name]
-            scene_dir = Path(tmp) / name
+            scene_dir = FIXTURE_ROOT / name
             scene_dir.mkdir(parents=True, exist_ok=True)
             store = scene.build(scene_dir)
-            svg = Path(tmp) / f"{name}.svg"
+            svg = scene_dir / f"{name}.svg"
             asyncio.run(scene.capture(store, svg))
             cs.patch_svg(svg)
             png = out_dir / f"{name}.png"

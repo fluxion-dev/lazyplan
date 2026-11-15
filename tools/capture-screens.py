@@ -19,14 +19,16 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import io
 import os
 import shutil
 import struct
 import subprocess
 import sys
 import tempfile
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Iterable
+from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass, replace
 from pathlib import Path
 from unittest import mock
 
@@ -38,7 +40,21 @@ from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
+from lazyplan.core.policies.agents import DEFAULT_MODELS, HOSTS, TIERS  # noqa: E402
+from lazyplan.infrastructure.environment import InstallInfo  # noqa: E402
+from lazyplan.infrastructure.host_models import HostCatalog  # noqa: E402
+from lazyplan.presentation.cli.parser import package_version  # noqa: E402
+from lazyplan.presentation.setup.constants import REPO as PLACEMENT_REPO  # noqa: E402
+from lazyplan.presentation.setup.session import (  # noqa: E402
+    SetupDraft,
+    SetupSession,
+)
+from lazyplan.presentation.setup.state import SetupState  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
+from lazyplan.presentation.tui.screens import (  # noqa: E402
+    SetupWizardScreen,
+    UpdateScreen,
+)
 from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
@@ -46,7 +62,9 @@ from lazyplan.store import Store  # noqa: E402
 
 SIZE = (130, 35)
 TRANSCRIPT_SIZE = (120, 22)
+CLI_SIZE = (130, 22)
 DEFAULT_OUT = ROOT / "site" / "public" / "screens"
+FIXTURE_ROOT = Path(tempfile.gettempdir()) / "lpui-fixtures"
 DATE = "2026-10-01T09:00:00+00:00"
 AUTHOR = "Ada Lovelace"
 EMAIL = "ada@acme.dev"
@@ -156,6 +174,170 @@ def build_source_fixture(tmp: Path) -> Store:
             checks=checks,
         )
     return store
+
+
+def build_empty_fixture(tmp: Path) -> Store:
+    """A fresh journal for the setup and update screens."""
+    return Store(str(tmp / "plan.db"))
+
+
+def build_dispatch_fixture(tmp: Path) -> Store:
+    """A parallel plan with three lanes and one registered lane worktree."""
+    from lazyplan.core.policies.worktrees import derive_lane_worktree
+
+    repo = tmp / "web"
+    repo.mkdir()
+    git(repo, "init", "-q", "-b", "main")
+    git(repo, "config", "user.email", EMAIL)
+    git(repo, "config", "user.name", AUTHOR)
+    base = commit(repo, "Add the API scaffolding", BASE_FILES)
+    git(repo, "remote", "add", "origin", REMOTE)
+
+    store = Store(str(tmp / "plan.db"))
+    plan = store.add_plan(
+        "Passwordless sign-in",
+        "Ship magic links and passkeys without breaking the password path.",
+        goal="Sign in without a password, safely and reversibly.",
+        dispatch_mode="parallel",
+        max_agents=2,
+    )
+    read = store.add_milestone(plan.id, "Read path", lane_group=1, agent_role="implementer")
+    write = store.add_milestone(plan.id, "Write path", lane_group=1, agent_role="docs")
+    integrate = store.add_milestone(plan.id, "Integration", lane_group=2, agent_role="integrator")
+    store.add_task(
+        read.id, "Add the token model", "Wire the model and migration.", role="implementer"
+    )
+    store.add_task(read.id, "Exchange the magic link", "Verify and redeem.", role="implementer")
+    store.add_task(write.id, "Document the sign-in flow", "Guide and reference.", role="docs")
+    store.add_task(integrate.id, "Merge the lanes", "Run the combined gate.", role="integrator")
+    store.add_repo_link("plan", plan.id, str(repo), REMOTE, branch="main", base_sha=base)
+
+    for lane in (read, write):
+        target = derive_lane_worktree(str(repo), plan.id, plan.name, lane.id, lane.title)
+        store.register_plan_worktree(
+            plan.id,
+            str(repo),
+            target.worktree_path,
+            branch=target.branch,
+            repo_remote=REMOTE,
+            actor="Ada",
+            registered_at=STAMP,
+            milestone_id=lane.id,
+        )
+    read_target = derive_lane_worktree(str(repo), plan.id, plan.name, read.id, read.title)
+    services.set_status(
+        store,
+        "task",
+        store.list_tasks(read.id)[0].id,
+        Status.DOING,
+        actor="Ada",
+        worktree=read_target.worktree_path,
+    )
+    return store
+
+
+def cli_text(store: Store, *args: str) -> str:
+    """Run one real CLI invocation against *store* and return stdout and stderr."""
+    from lazyplan.presentation.cli import main
+
+    out = io.StringIO()
+    err = io.StringIO()
+    argv = ["--db", str(store.path), *args]
+    try:
+        with redirect_stdout(out), redirect_stderr(err):
+            main(argv)
+    except SystemExit:
+        pass
+    text = out.getvalue() + err.getvalue()
+    return text.rstrip() + "\n"
+
+
+def cli_transcript(store: Store, *args: str) -> Text:
+    """A command line plus its real output, styled like the other transcripts."""
+    command = "lpui " + " ".join(args)
+    body = Text()
+    body.append(f"$ {command}\n", style="bold #22d3ee")
+    for line in cli_text(store, *args).splitlines():
+        body.append(line + "\n", style="#e4e4e7")
+    return body
+
+
+def next_minor(version: str) -> str:
+    """The next minor release of *version*, for the deterministic update screen."""
+    parts = version.split(".")
+    if len(parts) < 3 or not parts[0].isdigit() or not parts[1].isdigit():
+        return version
+    return f"{parts[0]}.{int(parts[1]) + 1}.0"
+
+
+def fixture_catalogs(
+    hosts: Iterable[str], _home: Path, _root: Path | None
+) -> dict[str, HostCatalog]:
+    """Deterministic host catalogs: no binaries, no real home config."""
+    return {
+        host: HostCatalog(
+            host=host,
+            label=host.title(),
+            models=tuple(
+                value
+                for tier in TIERS
+                for value in (DEFAULT_MODELS.get(tier, {}).get(host, ""),)
+                if value
+            ),
+            tier_defaults={
+                tier: DEFAULT_MODELS.get(tier, {}).get(host, "")
+                for tier in TIERS
+                if DEFAULT_MODELS.get(tier, {}).get(host, "")
+            },
+            source="fixture",
+        )
+        for host in HOSTS
+        if host in hosts
+    }
+
+
+def build_setup_session() -> SetupSession:
+    """A deterministic first-run wizard: two agents, repo placement, effort levels."""
+    from lazyplan.presentation.setup import models
+
+    home = Path("/home/ada")
+    repo = Path("/home/ada/web")
+    profiles_map, tiers = models.initial_maps(
+        home / ".lazyplan" / "lazyplan.db",
+        home,
+        repo,
+        ["opencode", "claude"],
+        fixture_catalogs,
+    )
+    draft = SetupDraft(
+        placement=PLACEMENT_REPO,
+        agents=["opencode", "claude"],
+        skills_enabled=True,
+        hooks_mode="strict",
+        agents_pointer=True,
+        profiles_map=profiles_map,
+        tiers_map=tiers,
+    )
+    for role, effort in (("implementer", "low"), ("qa", "medium"), ("reviewer", "high")):
+        profile = draft.profiles_map.get(role)
+        if profile is not None:
+            draft.profiles_map[role] = replace(profile, effort=effort)
+    return SetupSession(
+        cwd=repo,
+        home=home,
+        version=package_version(),
+        root=repo,
+        state=SetupState(
+            placement=PLACEMENT_REPO,
+            agents=["opencode", "claude"],
+            hooks=True,
+            skills_enabled=True,
+            agents_pointer=True,
+        ),
+        draft=draft,
+        catalogs=fixture_catalogs(["opencode", "claude"], home, repo),
+        pending=(),
+    )
 
 
 def build_export_fixture(tmp: Path) -> Store:
@@ -270,14 +452,6 @@ def build_control_room_fixture(tmp: Path) -> Store:
         kind="epic",
         actor="Ada",
     )
-    ended, _ = store.start_session("Ada", plan_id=plan.id, branch="feat/coordination", now=STAMP)
-    store.end_session(
-        ended.id,
-        "Ada",
-        summary="Closed the queue slice",
-        handoff="next: review the claim overlap",
-    )
-    store.start_session("Ada", plan_id=plan.id, branch="feat/control-room", now=STAMP + 60)
     return store
 
 
@@ -501,6 +675,99 @@ async def capture_collaboration(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
+async def capture_setup_step(store: Store, target: Path, start: str) -> None:
+    """Open the setup wizard at one step with a deterministic draft."""
+    session = build_setup_session()
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        app.push_screen(SetupWizardScreen(session, start))
+        await pilot.pause(0.6)
+        app.save_screenshot(str(target))
+
+
+async def capture_setup(store: Store, target: Path) -> None:
+    await capture_setup_step(store, target, "")
+
+
+async def capture_setup_review(store: Store, target: Path) -> None:
+    await capture_setup_step(store, target, "review")
+
+
+async def capture_update(store: Store, target: Path) -> None:
+    """The update dialog for a newer release, from a pipx install."""
+    installed = package_version()
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        app.push_screen(
+            UpdateScreen(
+                installed,
+                next_minor(installed),
+                InstallInfo(method="pipx", upgradeable=True),
+            )
+        )
+        await pilot.pause()
+        app.save_screenshot(str(target))
+
+
+def _dispatch_text() -> Text:
+    return transcript(
+        ("$ lpui dispatch --plan 7", "bold #22d3ee"),
+        ("P7 Sign-in · parallel · max 2", "#fafafa"),
+        ("now      wave 1 · capacity 1/2 active, 1 available", "#e4e4e7"),
+        ("lanes:", "#e4e4e7"),
+        ("  M1 Read path [active] w1 implementer", "#e4e4e7"),
+        ("    T2 Exchange the magic link (implementer)", "#a1a1aa"),
+        ("    registered: /home/ada/web--plan-7-sign-in--m1-read-path", "#71717a"),
+        ("  M2 Write path [ready] w1 docs", "#e4e4e7"),
+        ("    T3 Document the sign-in flow (docs)", "#a1a1aa"),
+        ("    registered: /home/ada/web--plan-7-sign-in--m2-write-path", "#71717a"),
+        ("  M3 Integration [waiting] w2 integrator", "#e4e4e7"),
+        ("    T4 Merge the lanes (integrator)", "#a1a1aa"),
+        ("    blocked: wave 2 waits for wave 1", "#fbbf24"),
+        ("dispatchable:", "#e4e4e7"),
+        ("  M2 T3 Document the sign-in flow (docs)", "#4ade80"),
+        (
+            "    lpui claim --id 3 --worktree /home/ada/web--plan-7-sign-in--m2-write-path",
+            "#a1a1aa",
+        ),
+        ("actions:", "#e4e4e7"),
+        ("  lpui plan worktree add --id 7 --milestone 3 --repo /home/ada/web", "#a1a1aa"),
+        ("  lpui claim --id 3 --worktree /home/ada/web--plan-7-sign-in--m2-write-path", "#a1a1aa"),
+    )
+
+
+def _worktrees_text() -> Text:
+    return transcript(
+        ("$ lpui plan worktree list --id 7", "bold #22d3ee"),
+        ("plan 7: Sign-in", "#fafafa"),
+        (
+            "  M1 /home/ada/web -> /home/ada/web--plan-7-sign-in--m1-read-path"
+            " [plan/7-sign-in--m1-read-path]",
+            "#e4e4e7",
+        ),
+        (
+            "  M2 /home/ada/web -> /home/ada/web--plan-7-sign-in--m2-write-path"
+            " [plan/7-sign-in--m2-write-path]",
+            "#e4e4e7",
+        ),
+        ("", ""),
+        ("$ lpui plan worktree print --id 7 --milestone 3", "bold #22d3ee"),
+        ("plan 7: Sign-in", "#fafafa"),
+        ("repo /home/ada/web", "#e4e4e7"),
+        (
+            "  git -C /home/ada/web worktree add -b plan/7-sign-in--m3-integration"
+            " /home/ada/web--plan-7-sign-in--m3-integration HEAD",
+            "#4ade80",
+        ),
+        ("", ""),
+        ("$ lpui plan worktree add --id 7 --milestone 3 --repo /home/ada/web", "bold #22d3ee"),
+        ("registered plan 7 worktree /home/ada/web--plan-7-sign-in--m3-integration", "#4ade80"),
+        ("on plan/7-sign-in--m3-integration", "#4ade80"),
+    )
+
+
 def _flow_health_text() -> Text:
     return transcript(
         ("$ lpui stats --since 30.days", "bold #22d3ee"),
@@ -688,6 +955,36 @@ SCENES: dict[str, Scene] = {
         capture_plan_detail,
         "Plan overview showing the reason, scope, acceptance criteria, milestones, and linked source.",
     ),
+    "lpui-setup": Scene(
+        SIZE,
+        build_empty_fixture,
+        capture_setup,
+        "Setup wizard on its welcome step, with the step rail, the database, config, and pointer paths, and the Back, Next, and Finish later actions.",
+    ),
+    "lpui-setup-review": Scene(
+        SIZE,
+        build_empty_fixture,
+        capture_setup_review,
+        "Setup wizard on the review step, listing every database, config, skill, pointer, and agent profile file the apply will write, with Apply and Finish later actions.",
+    ),
+    "lpui-update": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_update,
+        "Update dialog over a populated shell, showing the installed and latest versions, the install method, and the Download, Restart, and Later buttons.",
+    ),
+    "lpui-dispatch": Scene(
+        CLI_SIZE,
+        _no_fixture,
+        _transcript_capture(_dispatch_text(), CLI_SIZE, "lpui dispatch"),
+        "Terminal transcript of lpui dispatch showing a parallel plan, the current wave and capacity, three lanes with roles, registered worktrees, and the claim commands for the ready tasks.",
+    ),
+    "lpui-worktrees": Scene(
+        CLI_SIZE,
+        _no_fixture,
+        _transcript_capture(_worktrees_text(), CLI_SIZE, "lpui plan worktree"),
+        "Terminal transcript of lpui plan worktree list, print, and add showing the registered lane checkouts, the git worktree command for a new lane, and the registration result.",
+    ),
     "lpui-coordination": Scene(
         SIZE,
         build_coordination_fixture,
@@ -814,10 +1111,10 @@ def build_og(screenshot: Path, target: Path) -> None:
                 "#d4d4d8",
                 "-annotate",
                 "+68+220",
-                "One plan. You steer.",
+                "Plan it. Dispatch it.",
                 "-annotate",
                 "+68+264",
-                "Your agent helps.",
+                "Prove it.",
                 "-font",
                 "Cantarell",
                 "-pointsize",
@@ -826,10 +1123,10 @@ def build_og(screenshot: Path, target: Path) -> None:
                 "#22d3ee",
                 "-annotate",
                 "+68+350",
-                "Coordination · Flow health",
+                "First run · The plan · Lanes",
                 "-annotate",
                 "+68+382",
-                "Collaboration · Proof",
+                "Worktrees · Proof",
                 "-font",
                 "Cantarell",
                 "-pointsize",
@@ -871,12 +1168,14 @@ def build_og(screenshot: Path, target: Path) -> None:
 
 
 def _framed(path: Path, size: str) -> list[str]:
-    """Return the ImageMagick tokens for one framed screenshot."""
+    """Return the ImageMagick tokens for one framed, letterboxed screenshot."""
     return [
         "(",
         str(path),
         "-resize",
-        f"{size}^",
+        size,
+        "-background",
+        "#0b0b12",
         "-gravity",
         "center",
         "-extent",
@@ -889,9 +1188,9 @@ def _framed(path: Path, size: str) -> list[str]:
     ]
 
 
-def build_cinematic_hero(coordination: Path, agent: Path, source: Path, target: Path) -> None:
-    """Compose the 2400x1200 hero: plan, agent, and proof side by side."""
-    for path in (coordination, agent, source):
+def build_cinematic_hero(plan: Path, dispatch: Path, proof: Path, target: Path) -> None:
+    """Compose the 2400x1200 hero: plan, dispatch, and proof side by side."""
+    for path in (plan, dispatch, proof):
         if not path.is_file():
             raise SystemExit(f"error: missing hero source {path}")
     subprocess.run(
@@ -900,23 +1199,23 @@ def build_cinematic_hero(coordination: Path, agent: Path, source: Path, target: 
             "-size",
             "2400x1200",
             "gradient:#0b0b12-#050507",
-            *_framed(coordination, "1440x812"),
+            *_framed(plan, "1440x812"),
             "-gravity",
             "northwest",
             "-geometry",
             "+60+194",
             "-composite",
-            *_framed(agent, "820x462"),
+            *_framed(dispatch, "820x360"),
             "-gravity",
             "northwest",
             "-geometry",
             "+1540+100",
             "-composite",
-            *_framed(source, "820x462"),
+            *_framed(proof, "820x462"),
             "-gravity",
             "northwest",
             "-geometry",
-            "+1540+638",
+            "+1540+560",
             "-composite",
             "-fill",
             "#f59e0b",
@@ -934,6 +1233,8 @@ def build_cinematic_hero(coordination: Path, agent: Path, source: Path, target: 
 
 def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) -> None:
     os.environ.setdefault("LAZYPLAN_NO_SPINNER", "1")
+    os.environ.setdefault("LAZYPLAN_NO_SETUP", "1")
+    os.environ.setdefault("LAZYPLAN_NO_UPDATE_CHECK", "1")
     names = only or list(SCENES)
     unknown = [name for name in names if name not in SCENES]
     if unknown:
@@ -949,14 +1250,15 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
     with (
         mock.patch("lazyplan.store.base.time.time", return_value=STAMP),
         mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot),
-        tempfile.TemporaryDirectory(prefix="lpui-shot-") as tmp,
     ):
+        shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
+        FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)
         for name in names:
             scene = SCENES[name]
-            scene_dir = Path(tmp) / name
+            scene_dir = FIXTURE_ROOT / name
             scene_dir.mkdir(parents=True, exist_ok=True)
             store = scene.build(scene_dir)
-            svg = Path(tmp) / f"{name}.svg"
+            svg = scene_dir / f"{name}.svg"
             asyncio.run(scene.capture(store, svg))
             patch_svg(svg)
             png = out_dir / f"{name}.png"
@@ -967,15 +1269,15 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
             print(f"wrote {shown(png)} ({dimensions(png)})")
             print(f"wrote {shown(png.with_suffix('.webp'))}")
         hero_sources = {
-            "lpui-coordination",
-            "lpui-mcp",
+            "lpui-control-room",
+            "lpui-dispatch",
             "lpui-source-trail",
         }
         if hero_sources <= set(names):
             hero = out_dir / "lpui-hero.png"
             build_cinematic_hero(
-                out_dir / "lpui-coordination.png",
-                out_dir / "lpui-mcp.png",
+                out_dir / "lpui-control-room.png",
+                out_dir / "lpui-dispatch.png",
                 out_dir / "lpui-source-trail.png",
                 hero,
             )

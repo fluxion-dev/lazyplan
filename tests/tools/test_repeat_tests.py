@@ -13,9 +13,7 @@ from tests.support.paths import ROOT
 
 
 def _load():
-    spec = importlib.util.spec_from_file_location(
-        "repeat_tests", ROOT / "tools/repeat-tests.py"
-    )
+    spec = importlib.util.spec_from_file_location("repeat_tests", ROOT / "tools/repeat-tests.py")
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
     spec.loader.exec_module(module)

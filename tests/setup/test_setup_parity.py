@@ -277,7 +277,6 @@ class SetupParityCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mapping["tiers"]["fast"]["claude"], "tiny-model")
         self.assertEqual(mapping["tiers"]["deep"]["claude"], "large-model")
 
-
     def test_snapshot_ignores_a_transient_sqlite_journal(self) -> None:
         journal = self.home / ".lazyplan" / "lazyplan.db-journal"
         journal.parent.mkdir(parents=True)

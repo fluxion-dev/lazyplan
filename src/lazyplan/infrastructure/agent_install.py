@@ -7,6 +7,7 @@ it is a managed profile being refreshed. Stdlib only.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -134,6 +135,29 @@ def install_claude(
     )
 
 
+def codex_targets(scope: str, repo_root: Path | None, home: Path) -> list[Path]:
+    """One Codex custom-agent path per role for a scope."""
+    return _targets("codex", scope, repo_root, home)
+
+
+def install_codex(
+    scope: str,
+    repo_root: Path | None,
+    home: Path,
+    profiles: dict[str, Profile],
+    models: dict[str, str] | None = None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> AgentInstallResult:
+    """Write or refresh every Codex profile for a scope."""
+    return _install_host(
+        "codex",
+        scope,
+        codex_targets(scope, repo_root, home),
+        profiles,
+        lambda role, profile: render_codex(role, profile, models, tiers),
+    )
+
+
 def _install_host(
     host: str,
     scope: str,
@@ -189,6 +213,41 @@ def render_claude(
     return "\n".join(lines)
 
 
+def _toml_string(value: str) -> str:
+    """One TOML basic string, escaped like JSON."""
+    return json.dumps(value, ensure_ascii=False)
+
+
+def render_codex(
+    role: str,
+    profile: Profile,
+    models: dict[str, str] | None,
+    tiers: dict[str, dict[str, str]] | None = None,
+) -> str:
+    """One managed Codex custom-agent TOML file."""
+    resolved = resolve(profile, "codex", models, tiers)
+    meta = ROLE_META[role]
+    lines = [
+        f"# managed by lazyplan: codex {role}",
+        f"name = {_toml_string(f'lazyplan-{role}')}",
+        f"description = {_toml_string(meta['description'])}",
+    ]
+    if resolved["model"]:
+        lines.append(f"model = {_toml_string(resolved['model'])}")
+    if resolved["effort"]:
+        lines.append(f"model_reasoning_effort = {_toml_string(resolved['effort'])}")
+    if meta["edit"] == "deny":
+        lines.append('sandbox_mode = "read-only"')
+    instructions = data_text(f"agents/common/{role}.md").rstrip()
+    lines.extend(
+        [
+            f"developer_instructions = {_toml_string(instructions)}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
 def render_opencode(
     role: str,
     profile: Profile,
@@ -225,12 +284,7 @@ def render_opencode(
 
 def profile_paths(scope: str, repo_root: Path | None, home: Path, agents: list[str]) -> list[Path]:
     """Every profile file the selected hosts would write."""
-    paths: list[Path] = []
-    if "opencode" in agents:
-        paths.extend(opencode_targets(scope, repo_root, home))
-    if "claude" in agents:
-        paths.extend(claude_targets(scope, repo_root, home))
-    return paths
+    return [path for host in agents for path in _targets(host, scope, repo_root, home)]
 
 
 def install_profiles(
@@ -252,6 +306,8 @@ def install_profiles(
         results.append(install_opencode(scope, repo_root, home, loaded, opencode_defaults, tiers))
     if "claude" in agents:
         results.append(install_claude(scope, repo_root, home, loaded, None, tiers))
+    if "codex" in agents:
+        results.append(install_codex(scope, repo_root, home, loaded, None, tiers))
     return results
 
 
@@ -267,7 +323,7 @@ def _install_file(dest: Path, content: str) -> tuple[bool, str]:
         return False, "unreadable"
     if existing == content:
         return True, "up-to-date"
-    if MARKER in existing:
+    if "managed by lazyplan:" in existing:
         textfile.write(dest, content)
         return True, "refreshed"
     return False, "kept user file"

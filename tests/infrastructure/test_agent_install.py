@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -107,6 +108,46 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
     def test_claude_global_scope(self) -> None:
         agent_install.install_claude("global", self.repo, self.home, self.profiles)
         self.assertTrue((self.home / ".claude/agents/lazyplan-qa.md").is_file())
+
+    def test_codex_install_writes_valid_toml_and_read_only_sandbox(self) -> None:
+        tiers = {"deep": {"codex": "gpt-6.1-sol"}, "fast": {"codex": "gpt-6-luna"}}
+        result = agent_install.install_codex(
+            "project", self.repo, self.home, self.profiles, None, tiers
+        )
+        self.assertEqual(len(result.installed), len(AGENT_ROLES))
+        path = self.repo / ".codex/agents/lazyplan-reviewer.toml"
+        text = path.read_text(encoding="utf-8")
+        self.assertTrue(text.startswith("# managed by lazyplan: codex reviewer"))
+        parsed = tomllib.loads(text)
+        self.assertEqual(parsed["name"], "lazyplan-reviewer")
+        self.assertEqual(parsed["model"], "gpt-6.1-sol")
+        self.assertEqual(parsed["sandbox_mode"], "read-only")
+        self.assertIn("developer_instructions", parsed)
+        implementer = tomllib.loads(
+            (self.repo / ".codex/agents/lazyplan-implementer.toml").read_text(encoding="utf-8")
+        )
+        self.assertEqual(implementer["model"], "gpt-6-luna")
+        self.assertNotIn("sandbox_mode", implementer)
+
+    def test_codex_refresh_and_user_file_keep(self) -> None:
+        agent_install.install_codex("project", self.repo, self.home, self.profiles)
+        path = self.repo / ".codex/agents/lazyplan-docs.toml"
+        path.write_text(path.read_text(encoding="utf-8") + "\n# stale\n", encoding="utf-8")
+        agent_install.install_codex("project", self.repo, self.home, self.profiles)
+        self.assertNotIn("stale", path.read_text(encoding="utf-8"))
+        custom = self.repo / ".codex/agents/lazyplan-qa.toml"
+        custom.write_text('name = "mine"\n', encoding="utf-8")
+        result = agent_install.install_codex("project", self.repo, self.home, self.profiles)
+        self.assertEqual(custom.read_text(encoding="utf-8"), 'name = "mine"\n')
+        self.assertTrue(any("kept user file" in line for line in result.kept))
+
+    def test_codex_global_scope_and_profile_paths(self) -> None:
+        agent_install.install_codex("global", self.repo, self.home, self.profiles)
+        self.assertTrue((self.home / ".codex/agents/lazyplan-qa.toml").is_file())
+        paths = agent_install.profile_paths(
+            "both", self.repo, self.home, ["codex"]
+        )
+        self.assertEqual(len(paths), len(AGENT_ROLES) * 2)
 
     def test_install_profiles_selects_the_requested_hosts(self) -> None:
         db = self.root / "profiles.db"

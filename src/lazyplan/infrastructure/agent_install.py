@@ -91,6 +91,54 @@ class AgentInstallResult:
         }
 
 
+@dataclass
+class ProfileState:
+    """Disk state of every managed profile for one setup."""
+
+    files: list[Path] = field(default_factory=list)
+    missing: list[Path] = field(default_factory=list)
+    drifted: list[Path] = field(default_factory=list)
+    unmanaged: list[Path] = field(default_factory=list)
+
+    @property
+    def broken(self) -> bool:
+        """True when a profile is missing or no longer matches its render."""
+        return bool(self.missing or self.drifted)
+
+
+def inspect_profiles(
+    scope: str,
+    root: Path | None,
+    home: Path,
+    agents: list[str],
+    db_path: str | Path,
+) -> ProfileState:
+    """Compare every managed profile with the map that would rewrite it."""
+    loaded, _saved = load_all(db_path)
+    tiers = effective_tiers(db_path, home, root, agents)
+    state = ProfileState(files=profile_paths(scope, root, home, agents))
+    for host in agents:
+        for path in _targets(host, scope, root, home):
+            if not path.is_file():
+                state.missing.append(path)
+                continue
+            try:
+                text = textfile.read(path)
+            except OSError:
+                state.missing.append(path)
+                continue
+            if "managed by lazyplan:" not in text:
+                state.unmanaged.append(path)
+                continue
+            role = role_for(path)
+            if role not in loaded:
+                continue
+            expected = render_profile(host, role, loaded, None, tiers)
+            if text != expected:
+                state.drifted.append(path)
+    return state
+
+
 def _targets(host: str, scope: str, repo_root: Path | None, home: Path) -> list[Path]:
     """One profile path per role for a scope from the host registry."""
     spec = HOST_SPECS[host]

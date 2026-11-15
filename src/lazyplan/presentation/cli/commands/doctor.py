@@ -100,10 +100,7 @@ def _profile_report(
     scope = "project" if state.placement == "repo" and root is not None else "global"
     loaded, _saved = profiles.load_all(db_path)
     tiers = host_models.effective_tiers(db_path, home, root, profile_agents)
-    files = agent_install.profile_paths(scope, root, home, profile_agents)
-    missing: list[str] = []
-    drifted: list[str] = []
-    unmanaged: list[str] = []
+    state_on_disk = agent_install.inspect_profiles(scope, root, home, profile_agents, db_path)
     models: dict[str, dict[str, str]] = {}
     for host in profile_agents:
         models[host] = {}
@@ -116,40 +113,15 @@ def _profile_report(
             except profiles.ProfileError:
                 continue
             models[host][role] = resolved["model"]
-    owners = {
-        path: host for host in profile_agents for path in _host_paths(home, root, scope, host)
-    }
-    for path in files:
-        if not path.is_file():
-            missing.append(str(path))
-            continue
-        try:
-            text = path.read_text(encoding="utf-8")
-        except OSError:
-            continue
-        if "managed by lazyplan:" not in text:
-            unmanaged.append(str(path))
-            continue
-        host = owners.get(path, "")
-        role = agent_install.role_for(path)
-        if not host or role not in loaded:
-            continue
-        expected = agent_install.render_profile(host, role, loaded, None, tiers)
-        if text != expected:
-            drifted.append(str(path))
     return {
         "scope": scope,
         "agents": profile_agents,
-        "files": [str(path) for path in files],
-        "missing": missing,
-        "drifted": drifted,
-        "unmanaged": unmanaged,
+        "files": [str(path) for path in state_on_disk.files],
+        "missing": [str(path) for path in state_on_disk.missing],
+        "drifted": [str(path) for path in state_on_disk.drifted],
+        "unmanaged": [str(path) for path in state_on_disk.unmanaged],
         "models": models,
     }
-
-
-def _host_paths(home: Path, root: Path | None, scope: str, host: str) -> list[Path]:
-    return agent_install.profile_paths(scope, root, home, [host])
 
 
 def _doctor_data(

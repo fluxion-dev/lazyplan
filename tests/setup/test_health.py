@@ -152,6 +152,24 @@ class IntegrationFindingsTest(HealthCase):
         self.assertEqual(self.check("2.0", missing=("git",)).open, ())
         self.assertTrue(state_path(self.home).is_file())
 
+    def test_a_drifted_profile_is_a_setup_finding(self):
+        from lazyplan.infrastructure import agent_install
+        from lazyplan.infrastructure.repo import shared_db_path
+
+        db = shared_db_path(self.home)
+        self.state.agents = ["claude"]
+        self.state.profile_files = [
+            str(path)
+            for path in agent_install.profile_paths("global", None, self.home, ["claude"])
+        ]
+        agent_install.install_profiles("global", None, self.home, ["claude"], db)
+        self.assertNotIn("profile:agents", self.by_id(self.check()))
+        path = self.home / ".claude/agents/lazyplan-qa.md"
+        path.write_text(path.read_text(encoding="utf-8") + "\nstale\n", encoding="utf-8")
+        finding = self.by_id(self.check())["profile:agents"]
+        self.assertIn("out of date", finding.capability)
+        self.assertIn("lpui setup", finding.fix)
+
     def test_check_writes_nothing(self):
         before = sorted(path.relative_to(self.home) for path in self.home.rglob("*"))
         self.check()

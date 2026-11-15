@@ -10,7 +10,6 @@ plus a live_fingerprint() poll that the feed toast summarizes.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -282,11 +281,9 @@ if _TEXTUAL_OK:
 
 def _setup_check_off(db_path: str | None) -> bool:
     """True when a caller-owned database or a skipped setup turns checks off."""
-    from ..setup.constants import NO_SETUP_ENV
+    from ..setup.triggers import setup_off
 
-    return bool(
-        db_path or os.environ.get("LAZYPLAN_DB") or os.environ.get(NO_SETUP_ENV, "").strip()
-    )
+    return setup_off(db_path)
 
 
 def _startup_health_check(db_path: str | None) -> HealthCheck | None:

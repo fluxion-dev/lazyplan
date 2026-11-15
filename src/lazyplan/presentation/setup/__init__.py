@@ -58,6 +58,7 @@ from .triggers import (
     detect,
     mark_pending,
     pending_reason,
+    setup_off,
     textual_available,
     tui_owns_setup,
 )
@@ -120,6 +121,7 @@ __all__ = [
     "save_state",
     "setup_layout",
     "setup_ui",
+    "setup_off",
     "state_path",
     "textual_available",
     "tui_owns_setup",

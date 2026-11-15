@@ -8,6 +8,7 @@ broken managed profiles. ``detect`` never writes; ``mark_pending`` and
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,7 @@ from lazyplan.infrastructure.repo import find_repo_root
 
 from . import ui
 from .apply import choice_from_state, profile_drift
+from .constants import NO_SETUP_ENV
 from .integrations import inspect
 from .layout import SetupChoice
 from .state import SetupState, load_state, save_state
@@ -133,6 +135,12 @@ def textual_available() -> bool:
         return importlib.util.find_spec("textual") is not None
     except (ImportError, ValueError):  # pragma: no cover - broken install
         return False
+
+
+def setup_off(db_path: str | None = None) -> bool:
+    """True when a caller-owned database or ``LAZYPLAN_NO_SETUP`` turns setup off."""
+    explicit = db_path or os.environ.get("LAZYPLAN_DB", "")
+    return bool(str(explicit).strip() or os.environ.get(NO_SETUP_ENV, "").strip())
 
 
 def _screen_terminal(interactive: bool | None) -> bool:

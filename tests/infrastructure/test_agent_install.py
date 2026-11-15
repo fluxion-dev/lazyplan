@@ -226,6 +226,48 @@ class OpenCodeProfileInstallTest(unittest.TestCase):
             len(AGENT_ROLES) * 2,
         )
 
+    def test_all_host_matrix_at_every_scope(self) -> None:
+        readonly = {
+            "opencode": "edit: deny",
+            "claude": "permissionMode: plan",
+            "codex": 'sandbox_mode = "read-only"',
+            "gemini": "read_file",
+            "cursor": "readonly: true",
+            "copilot": "strict-tools-list: true",
+        }
+        for scope in ("project", "global", "both"):
+            for host in profiles.HOSTS:
+                with self.subTest(scope=scope, host=host):
+                    base = self.root / f"{scope}-{host}"
+                    home = base / "home"
+                    repo = base / "repo"
+                    home.mkdir(parents=True)
+                    repo.mkdir()
+                    db = base / "matrix.db"
+                    agent_install.install_profiles(scope, repo, home, [host], db)
+                    paths = agent_install.profile_paths(scope, repo, home, [host])
+                    self.assertEqual(len(paths), len(AGENT_ROLES) * (2 if scope == "both" else 1))
+                    again = agent_install.install_profiles(scope, repo, home, [host], db)
+                    self.assertTrue(all("up-to-date" in line for line in again[0].installed))
+                    scout = next(path for path in paths if path.name.startswith("lazyplan-scout"))
+                    self.assertIn(readonly[host], scout.read_text(encoding="utf-8"))
+                    reviewer = next(
+                        path for path in paths if path.name.startswith("lazyplan-reviewer")
+                    )
+                    self.assertTrue(reviewer.is_file())
+
+    def test_unmarked_user_file_is_kept_for_every_host(self) -> None:
+        for host in profiles.HOSTS:
+            with self.subTest(host=host):
+                target = agent_install.profile_paths("project", self.repo, self.home, [host])[0]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text("my custom agent\n", encoding="utf-8")
+                result = agent_install.install_profiles(
+                    "project", self.repo, self.home, [host], self.root / f"{host}.db"
+                )
+                self.assertEqual(target.read_text(encoding="utf-8"), "my custom agent\n")
+                self.assertTrue(any("kept user file" in line for line in result[0].kept))
+
     def test_installers_registry_covers_every_host(self) -> None:
         self.assertEqual(set(agent_install.INSTALLERS), set(profiles.HOSTS))
 

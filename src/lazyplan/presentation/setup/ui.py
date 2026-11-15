@@ -9,10 +9,13 @@ from __future__ import annotations
 import os
 import shutil
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import TextIO
 
+from lazyplan.core.policies.lanes import AGENT_ROLES
+from lazyplan.infrastructure import profiles
+from lazyplan.infrastructure.host_models import HostCatalog
 from lazyplan.infrastructure.skills import AgentHost
 
 from ..shared.design import ANSI, ASCII_ICONS, ICONS
@@ -206,6 +209,85 @@ def ask_agents(
     return parse_tool_selection(answer, hosts)
 
 
+def _tier_model(
+    tier: str,
+    host: str,
+    tiers: Mapping[str, Mapping[str, str]],
+    catalog: HostCatalog,
+) -> str:
+    """One tier target, falling back to the catalog's discovered default."""
+    model = str((tiers.get(tier) or {}).get(host, "") or "").strip()
+    return model or str(catalog.tier_defaults.get(tier, "") or "").strip() or "inherit"
+
+
+def _role_model(
+    profile: profiles.Profile,
+    host: str,
+    tiers: Mapping[str, Mapping[str, str]],
+    catalog: HostCatalog,
+) -> str:
+    """One role target, falling back to the catalog's tier default."""
+    effective = {tier: dict(values) for tier, values in tiers.items()}
+    for tier, model in catalog.tier_defaults.items():
+        if model and not effective.get(tier, {}).get(host):
+            effective.setdefault(tier, {})[host] = model
+    return profiles.resolve(profile, host, tiers=effective)["model"] or "inherit"
+
+
+def render_models(
+    write: TextIO,
+    hosts: list[str],
+    profiles_map: Mapping[str, profiles.Profile],
+    tiers: Mapping[str, Mapping[str, str]],
+    catalogs: Mapping[str, HostCatalog],
+    color: bool,
+) -> None:
+    """Render tiers and roles with each selected host's target model."""
+    step(write, 3, 4, "Model targets", color)
+    chosen = [host for host in hosts if host in catalogs]
+    for tier in profiles.TIERS:
+        models = "  ".join(
+            f"{catalogs[host].label} {_tier_model(tier, host, tiers, catalogs[host])}"
+            for host in chosen
+        )
+        _line(
+            write.write,
+            f"  {_paint(tier.ljust(9), 'bold', color=color)} {models}",
+        )
+    _line(write.write)
+    for role in AGENT_ROLES:
+        profile = profiles_map.get(role)
+        if profile is None:
+            continue
+        models = "  ".join(
+            f"{catalogs[host].label} {_role_model(profile, host, tiers, catalogs[host])}"
+            for host in chosen
+        )
+        _line(
+            write.write,
+            f"  {_paint(role.ljust(12), 'bold', color=color)} "
+            f"{_paint(profile.tier.ljust(9), 'dim', color=color)} {models}",
+        )
+    sources = "  ".join(
+        f"{catalogs[host].label}: {catalogs[host].source or 'defaults'}" for host in chosen
+    )
+    if sources:
+        _line(write.write, _paint(f"  sources: {sources}", "dim", color=color))
+    for host in chosen:
+        warning = catalogs[host].warning
+        if warning:
+            note(write, f"{catalogs[host].label}: {warning}", color, "warn")
+    _line(
+        write.write,
+        _paint(
+            "  enter accept · t ROLE TIER · m HOST TIER MODEL · r HOST TIER · ? help",
+            "dim",
+            color=color,
+        ),
+    )
+    _line(write.write)
+
+
 def render_review(
     write: TextIO,
     db: Path,
@@ -216,7 +298,7 @@ def render_review(
     color: bool,
     plugins: list[tuple[str, Path]] | None = None,
 ) -> None:
-    step(write, 3, 3, "Review", color)
+    step(write, 4, 4, "Review", color)
     rows = [("database", str(db)), ("templates", str(templates))]
     if config is not None:
         rows.append(("config", str(config)))

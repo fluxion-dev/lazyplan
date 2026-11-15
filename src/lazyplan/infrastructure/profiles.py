@@ -144,9 +144,9 @@ def resolve_all(
     profiles: Mapping[str, Profile],
     tiers: Mapping[str, Mapping[str, str]] | None = None,
     models: Mapping[str, str] | None = None,
-) -> dict[str, dict[str, str]]:
+) -> dict[str, dict[str, object]]:
     """Resolve every role for every host using one map."""
-    out: dict[str, dict[str, str]] = {}
+    out: dict[str, dict[str, object]] = {}
     for role, profile in profiles.items():
         resolved = {host: resolve(profile, host, models, tiers)["model"] for host in HOSTS}
         out[role] = {
@@ -158,7 +158,7 @@ def resolve_all(
     return out
 
 
-def dispatch_profiles(db_path: str | Path, home: Path | None = None) -> dict[str, dict[str, str]]:
+def dispatch_profiles(db_path: str | Path, home: Path | None = None) -> dict[str, dict[str, object]]:
     """Resolved role profiles for the dispatch manifest."""
     profiles, tiers = load_all(db_path)
     return resolve_all(profiles, tiers, opencode_models(home or Path.home()))

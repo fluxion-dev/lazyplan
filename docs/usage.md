@@ -197,7 +197,8 @@ setup, new skills or hooks a release added, managed agent profiles that are
 missing or out of date, or an explicit request. Choosing **finish later**
 writes nothing and reopens the wizard at the next applicable launch. Reopen it
 any time from the palette's **Open setup wizard** or the `S` key; it starts
-filled with the remembered choices.
+filled with the remembered choices. In the wizard, `n` moves to the next step,
+`b` goes back, and `l` or `escape` closes it without writing.
 
 `lpui setup` keeps the terminal wizard for an explicit run. Runs without a
 terminal, without Textual, with `--json`, `--yes`, or `LAZYPLAN_NO_SETUP`
@@ -404,6 +405,12 @@ The bottom bar also pins the running version at its right edge, for example
 The health count, when present, sits just left of the version. The same bar
 appears at the bottom of the source, hub, plan diff, and setup views.
 
+The update screen names the installed and latest versions and the install
+method. **Download** fetches and verifies the release, which applies the next
+time `lpui` starts; on Windows, **Restart now** applies it without leaving the
+screen. An install lazyplan cannot own, such as a system package or a source
+checkout, gets the command to run instead.
+
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter
 loads the matching branches so a collapsed hit is never hidden. `z` folds one
@@ -434,6 +441,7 @@ before it.
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
 | `S` | setup wizard, from any screen |
+| `U` | update screen: version badge and download |
 | `t` | cycle theme: mocha, void, latte |
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |
@@ -670,7 +678,8 @@ and otherwise keep the host default. A missing binary or bad config becomes a
 warning, never a failed setup.
 
 The interactive flow has four steps: placement, agents, model targets, and
-review. The model step prints the tier table, then one row per role with its
+review, and the screen wizard asks the same questions across its own steps. The
+model step prints the tier table, then one row per role with its
 tier and each selected host's resolved model. Enter accepts the map;
 `t ROLE TIER`, `m HOST TIER MODEL`, and `r HOST TIER` edit it, and `inherit`
 clears a target back to the host default. Setup backs up `agents.json` before

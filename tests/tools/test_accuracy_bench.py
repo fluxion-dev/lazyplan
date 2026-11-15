@@ -1,9 +1,11 @@
 """The synthetic benchmark is deterministic and shows the improvement."""
 
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
+from tests.support.home import sandbox_home
 from tests.support.paths import ROOT
 
 
@@ -55,11 +57,16 @@ class BenchCase(unittest.TestCase):
         self.assertGreaterEqual(baseline["median_lag_commits"], intervention["median_lag_commits"])
         self.assertGreater(len(baseline["criteria_gaps"]), len(intervention["criteria_gaps"]))
 
-    def test_benchmark_leaves_the_real_home_alone(self):
-        home = Path.home()
-        before = set(home.glob(".lazyplan/*")) if (home / ".lazyplan").is_dir() else set()
+    def test_benchmark_leaves_its_sandboxed_home_alone(self):
+        home = Path(tempfile.mkdtemp()) / "home"
+        home.mkdir(parents=True)
+        sandbox_home(self, home)
+        (home / ".lazyplan").mkdir()
+        marker = home / ".lazyplan" / "marker.txt"
+        marker.write_text("kept", encoding="utf-8")
+        before = set(home.rglob("*"))
         self.bench.run()
-        after = set(home.glob(".lazyplan/*")) if (home / ".lazyplan").is_dir() else set()
+        after = set(home.rglob("*"))
         self.assertEqual(before, after)
 
 

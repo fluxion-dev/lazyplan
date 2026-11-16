@@ -314,11 +314,14 @@ class WizardScreenParityTest(SetupParityCase):
             screen = SetupWizardScreen(session, start="review")
             app.push_screen(screen, lambda _result: None)
             await pilot.pause()
+            await pilot.app.workers.wait_for_complete()
+            await pilot.pause()
             screen.query_one("#setup-next", Button).press()
             await pilot.app.workers.wait_for_complete()
             await pilot.pause()
             self.assertTrue(Path(session.db_path).is_file())
             await pilot.press("l")
+            await pilot.app.workers.wait_for_complete()
             await pilot.pause()
 
         self.assert_matches(

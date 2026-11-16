@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 try:
     from textual.content import Content
@@ -138,14 +140,20 @@ class TaskbarPilotTest(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(text.endswith(f"v{package_version()}"))
 
     async def test_a_cached_update_adds_the_arrow_to_the_bar(self) -> None:
-        app = create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.update_controller.latest = "99.0.0"
-            app.health_controller.refresh_hints()
-            await pilot.pause()
-            text = str(app.query_one("#hints", Taskbar).render())
-            self.assertIn("→ v99.0.0", text)
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                for _ in range(40):
+                    if not app.update_controller.checking:
+                        break
+                    await pilot.pause(0.05)
+                app.update_controller.stop()
+                app.update_controller.latest = "99.0.0"
+                app.refresh_taskbar()
+                await pilot.pause()
+                text = str(app.query_one("#hints", Taskbar).render())
+                self.assertIn("→ v99.0.0", text)
 
     async def test_the_health_chip_stays_left_of_the_version(self) -> None:
         app = create_app(self.db)

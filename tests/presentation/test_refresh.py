@@ -121,6 +121,10 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 24)) as pilot:
             await pilot.pause()
+            for _ in range(40):
+                if app._row_nodes:
+                    break
+                await pilot.pause(0.05)
             harness = self.harness(app, session_id)
             tree = app.query_one("#tree", Tree)
             tree.move_cursor(next(reversed(list(app._row_nodes.values()))))

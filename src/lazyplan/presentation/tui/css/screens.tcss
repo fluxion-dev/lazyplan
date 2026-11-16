@@ -538,14 +538,15 @@ Screen.compact #setup-panel .setup-row Input {
     border: none;
 }
 
-#setup-page Input,
-#setup-page Select {
+#setup-page Input {
     height: 3;
     border: tall $lp-border;
 }
 
 #setup-page Select {
     width: 1fr;
+    height: 3;
+    border: none;
 }
 
 Screen.compact #setup-page {

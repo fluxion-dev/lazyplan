@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **The setup wizard's dropdowns show their selected value.** The hooks, model
+  target, role tier, role effort, integration, and theme selectors now draw the
+  current choice inside the field. A value that wraps sizes its field, and the
+  option menu opens attached to the control instead of floating over the copy.
+
 ## v0.48.0 — 2026-11-15
 
 ### Added

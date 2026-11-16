@@ -587,16 +587,20 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 app.refresh_all()
                 await pilot.pause()
                 app.select_row("task", task.id)
-                await pilot.pause()
                 body = app.query_one("#preview-body", Markdown)
-                self.assertIn("**bold** text", body.source or "")
-                blocks = [type(child).__name__ for child in body.children]
-                for expected in (
+                expected_blocks = (
                     "MarkdownBulletList",
                     "MarkdownBlockQuote",
                     "MarkdownFence",
                     "MarkdownTable",
-                ):
+                )
+                for _ in range(40):
+                    await pilot.pause(0.05)
+                    blocks = [type(child).__name__ for child in body.children]
+                    if all(name in blocks for name in expected_blocks):
+                        break
+                self.assertIn("**bold** text", body.source or "")
+                for expected in expected_blocks:
                     self.assertIn(expected, blocks)
                 paragraphs = [
                     child for child in body.children if type(child).__name__ == "MarkdownParagraph"

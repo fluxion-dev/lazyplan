@@ -439,7 +439,10 @@ class TestExpansionOwnership(RefreshCase):
             await pilot.pause()
             self.store.delete("task", self.task.id, actor="ana")
             app.refresh_all()
-            await pilot.pause()
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if app.selected == ("milestone", self.milestone.id):
+                    break
             self.assertNotIn(("task", self.task.id), app._row_nodes)
             cursor = tree.cursor_node
             self.assertIsNotNone(cursor)

@@ -204,6 +204,23 @@ class SetupWizardSelectsTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.label_text(select), HOOK_MODES[2][1])
             self.assertIn(HOOK_MODES[2][1], self.screen_text(app))
 
+    async def test_a_wrapped_value_sizes_its_field(self) -> None:
+        session = self.session()
+        app = create_app(self.db)
+        async with app.run_test(size=(100, 30)) as pilot:
+            screen = await self.offer(app, pilot, session, "models")
+            select = screen.query_one("#setup-tier-opencode-deep", Select)
+            current = select.query_one("SelectCurrent")
+            self.assertGreater(current.region.height, 3)
+            self.assertEqual(select.content_region.height, current.region.height)
+            self.assertIn("inherit (host", self.screen_text(app))
+            overlay = select.query_one("SelectOverlay")
+            select.focus()
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertTrue(overlay.display)
+            self.assertTrue(screen.region.contains_region(overlay.region))
+
     async def test_a_value_survives_a_step_round_trip(self) -> None:
         session = self.session()
         app = create_app(self.db)

@@ -542,7 +542,8 @@ Screen.compact #setup-panel .setup-row Input {
 
 #setup-page Select {
     width: 1fr;
-    height: 3;
+    height: auto;
+    min-height: 3;
     border: none;
 }
 

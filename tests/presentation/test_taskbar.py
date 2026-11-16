@@ -204,18 +204,24 @@ class TaskbarPilotTest(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(app.screen, UpdateScreen)
 
     async def test_a_poll_refreshes_every_visible_bar(self) -> None:
-        app = create_app(self.db)
-        async with app.run_test(size=(120, 40)) as pilot:
-            await pilot.pause()
-            app.push_screen(PlanDiffScreen(EMPTY_DIFF))
-            await pilot.pause()
-            app.update_controller.latest = "99.0.0"
-            app.refresh_taskbar()
-            await pilot.pause()
-            main = str(app.screen_stack[0].query_one("#hints", Taskbar).render())
-            diff = str(app.screen.query_one("#plan-diff-hints", Taskbar).render())
-            self.assertIn("→ v99.0.0", main)
-            self.assertIn("→ v99.0.0", diff)
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                for _ in range(40):
+                    if not app.update_controller.checking:
+                        break
+                    await pilot.pause(0.05)
+                app.update_controller.stop()
+                app.push_screen(PlanDiffScreen(EMPTY_DIFF))
+                await pilot.pause()
+                app.update_controller.latest = "99.0.0"
+                app.refresh_taskbar()
+                await pilot.pause()
+                main = str(app.screen_stack[0].query_one("#hints", Taskbar).render())
+                diff = str(app.screen.query_one("#plan-diff-hints", Taskbar).render())
+                self.assertIn("→ v99.0.0", main)
+                self.assertIn("→ v99.0.0", diff)
 
     async def test_clearing_the_update_removes_the_arrow(self) -> None:
         app = create_app(self.db)

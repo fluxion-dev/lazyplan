@@ -121,6 +121,10 @@ class TestHeartbeatKeepsTreeStill(RefreshCase):
         app = create_app(self.store.path)
         async with app.run_test(size=(120, 24)) as pilot:
             await pilot.pause()
+            for _ in range(40):
+                if app._row_nodes:
+                    break
+                await pilot.pause(0.05)
             harness = self.harness(app, session_id)
             tree = app.query_one("#tree", Tree)
             tree.move_cursor(next(reversed(list(app._row_nodes.values()))))
@@ -439,7 +443,10 @@ class TestExpansionOwnership(RefreshCase):
             await pilot.pause()
             self.store.delete("task", self.task.id, actor="ana")
             app.refresh_all()
-            await pilot.pause()
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if app.selected == ("milestone", self.milestone.id):
+                    break
             self.assertNotIn(("task", self.task.id), app._row_nodes)
             cursor = tree.cursor_node
             self.assertIsNotNone(cursor)

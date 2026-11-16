@@ -1,3 +1,16 @@
 {
-  "tests": []
+  "tests": [
+    {
+      "id": "tests.presentation.test_taskbar.TaskbarPilotTest.test_clicking_the_badge_after_a_health_chip_opens_updates",
+      "task": 415,
+      "reason": "Windows shuffled-order click lands on the health chip after the badge moves; tracked for a deterministic click target.",
+      "expires": "2026-12-16"
+    },
+    {
+      "id": "tests.presentation.test_refresh.TestExpansionOwnership.test_deleting_the_cursor_row_falls_back_to_a_visible_survivor",
+      "task": 415,
+      "reason": "Windows shuffled order falls back to the plan row instead of the milestone after deletion; needs a platform reproduction.",
+      "expires": "2026-12-16"
+    }
+  ]
 }

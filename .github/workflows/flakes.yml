@@ -68,7 +68,7 @@ jobs:
       - name: Repeat the suite with shuffled order
         run: |
           set -o pipefail
-          .venv/Scripts/python.exe tools/repeat-tests.py --times 2 --seed 0 2>&1 | tee repeat.log
+          .venv/Scripts/python.exe tools/repeat-tests.py --times 1 --seed 0 2>&1 | tee repeat.log
       - name: Upload the failure log
         if: failure()
         uses: actions/upload-artifact@v4

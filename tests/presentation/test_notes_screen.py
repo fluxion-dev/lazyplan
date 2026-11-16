@@ -66,7 +66,10 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                 startup_notes="## v0.38.0 — 2026-11-11\n\n- New notes.",
             )
             async with app.run_test(size=(110, 35)) as pilot:
-                await pilot.pause()
+                for _ in range(40):
+                    await pilot.pause(0.05)
+                    if isinstance(app.screen, ReleaseNotesScreen):
+                        break
                 self.assertIsInstance(app.screen, ReleaseNotesScreen)
                 await pilot.press("escape")
                 await pilot.pause()

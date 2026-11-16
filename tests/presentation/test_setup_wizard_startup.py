@@ -18,6 +18,7 @@ try:
     from textual.app import ComposeResult
     from textual.screen import Screen
     from textual.widgets import Static
+    from textual.worker import WorkerCancelled
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.controllers.setup import current
@@ -85,7 +86,10 @@ class SetupStartupTest(unittest.IsolatedAsyncioTestCase):
 
     async def settle(self, pilot: Any) -> None:
         for _ in range(3):
-            await pilot.app.workers.wait_for_complete()
+            try:
+                await pilot.app.workers.wait_for_complete()
+            except WorkerCancelled:
+                pass
             await pilot.pause()
 
     async def test_a_fresh_install_opens_the_wizard_after_the_first_paint(self) -> None:

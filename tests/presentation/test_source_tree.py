@@ -97,24 +97,37 @@ class SourceTreeStatsTest(unittest.IsolatedAsyncioTestCase):
             app.push_screen(SourceScreen(self.store, "task", self.task.id))
             await pilot.pause(0.5)
             tree = app.screen.query_one("#source-tree", Tree)
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if tree.root.children:
+                    break
             repo_node = tree.root.children[0]
             repo_node.expand()
             commit_node = repo_node.children[0]
             tree.move_cursor(commit_node)
-            await pilot.pause()
             body = app.screen.query_one("#source-preview-body")
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if "files 1/2" in str(body.content):
+                    break
             text = str(body.content)
             self.assertIn("files 1/2", text)
             self.assertIn("app/a.py", text)
             app.screen.action_next_file()
-            await pilot.pause()
+            await pilot.pause(0.1)
             app.screen.action_next_file()
-            await pilot.pause()
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if "file 2/2" in str(body.content):
+                    break
             text = str(body.content)
             self.assertIn("file 2/2", text)
             self.assertIn("app/b.py", text)
             app.screen.action_prev_file()
-            await pilot.pause()
+            for _ in range(40):
+                await pilot.pause(0.05)
+                if "file 1/2" in str(body.content):
+                    break
             self.assertIn("file 1/2", str(body.content))
 
     async def test_more_and_less_page_a_cached_preview(self) -> None:

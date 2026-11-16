@@ -177,11 +177,17 @@ class SetupWizardModelsTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(session.draft.profiles_map["reviewer"].tier, "deep")
             self.assertEqual(session.draft.profiles_map["reviewer"].effort, "")
             self.assertEqual(session.draft.profiles_map["scout"].tier, "fast")
-            tier = screen.query_one("#setup-role-tier-reviewer", Select)
+            tier = None
             for _ in range(40):
+                try:
+                    tier = screen.query_one("#setup-role-tier-reviewer", Select)
+                except Exception:
+                    await pilot.pause(0.05)
+                    continue
                 if tier.value == "deep":
                     break
                 await pilot.pause(0.05)
+            self.assertIsNotNone(tier)
             self.assertEqual(tier.value, "deep")
 
     async def test_a_stored_non_level_effort_stays_readable_until_edited(self) -> None:

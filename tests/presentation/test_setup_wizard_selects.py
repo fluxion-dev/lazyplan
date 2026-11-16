@@ -13,10 +13,6 @@ from lazyplan.core.policies import effort as effort_policy
 from lazyplan.infrastructure.host_models import HostCatalog
 from lazyplan.presentation import setup
 from lazyplan.presentation.setup.health import HealthFinding
-from lazyplan.presentation.tui.screens.setup_support import (
-    HOOK_MODES,
-    INHERIT_LABEL,
-)
 from tests.support.home import sandbox_home
 
 try:
@@ -24,11 +20,17 @@ try:
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.screens import SetupWizardScreen
+    from lazyplan.presentation.tui.screens.setup_support import (
+        HOOK_MODES,
+        INHERIT_LABEL,
+    )
     from lazyplan.presentation.tui.widgets.setup_controls import widget_id
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
     SetupWizardScreen = None  # type: ignore[assignment]
     Select = Static = None  # type: ignore[assignment,misc]
+    HOOK_MODES = ()  # type: ignore[assignment]
+    INHERIT_LABEL = ""  # type: ignore[assignment]
 
     def widget_id(text: str) -> str:  # pragma: no cover - textual not installed
         return text

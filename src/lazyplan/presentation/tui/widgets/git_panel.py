@@ -6,6 +6,7 @@ from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static
 
+from ..query import query_one_opt
 from ..views.git import GitDocument
 
 
@@ -21,7 +22,9 @@ class GitPanel(VerticalScroll):
         yield Static("", id="git-body")
 
     def show(self, document: GitDocument) -> None:
-        body = self.query_one("#git-body", Static)
+        body = query_one_opt(self, "#git-body", Static)
+        if body is None:
+            return
         if not document.body:
             self.show_empty("", "")
             return
@@ -39,7 +42,9 @@ class GitPanel(VerticalScroll):
 
     def show_error(self, text: str) -> None:
         """A visible load failure instead of a blank pane."""
-        body = self.query_one("#git-body", Static)
+        body = query_one_opt(self, "#git-body", Static)
+        if body is None:
+            return
         self.display = True
         body.add_class("git-error")
         body.update(f"[red]{text}[/]")

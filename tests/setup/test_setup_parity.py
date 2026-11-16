@@ -24,6 +24,7 @@ from lazyplan.infrastructure.host_models import HostCatalog
 from lazyplan.presentation import setup
 from lazyplan.presentation.setup import integrations as integrations_module
 from tests.support.home import sandbox_home
+from tests.support.sqlite_state import quiesce
 
 try:
     from textual.widgets import Button
@@ -45,6 +46,7 @@ VOLATILE = frozenset(
         "lazyplan.db",
         "lazyplan.db-wal",
         "lazyplan.db-shm",
+        "lazyplan.db-journal",
         "update.json",
         "update-gate.json",
     }
@@ -139,6 +141,7 @@ class SetupParityCase(unittest.IsolatedAsyncioTestCase):
 
     def snapshot(self) -> dict[str, bytes]:
         """Every file setup owns, keyed by its sandbox-relative path."""
+        quiesce(self.base)
         roots = (self.home, self.repo)
         files: dict[str, bytes] = {}
         for root in roots:
@@ -273,6 +276,18 @@ class SetupParityCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mapping["profiles"]["reviewer"]["effort"], "high")
         self.assertEqual(mapping["tiers"]["fast"]["claude"], "tiny-model")
         self.assertEqual(mapping["tiers"]["deep"]["claude"], "large-model")
+
+    def test_snapshot_ignores_a_transient_sqlite_journal(self) -> None:
+        journal = self.home / ".lazyplan" / "lazyplan.db-journal"
+        journal.parent.mkdir(parents=True)
+        journal.write_text("transient", encoding="utf-8")
+        self.assertNotIn("home/.lazyplan/lazyplan.db-journal", self.snapshot())
+
+    def test_snapshot_still_reports_a_real_extra_file(self) -> None:
+        extra = self.home / ".lazyplan" / "real.txt"
+        extra.parent.mkdir(parents=True)
+        extra.write_text("kept", encoding="utf-8")
+        self.assertIn("home/.lazyplan/real.txt", self.snapshot())
 
 
 class HomePlacementParityTest(SetupParityCase):

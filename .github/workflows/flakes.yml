@@ -1,0 +1,78 @@
+name: flakes
+
+# Nightly seeded repeat runs. These do not gate pull requests; they find order
+# dependence and state leaks before a release needs a rerun.
+on:
+  schedule:
+    - cron: "41 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flakes
+  cancel-in-progress: false
+
+jobs:
+  repeat:
+    name: repeat (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (editable + dev extras)
+        run: |
+          python -m venv .venv
+          if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+          "$VENV_BIN"/python -m pip install -e ".[dev]"
+      - name: Repeat the suite with shuffled order
+        run: |
+          set -o pipefail
+          .venv/bin/python tools/repeat-tests.py --times 3 --seed 0 2>&1 | tee repeat.log
+      - name: Upload the failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repeat-${{ matrix.os }}
+          path: repeat.log
+          if-no-files-found: ignore
+
+  repeat-windows:
+    name: repeat (windows-latest)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install (editable + dev extras)
+        run: |
+          python -m venv .venv
+          if [[ -d .venv/Scripts ]]; then VENV_BIN=.venv/Scripts; else VENV_BIN=.venv/bin; fi
+          "$VENV_BIN"/python -m pip install -e ".[dev]"
+      - name: Repeat the suite with shuffled order
+        run: |
+          set -o pipefail
+          .venv/Scripts/python.exe tools/repeat-tests.py --times 2 --seed 0 2>&1 | tee repeat.log
+      - name: Upload the failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repeat-windows
+          path: repeat.log
+          if-no-files-found: ignore

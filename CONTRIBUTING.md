@@ -102,6 +102,30 @@ and `tests/support`:
 python -m unittest discover -s tests -t .
 ```
 
+## Flaky tests
+
+A failing gate is never retried to green. A flake is a defect in the test or
+the code it exercises: fix the race, the shared state, or the snapshot, and
+add a regression test.
+
+- Use `sandbox_home` or a per-test temp directory for anything that reads or
+  writes home. Quiesce SQLite before snapshotting a tree.
+- Wait for workers, timers, and mount state. `time.sleep` and `asyncio.sleep`
+  are rejected by `tools/test_hygiene.py`.
+- Run a seeded shuffle before calling a fix done:
+
+  ```bash
+  python tools/repeat-tests.py --times 3 --seed 0
+  python tools/repeat-tests.py --times 2 --seed 7 --no-tui
+  ```
+
+  The runner prints the exact reproducer for the first failure. The nightly
+  `flakes` workflow runs the same command on Linux, macOS, and Windows.
+
+- A temporary quarantine lives in `tests/quarantine.json`. Every entry needs a
+  test id, a linked task, a reason, and a future `expires` date; a malformed or
+  expired entry fails the suite. Permanent skips are not allowed.
+
 ## Landing changes
 
 `main` is protected by the committed ruleset in

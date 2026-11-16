@@ -12,7 +12,7 @@ from lazyplan.presentation import setup
 
 class ProfileMapSetupTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
         self.home = Path(self.tmp.name) / "home"
         self.home.mkdir()
         self.db = self.home / ".lazyplan/lazyplan.db"

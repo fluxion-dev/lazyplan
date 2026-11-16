@@ -213,7 +213,8 @@ class DialogCssTest(unittest.TestCase):
 
     def test_dialog_fields_and_buttons_share_one_compact_scale(self) -> None:
         text = CSS.read_text(encoding="utf-8")
-        self.assertIn("#dlg Input,\n#dlg Select {", text)
+        self.assertIn("#dlg Input {", text)
+        self.assertNotIn("#dlg Select", text)
         self.assertIn("height: 3;", text)
         self.assertIn("#dlg TextArea {", text)
         self.assertIn("height: 5;", text)

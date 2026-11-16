@@ -31,8 +31,7 @@ ModalScreen {
     color: $lp-text-muted;
 }
 
-#dlg Input,
-#dlg Select {
+#dlg Input {
     width: 100%;
     height: 3;
     border: tall $lp-border;

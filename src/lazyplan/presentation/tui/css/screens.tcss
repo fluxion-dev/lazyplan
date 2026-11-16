@@ -479,12 +479,10 @@ Screen.compact #source-head {
 
 #setup-panel .setup-row Select {
     width: 2fr;
-    height: 3;
 }
 
 #setup-panel .setup-row Input {
     width: 2fr;
-    height: 3;
 }
 
 Screen.compact #setup-panel .setup-row {

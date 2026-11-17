@@ -753,21 +753,22 @@ class TestStore(unittest.TestCase):
             self.assertNotEqual(self.store.live_fingerprint(), before)
 
     def test_structural_edits_change_fingerprint_but_not_live(self):
-        plan = self.store.add_plan("P")
-        milestone = self.store.add_milestone(plan.id, "M")
-        task = self.store.add_task(milestone.id, "T")
-        structural = self.store.fingerprint()
-        live = self.store.live_fingerprint()
-        self.store.update_task(task.id, title="renamed", actor="ana")
-        self.assertNotEqual(self.store.fingerprint(), structural)
-        self.assertEqual(self.store.live_fingerprint(), live)
+        with self.subTest(case="structural edit"):
+            plan = self.store.add_plan("P")
+            milestone = self.store.add_milestone(plan.id, "M")
+            task = self.store.add_task(milestone.id, "T")
+            structural = self.store.fingerprint()
+            live = self.store.live_fingerprint()
+            self.store.update_task(task.id, title="renamed", actor="ana")
+            self.assertNotEqual(self.store.fingerprint(), structural)
+            self.assertEqual(self.store.live_fingerprint(), live)
 
-    def test_out_of_band_write_leaves_the_fingerprint_alone(self):
-        self.store.add_plan("P")
-        fingerprint = self.store.fingerprint()
-        with closing(sqlite3.connect(self.db)) as conn, conn:
-            conn.execute("UPDATE plans SET name='edited outside the store'")
-        self.assertEqual(self.store.fingerprint(), fingerprint)
+        with self.subTest(case="out-of-band write"):
+            self.store.add_plan("P2")
+            fingerprint = self.store.fingerprint()
+            with closing(sqlite3.connect(self.db)) as conn, conn:
+                conn.execute("UPDATE plans SET name='edited outside the store'")
+            self.assertEqual(self.store.fingerprint(), fingerprint)
 
     def test_tree_orders_by_recent_activity_with_id_fallback(self):
         ids = [self.store.add_plan(f"P{i}").id for i in range(7)]
@@ -891,37 +892,56 @@ class TestStore(unittest.TestCase):
         self.assertEqual(self.store.counts()["tasks"], 0)
 
     def test_status_rollup_cascade(self):
-        p = self.store.add_plan("P")
-        s = self.store.add_milestone(p.id, "S")
-        t1 = self.store.add_task(s.id, "T1")
-        t2 = self.store.add_task(s.id, "T2")
-        services.set_status(self.store, "task", t1.id, Status.DOING)
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.DOING)
-        self.assertEqual(self.store.get_plan(p.id).status, Status.DOING)
-        services.set_status(self.store, "task", t1.id, Status.DONE)
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)  # T2 still open
-        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
-        services.set_status(self.store, "task", t2.id, Status.DONE)
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
-        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+        with self.subTest(case="children roll up"):
+            p = self.store.add_plan("P")
+            s = self.store.add_milestone(p.id, "S")
+            t1 = self.store.add_task(s.id, "T1")
+            t2 = self.store.add_task(s.id, "T2")
+            services.set_status(self.store, "task", t1.id, Status.DOING)
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.DOING)
+            self.assertEqual(self.store.get_plan(p.id).status, Status.DOING)
+            services.set_status(self.store, "task", t1.id, Status.DONE)
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)  # T2 still open
+            self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+            services.set_status(self.store, "task", t2.id, Status.DONE)
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+            self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
 
-    def test_rollup_empty_keeps_manual(self):
-        p = self.store.add_plan("P")
-        s = self.store.add_milestone(p.id, "S")
-        self.assertTrue(services.set_status(self.store, "milestone", s.id, Status.DONE))
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)  # no tasks: untouched
-        # the done milestone rolls its plan up (all children done -> done)
-        self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
-        p2 = self.store.add_plan("P2")  # no milestones: manual sticks
-        self.assertTrue(services.set_status(self.store, "plan", p2.id, Status.DOING))
-        self.assertEqual(self.store.get_plan(p2.id).status, Status.DOING)
+        with self.subTest(case="empty keeps manual"):
+            p = self.store.add_plan("P")
+            s = self.store.add_milestone(p.id, "S")
+            self.assertTrue(services.set_status(self.store, "milestone", s.id, Status.DONE))
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+            self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+            p2 = self.store.add_plan("P2")
+            self.assertTrue(services.set_status(self.store, "plan", p2.id, Status.DOING))
+            self.assertEqual(self.store.get_plan(p2.id).status, Status.DOING)
 
-    def test_manual_parent_yields_to_children(self):
-        p = self.store.add_plan("P")
-        s = self.store.add_milestone(p.id, "S")
-        self.store.add_task(s.id, "T")
-        self.assertTrue(services.set_status(self.store, "milestone", s.id, Status.DONE))
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)  # rolled back
+        with self.subTest(case="manual parent yields"):
+            p = self.store.add_plan("P")
+            s = self.store.add_milestone(p.id, "S")
+            self.store.add_task(s.id, "T")
+            self.assertTrue(services.set_status(self.store, "milestone", s.id, Status.DONE))
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
+
+        with self.subTest(case="delete recomputes ancestors"):
+            p = self.store.add_plan("P")
+            s = self.store.add_milestone(p.id, "S")
+            t = self.store.add_task(s.id, "T")
+            services.set_status(self.store, "task", t.id, Status.DONE, actor="t")
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
+            self.assertTrue(services.delete_row(self.store, "task", t.id, actor="t"))
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
+            self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+
+        with self.subTest(case="delete milestone recomputes plan"):
+            p = self.store.add_plan("P")
+            s = self.store.add_milestone(p.id, "S")
+            t = self.store.add_task(s.id, "T")
+            services.set_status(self.store, "task", t.id, Status.DONE, actor="t")
+            self.assertEqual(self.store.get_plan(p.id).status, Status.DONE)
+            self.assertTrue(services.delete_row(self.store, "milestone", s.id, actor="t"))
+            self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
 
     def test_reconcile_fixes_drift(self):
         import sqlite3
@@ -934,44 +954,46 @@ class TestStore(unittest.TestCase):
         conn.execute("UPDATE plans SET status='done' WHERE id=?", (p.id,))
         conn.commit()
         conn.close()
-        changes = services.reconcile(self.store, actor="t")["changes"]
-        self.assertEqual(
-            changes,
-            [
-                {"kind": "milestone", "id": s.id, "to": "todo"},
-                {"kind": "plan", "id": p.id, "to": "todo"},
-            ],
-        )
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
-        self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
-        self.assertEqual(
-            services.reconcile(self.store, actor="t"),
-            {"changes": [], "released": [], "expired": [], "ambiguous": []},
-        )
-        self.assertIsNotNone(t)
 
-    def test_reconcile_check_reports_drift_without_writing(self):
-        import sqlite3
+        with self.subTest(case="check reports without writing"):
+            with tempfile.TemporaryDirectory() as tmp:
+                other_db = os.path.join(tmp, "other.db")
+                other = Store(other_db)
+                p2 = other.add_plan("P2")
+                s2 = other.add_milestone(p2.id, "S2")
+                other.add_task(s2.id, "T2")
+                conn = sqlite3.connect(other_db)
+                conn.execute("UPDATE milestones SET status='done' WHERE id=?", (s2.id,))
+                conn.commit()
+                conn.close()
+                report = services.reconcile(other, actor="t", check=True)
+                self.assertEqual(
+                    report["changes"],
+                    [
+                        {"kind": "milestone", "id": s2.id, "to": "todo"},
+                        {"kind": "plan", "id": p2.id, "to": "done"},
+                    ],
+                )
+                self.assertEqual(other.get_milestone(s2.id).status, Status.DONE)
+                self.assertEqual(lpui_main(["--db", other_db, "reconcile", "--check"]), 1)
 
-        p = self.store.add_plan("P")
-        s = self.store.add_milestone(p.id, "S")
-        self.store.add_task(s.id, "T")
-        conn = sqlite3.connect(self.db)
-        conn.execute("UPDATE milestones SET status='done' WHERE id=?", (s.id,))
-        conn.commit()
-        conn.close()
-        report = services.reconcile(self.store, actor="t", check=True)
-        self.assertEqual(
-            report["changes"],
-            [
-                {"kind": "milestone", "id": s.id, "to": "todo"},
-                {"kind": "plan", "id": p.id, "to": "done"},
-            ],
-        )
-        self.assertEqual(self.store.get_milestone(s.id).status, Status.DONE)
-        self.assertEqual(lpui_main(["--db", self.db, "reconcile", "--check"]), 1)
-        self.assertEqual(lpui_main(["--db", self.db, "reconcile"]), 0)
-        self.assertEqual(lpui_main(["--db", self.db, "reconcile", "--check"]), 0)
+        with self.subTest(case="apply fixes"):
+            self.assertEqual(
+                services.reconcile(self.store, actor="t")["changes"],
+                [
+                    {"kind": "milestone", "id": s.id, "to": "todo"},
+                    {"kind": "plan", "id": p.id, "to": "todo"},
+                ],
+            )
+            self.assertEqual(self.store.get_milestone(s.id).status, Status.TODO)
+            self.assertEqual(self.store.get_plan(p.id).status, Status.TODO)
+            self.assertEqual(
+                services.reconcile(self.store, actor="t"),
+                {"changes": [], "released": [], "expired": [], "ambiguous": []},
+            )
+            self.assertEqual(lpui_main(["--db", self.db, "reconcile"]), 0)
+            self.assertEqual(lpui_main(["--db", self.db, "reconcile", "--check"]), 0)
+            self.assertIsNotNone(t)
 
     def test_delete_last_task_recomputes_ancestors(self):
         p = self.store.add_plan("P")

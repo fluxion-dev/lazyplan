@@ -25,15 +25,18 @@ class TextFileCase(unittest.TestCase):
         textfile.write(self.path, "café ✓\nnext\n")
         self.assertEqual(self.path.read_bytes(), "café ✓\nnext\n".encode())
 
-    def test_existing_crlf_file_keeps_crlf(self):
-        self.path.write_bytes(b"one\r\ntwo\r\n")
-        textfile.write(self.path, "one\ntwo\nthree\n")
-        self.assertEqual(self.path.read_bytes(), b"one\r\ntwo\r\nthree\r\n")
-
-    def test_existing_lf_file_keeps_lf(self):
-        self.path.write_bytes(b"one\n")
-        textfile.write(self.path, "one\ntwo\n")
-        self.assertEqual(self.path.read_bytes(), b"one\ntwo\n")
+    def test_existing_line_endings_are_kept(self):
+        cases = (
+            (b"one\r\ntwo\r\n", b"one\r\ntwo\r\nthree\r\n"),
+            (b"one\n", b"one\ntwo\n"),
+        )
+        for original, expected in cases:
+            with self.subTest(original=original):
+                self.path.write_bytes(original)
+                textfile.write(
+                    self.path, "one\ntwo\nthree\n" if b"\r\n" in original else "one\ntwo\n"
+                )
+                self.assertEqual(self.path.read_bytes(), expected)
 
     def test_read_strips_utf8_bom_and_crlf(self):
         self.path.write_bytes(codecs.BOM_UTF8 + '{\r\n  "a": "é"\r\n}\r\n'.encode())
@@ -50,12 +53,11 @@ class TextFileCase(unittest.TestCase):
         with self.assertRaises(UnicodeDecodeError):
             textfile.read(self.path)
 
-    def test_append_matches_existing_crlf(self):
+    def test_append_matches_the_file_or_creates_lf(self):
         self.path.write_bytes(b"a\r\n")
         textfile.append(self.path, "b\n")
         self.assertEqual(self.path.read_bytes(), b"a\r\nb\r\n")
-
-    def test_append_creates_lf_file(self):
+        self.path.unlink()
         textfile.append(self.path, "a\n")
         self.assertEqual(self.path.read_bytes(), b"a\n")
 

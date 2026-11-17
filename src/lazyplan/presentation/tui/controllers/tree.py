@@ -11,6 +11,7 @@ from .... import services
 from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
+from ..size import classes_for
 from ..views.rows import RowSpec
 from .expansion import ExpansionMixin
 from .filtering import TreeFilter
@@ -128,7 +129,9 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         """Usable label width for a row at `depth`, excluding tree guides."""
         app = self.app
         base = tree.size.width or (
-            max(20, app.size.width // 2) if app.size.width >= 100 else max(20, app.size.width)
+            max(20, app.size.width // 2)
+            if not classes_for(app.size.width).narrow
+            else max(20, app.size.width)
         )
         return max(10, base - 5 - depth)
 

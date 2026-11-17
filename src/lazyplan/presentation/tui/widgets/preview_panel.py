@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from textual import on
+from textual import events, on
 from textual.app import ComposeResult
 from textual.containers import Vertical, VerticalScroll
 from textual.widgets import Markdown, Static
@@ -24,6 +24,17 @@ class PreviewPanel(Vertical):
         with VerticalScroll(id="preview-scroll"):
             yield Markdown("", id="preview-body", open_links=False)
         yield Static("", id="preview-empty", classes="pane-empty")
+
+    def on_resize(self, event: events.Resize) -> None:
+        """Keep the preview at a reachable offset after the width changes."""
+        self.call_after_refresh(self._clamp_scroll)
+
+    def _clamp_scroll(self) -> None:
+        """Markdown re-wraps on its own; only the offset can go stale."""
+        scroll = self.query_one("#preview-scroll", VerticalScroll)
+        target = min(scroll.scroll_y, scroll.max_scroll_y)
+        if target != scroll.scroll_y:
+            scroll.scroll_to(y=target, animate=False)
 
     def show(self, document: PreviewDocument, strip: str = "") -> None:
         head = self.query_one("#preview-head", Static)

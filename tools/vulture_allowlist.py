@@ -48,4 +48,4 @@ _.ENVIRONMENT, _.FILES, _.row_factory, _.whitespace
 _.whitespace_split
 # Kept-live seams, each with a caller or contract outside src discovery.
 _._status_keep_ids, _.attention_ids, _.criteria_progress, _.is_available
-_.plan_uid, _.poll_now, _.task_criteria
+_.drawn_width, _.plan_uid, _.poll_now, _.task_criteria

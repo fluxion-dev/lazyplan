@@ -56,6 +56,7 @@ from .metrics import MetricsSection
 from .notifications import NotificationMixin
 from .preview import PreviewMixin
 from .screens import NotificationLogScreen, ReleaseNotesScreen
+from .size import apply_classes, classes_for
 from .state import AppState
 from .theme import register_themes, remembered_theme
 from .tree import TreeMixin
@@ -130,25 +131,20 @@ if _TEXTUAL_OK:
             if main is None:
                 return False
             available = self.size.width if width is None else width
-            narrow = available < 100
-            compact = available < 80
-            wide = available >= 120
-            changed = self._narrow is not narrow
-            self._narrow = narrow
-            self.state.compact = compact
-            self.state.wide = wide
-            main.set_class(narrow, "narrow")
-            main.set_class(compact, "compact")
-            main.set_class(wide, "wide")
+            tiers = classes_for(available)
+            changed = self._narrow is not tiers.narrow
+            self._narrow = tiers.narrow
+            self.state.compact = tiers.compact
+            self.state.wide = tiers.wide
+            apply_classes(main, tiers, ("narrow", "compact", "wide"))
             panel = query_one_opt(self, "#panel", Vertical)
             if panel is not None:
-                panel.set_class(compact, "compact")
+                apply_classes(panel, tiers, ("compact",))
             metrics = query_one_opt(self, "#metrics", MetricsSection)
             if metrics is not None:
-                metrics.display = self.state.timeline_shown(narrow)
+                metrics.display = self.state.timeline_shown(tiers.narrow)
             screen = self.screen
-            screen.set_class(compact, "compact")
-            screen.set_class(wide, "wide")
+            apply_classes(screen, tiers, ("compact", "wide"))
             return changed
 
         def __init__(self, store: Store) -> None:
@@ -244,7 +240,10 @@ if _TEXTUAL_OK:
             """Textual stops Resize at the App; re-apply the shell after it."""
             await super()._on_resize(event)
             changed = self._apply_layout(event.size.width)
-            if self._mounted and changed:
+            if not self._mounted:
+                return
+            self.metrics_controller.refresh()
+            if changed:
                 self.call_after_refresh(self.refresh_all)
 
         def on_unmount(self) -> None:

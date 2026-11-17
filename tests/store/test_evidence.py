@@ -4,27 +4,22 @@ from __future__ import annotations
 
 import os
 import sqlite3
-import tempfile
 import unittest
 from contextlib import closing
 
 from lazyplan.store import Store
 from lazyplan.store import migrate as migrate_mod
+from tests.support.state import StoreCase
 
 
-class TestEvidenceStore(unittest.TestCase):
+class TestEvidenceStore(StoreCase):
     def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.db = os.path.join(self.tmp.name, "t.db")
-        self.store = Store(self.db)
+        super().setUp()
         self.plan = self.store.add_plan("Plan")
         self.milestone = self.store.add_milestone(self.plan.id, "M")
         self.task = self.store.add_task(self.milestone.id, "T")
         self.criterion = self.store.add_criteria("task", self.task.id, "Works")
         self.store.relate_criterion(self.criterion.id, self.task.id)
-
-    def tearDown(self) -> None:
-        self.tmp.cleanup()
 
     def test_schema_has_evidence_table_and_indexes(self) -> None:
         with closing(sqlite3.connect(self.db)) as conn:

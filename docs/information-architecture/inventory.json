@@ -1588,7 +1588,7 @@
   "counts": {
     "cli_commands": 51,
     "doc_files": 9,
-    "doc_headings": 97,
+    "doc_headings": 98,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
@@ -1623,6 +1623,7 @@
           "Before you push",
           "Screenshots and the UX review board",
           "Tests",
+          "Core suite policy",
           "Flaky tests",
           "Landing changes",
           "edit, then commit in small green slices",

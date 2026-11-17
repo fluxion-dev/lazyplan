@@ -1,6 +1,5 @@
 """Audit metric model: coverage, status lag, and criteria gaps."""
 
-import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -9,12 +8,12 @@ from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.services import audit
 from lazyplan.store import Store
+from tests.support.state import StoreCase
 
 
-class AuditCase(unittest.TestCase):
+class AuditCase(StoreCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.store = Store(Path(self.tmp.name) / "lazyplan.db")
+        super().setUp()
         self.plan = self.store.add_plan("P", "what", goal="why")
         self.milestone = self.store.add_milestone(self.plan.id, "M", "desc")
         self.task = self.store.add_task(self.milestone.id, "T", "desc")

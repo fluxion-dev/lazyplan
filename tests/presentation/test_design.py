@@ -72,58 +72,37 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(design.plan_row(p).startswith("[dim]P1[/] "))
         self.assertNotIn("⬜", design.plan_row(p))
 
-    def test_task_row_hides_claim_and_blocked_detail(self):
-        t = Task(id=3, milestone_id=2, title="T")
-        row = design.task_row(t)
-        self.assertIn("T3", row)
-        self.assertIn("[bold]T[/]", row)
-        self.assertNotIn("⚑", row)
-        self.assertNotIn("◉", row)
-        self.assertNotIn("blocked", row)
-
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_reads_as_id_title_and_words(self):
+    def test_task_row_content_and_attention(self):
         t = Task(id=3, milestone_id=2, title="Compact title")
-
         plain = Text.from_markup(design.task_row(t, width=80)).plain
-
         self.assertEqual(plain.rstrip(), "T3 Compact title")
-        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!"):
+        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!", "PR", "1c"):
             self.assertNotIn(stat, plain)
 
-    @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_marks_attention_with_one_word(self):
-        t = Task(id=3, milestone_id=2, title="Compact title")
-
-        plain = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
-
-        self.assertTrue(plain.rstrip().endswith("review"))
-        self.assertIn("T3 Compact title", plain)
-        self.assertEqual(plain.count("review"), 1)
-        self.assertNotIn("!", plain)
+        hot = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
+        self.assertTrue(hot.rstrip().endswith("review"))
+        self.assertIn("T3 Compact title", hot)
+        self.assertEqual(hot.count("review"), 1)
+        self.assertNotIn("!", hot)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_truncates_to_the_row_width(self):
+    def test_task_row_width_budget(self):
         t = Task(id=3, milestone_id=2, title="A very long task title that will not fit")
-
         for width in (12, 20, 33, 80):
             with self.subTest(width=width):
                 plain = Text.from_markup(design.task_row(t, width=width)).plain
                 self.assertEqual(len(plain), width)
                 self.assertIn("T3", plain)
-
         narrow = Text.from_markup(design.task_row(t, width=20)).plain
         self.assertIn("…", narrow)
 
-    @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_gives_the_freed_slots_to_the_title(self):
         title = "A title long enough to be cut by the old slots"
-        t = Task(id=3, milestone_id=2, title=title)
-
-        plain = Text.from_markup(design.task_row(t, width=60)).plain
-
-        self.assertIn(title, plain)
-        self.assertNotIn("…", plain)
+        wide = Text.from_markup(
+            design.task_row(Task(id=3, milestone_id=2, title=title), width=60)
+        ).plain
+        self.assertIn(title, wide)
+        self.assertNotIn("…", wide)
 
     def test_task_label_keeps_blocked_and_claim_detail(self):
         p = self.store.add_plan("P")
@@ -144,12 +123,12 @@ class TestDesignSystem(unittest.TestCase):
             self.assertTrue(row.rstrip().endswith("doing"))
             self.assertNotIn("◐", row)
 
-    def test_progress_and_truncation(self):
+    def test_plan_row_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")
         row = design.plan_row(p, progress=(3, 7), width=24)
         self.assertIn("…", row)
         self.assertNotIn("▰", row)
-        self.assertNotIn("title", row)  # truncated before the last word
+        self.assertNotIn("title", row)
         full = design.plan_row(p, progress=(3, 7), width=80)
         self.assertIn("A very long plan title", full)
         self.assertIn("3/7", full)
@@ -158,22 +137,25 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.truncate("abcdef", 3), "ab…")
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_plan_rows_keep_the_stats_block_start(self):
+    def test_plan_row_stats_and_attention(self):
         p = Plan(id=1, name="Plan")
         width = 80
         first = Text.from_markup(design.plan_row(p, progress=(3, 7), width=width)).plain
         second = Text.from_markup(
-            design.plan_row(
-                p,
-                progress=(3, 7),
-                attention=True,
-                width=width,
-            )
+            design.plan_row(p, progress=(3, 7), attention=True, width=width)
         ).plain
-
         self.assertEqual(len(first), width)
         self.assertEqual(len(second), width)
         self.assertEqual(first.index("3/7"), second.index("3/7"))
+        self.assertIn("review", second)
+
+    def test_plan_row_marks_a_registered_worktree_and_escapes(self):
+        p = Plan(id=1, name="Plan")
+        self.assertIn("wt", design.plan_row(p, worktrees=1, width=80))
+        self.assertNotIn("wt", design.plan_row(p, worktrees=0, width=80))
+        escaped = design.plan_row(Plan(id=1, name="Ray [old]"), width=80)
+        self.assertIn(r"[bold]Ray \[old][/]", escaped)
+        self.assertNotIn("TODO", escaped)
 
     def test_no_criteria_progress_in_labels(self):
         p = self.store.add_plan("P")
@@ -184,17 +166,6 @@ class TestDesignSystem(unittest.TestCase):
         label = design.plan_label(p, self.store)
         self.assertEqual(label, "○ P1 P")
         self.assertNotRegex(label, r"\[\d+/\d+✓\]")
-
-    def test_plan_row_marks_a_registered_worktree(self):
-        p = Plan(id=1, name="Plan")
-        self.assertIn("wt", design.plan_row(p, worktrees=1, width=80))
-        self.assertNotIn("wt", design.plan_row(p, worktrees=0, width=80))
-
-    def test_plan_row_escapes_title(self):
-        p = Plan(id=1, name="Ray [old]")
-        row = design.plan_row(p, width=80)
-        self.assertIn(r"[bold]Ray \[old][/]", row)
-        self.assertNotIn("TODO", row)
 
     def test_cli_doing_row_stays_static(self):
         p = self.store.add_plan("P")

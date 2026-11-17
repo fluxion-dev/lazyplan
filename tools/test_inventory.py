@@ -296,7 +296,7 @@ KEEP_MATRIX: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "core status policy",
-        ("tests.core.test_planning_policies.TestRollup.test_all_done_is_done",),
+        ("tests.core.test_planning_policies.TestRollup.test_rollup_target_matrix",),
     ),
     (
         "core evidence policy",
@@ -321,7 +321,7 @@ KEEP_MATRIX: tuple[tuple[str, tuple[str, ...]], ...] = (
     ),
     (
         "service claim release on done",
-        ("tests.services.test_claims.TestClaims.test_moving_to_done_releases_the_lease",),
+        ("tests.services.test_claims.TestClaims.test_moving_off_doing_releases_the_lease",),
     ),
     (
         "CLI porcelain rows",
@@ -401,7 +401,7 @@ DUPLICATE_MAP: dict[str, tuple[str, ...]] = {
         "tests.setup.test_setup_ui_render.RenderCase.test_model_review_rejects_bad_input_and_help_is_shown",
         "tests.setup.test_setup_ui_render.RenderCase.test_model_review_marks_a_catalog_warning",
     ),
-    "tests.cli.test_upgrade.TestRunners.test_run_upgrade_routes_pipx": (
+    "tests.cli.test_upgrade.TestRunners.test_run_upgrade_routes_and_guards": (
         "tests.cli.test_upgrade.TestRunners.test_run_upgrade_rejects_unknown_method",
         "tests.cli.test_upgrade.TestRunners.test_run_upgrade_routes_venv",
         "tests.cli.test_upgrade.TestRunners.test_run_upgrade_rejects_a_downgrade_before_dispatch",
@@ -448,7 +448,8 @@ DUPLICATE_MAP: dict[str, tuple[str, ...]] = {
 
 # One shared fixture per shape; the value names the modules that must use it.
 FIXTURE_MAP: dict[str, tuple[str, ...]] = {
-    "tests.support.state:store_case": (
+    "tests.support.state:StoreCase": (
+        "tests.services.test_active",
         "tests.services.test_audit",
         "tests.services.test_claims",
         "tests.services.test_lint",

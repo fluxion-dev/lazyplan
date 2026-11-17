@@ -2,26 +2,20 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
 import unittest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.store import ClaimConflict, ClaimMissing, Store
+from lazyplan.store import ClaimConflict, ClaimMissing
+from tests.support.state import StoreCase, temp_store
 
 
-class TestClaims(unittest.TestCase):
+class TestClaims(StoreCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.db = os.path.join(self.tmp.name, "claims.db")
-        self.store = Store(self.db)
+        super().setUp()
         plan = self.store.add_plan("P", actor="fixture", worktree_required=False)
         milestone = self.store.add_milestone(plan.id, "M", actor="fixture")
         self.task = self.store.add_task(milestone.id, "T", actor="fixture")
-
-    def tearDown(self):
-        self.tmp.cleanup()
 
     def test_claim_sets_actor_ttl_and_note(self):
         claim, previous = self.store.claim_task(
@@ -151,7 +145,7 @@ class TestClaims(unittest.TestCase):
         claim = data["plans"][0]["milestones"][0]["tasks"][0]["claim"]
         self.assertEqual(claim["actor"], "alice")
 
-        other = Store(os.path.join(self.tmp.name, "other.db"))
+        other = temp_store(self, "other.db")
         counts = services.import_all(other, data, actor="fixture")
         self.assertEqual(counts["claims"], 1)
         imported = other.get_claim(1)
@@ -162,7 +156,7 @@ class TestClaims(unittest.TestCase):
     def test_export_import_skips_expired_claims(self):
         self.store.claim_task(self.task.id, "alice", 1, now=1)
         data = services.export_all(self.store)
-        other = Store(os.path.join(self.tmp.name, "expired.db"))
+        other = temp_store(self, "expired.db")
         counts = services.import_all(other, data, actor="fixture")
         self.assertEqual(counts["claims"], 0)
         self.assertIsNone(other.get_claim(1))

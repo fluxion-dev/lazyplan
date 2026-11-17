@@ -196,6 +196,15 @@ class _SurfaceCase(unittest.IsolatedAsyncioTestCase):
         self.store.add_repo_link(
             "plan", self.plan.id, str(checkout), "git@example.test:org/api.git"
         )
+        self.store.link_commit(
+            "plan",
+            self.plan.id,
+            "a" * 40,
+            subject="Wrap the diff at every width",
+            author="Fixture",
+            repo_root=str(checkout),
+            files=("app/a.py",),
+        )
 
     def hubs(self) -> list[tuple[str, Any]]:
         """Every hub, with one row loaded where the fixture supports it."""
@@ -389,6 +398,29 @@ class SourceAndDiffResizeTest(_SurfaceCase):
                     self.assertEqual(tree[1], preview[1])
                     self.assertLess(tree[0], preview[0])
 
+    async def test_the_source_screen_keeps_its_diff_page(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            screen = SourceScreen(self.store, "plan", self.plan.id)
+            app.push_screen(screen)
+            await pilot.pause(0.4)
+            tree = screen.query_one("#source-tree")
+            for _ in range(40):
+                if tree.root.children:
+                    break
+                await pilot.pause(0.05)
+            self.assertTrue(tree.root.children)
+            tree.move_cursor(tree.root.children[0])
+            await pilot.pause()
+            screen._view.page_offset = 300
+            screen._view.page_has_more = True
+            for width, height in ((40, 24), (80, 24), (120, 40), (160, 50)):
+                await pilot.resize_terminal(width, height)
+                await pilot.pause()
+                await pilot.pause()
+                self.assertEqual(screen._view.page_offset, 300, f"page at {width}")
+
     async def test_the_plan_diff_reflows_and_keeps_its_page(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=SIZES[0]) as pilot:
@@ -411,6 +443,21 @@ class SourceAndDiffResizeTest(_SurfaceCase):
                     "TASKS",
                     str(screen.query_one("#plan-diff-body", Static).content),
                 )
+
+    async def test_the_plan_diff_restores_its_page_after_resize(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(80, 24)) as pilot:
+            await pilot.pause()
+            app.push_screen(PlanDiffScreen(DIFF))
+            await pilot.pause()
+            scroll = app.screen.query_one("#plan-diff-scroll")
+            scroll.scroll_to(y=4, animate=False)
+            await pilot.pause()
+            for width, height in ((40, 24), (160, 50), (80, 24)):
+                await pilot.resize_terminal(width, height)
+                await pilot.pause()
+                await pilot.pause()
+                self.assertEqual(scroll.scroll_y, min(4, scroll.max_scroll_y), f"page at {width}")
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")

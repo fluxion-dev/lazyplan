@@ -132,7 +132,11 @@ if _TEXTUAL_OK:
             self.set_class(width >= 120, "wide")
 
         def on_resize(self, event: events.Resize) -> None:
-            """Re-render the current preview after a width change."""
+            """Re-render the current preview after a width change.
+
+            The selected node and diff page are the user's place; only the
+            pagination cache is stale, so the page offset is kept.
+            """
             self._apply_width_classes(event.size.width)
             if self._view.split and event.size.width - 2 < MIN_SPLIT_WIDTH:
                 self._view.split = False
@@ -143,7 +147,15 @@ if _TEXTUAL_OK:
             self._diff_cache.clear()
             node = self.query_one("#source-tree", NavTree).cursor_node
             if node is not None:
-                self._preview(node)
+                self._preview(node, reset_page=False)
+            self.call_after_refresh(self._clamp_scroll)
+
+        def _clamp_scroll(self) -> None:
+            """A wider preview can leave the old offset past the last page."""
+            scroll = self.query_one("#source-preview", VerticalScroll)
+            target = min(scroll.scroll_y, scroll.max_scroll_y)
+            if target != scroll.scroll_y:
+                scroll.scroll_to(y=target, animate=False)
 
         def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
             """Keep the filter field's keys free while it owns the keyboard."""

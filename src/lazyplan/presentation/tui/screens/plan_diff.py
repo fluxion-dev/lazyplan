@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 try:
+    from textual import events
     from textual.app import ComposeResult  # noqa: F401
     from textual.binding import Binding  # noqa: F401
     from textual.containers import Vertical, VerticalScroll  # noqa: F401
@@ -44,16 +45,29 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             self.query_one("#plan-diff-page").border_title = " plan diff "
+            self._paint()
+            self.query_one("#plan-diff-hints", Taskbar).set_for_app(
+                action_bar(None, [("↑↓", "scroll"), ("esc", "back")]),
+            )
+            self.query_one("#plan-diff-scroll", VerticalScroll).focus()
+
+        def on_resize(self, event: events.Resize) -> None:
+            """Re-wrap the body and keep the reader's page position."""
+            offset = self.query_one("#plan-diff-scroll", VerticalScroll).scroll_y
+            self._paint()
+            self.call_after_refresh(lambda: self._restore_page(offset))
+
+        def _paint(self) -> None:
             head, body = render_plan_diff(
                 self._view,
                 palette_from_theme(self.app.theme_variables),
             )
             self.query_one("#plan-diff-head", Static).update(head)
             self.query_one("#plan-diff-body", Static).update(body)
-            self.query_one("#plan-diff-hints", Taskbar).set_for_app(
-                action_bar(None, [("↑↓", "scroll"), ("esc", "back")]),
-            )
-            self.query_one("#plan-diff-scroll", VerticalScroll).focus()
+
+        def _restore_page(self, offset: float) -> None:
+            scroll = self.query_one("#plan-diff-scroll", VerticalScroll)
+            scroll.scroll_to(y=min(offset, scroll.max_scroll_y), animate=False)
 
         def action_update_prompt(self) -> None:
             """Open the update screen without leaving this view."""

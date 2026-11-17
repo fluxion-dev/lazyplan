@@ -23,6 +23,7 @@ import os
 import shutil
 import sys
 from collections.abc import Callable
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from pathlib import Path
@@ -1786,18 +1787,25 @@ def run(out_dir: Path, only: list[str]) -> None:
     ):
         shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
         FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)
-        for name in names:
-            scene = by_id[name]
-            scene_dir = FIXTURE_ROOT / name
-            scene_dir.mkdir(parents=True, exist_ok=True)
-            store = scene.build(scene_dir)
-            svg = scene_dir / f"{name}.svg"
-            asyncio.run(scene.capture(store, svg))
-            cs.patch_svg(svg)
-            png = out_dir / f"{name}.png"
-            out_dir.mkdir(parents=True, exist_ok=True)
-            cs.convert(svg, png)
-            print(f"wrote {cs.shown(png)} ({cs.dimensions(png)})")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        pending: list[tuple[Path, Future[None]]] = []
+        workers = min(4, os.cpu_count() or 1)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for name in names:
+                scene = by_id[name]
+                scene_dir = FIXTURE_ROOT / name
+                scene_dir.mkdir(parents=True, exist_ok=True)
+                store = scene.build(scene_dir)
+                svg = scene_dir / f"{name}.svg"
+                asyncio.run(scene.capture(store, svg))
+                cs.patch_svg(svg)
+                png = out_dir / f"{name}.png"
+                # Conversion runs in its own process; overlap it with the next
+                # capture instead of waiting on each image.
+                pending.append((png, pool.submit(cs.convert, svg, png)))
+            for png, future in pending:
+                future.result()
+                print(f"wrote {cs.shown(png)} ({cs.dimensions(png)})")
 
     write_manifest(names, out_dir)
 

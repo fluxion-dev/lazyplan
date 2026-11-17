@@ -3,26 +3,51 @@
 from __future__ import annotations
 
 import time
-from pathlib import Path
 
 from lazyplan.infrastructure.templates import apply_template, template_criteria
 
-from ..core.entities import Criterion, Milestone, Plan, Status, Task
+from ..core.entities import Milestone, Plan, Status, Task
 from ..core.kinds import check_kind
-from ..core.policies.insights import leading_int
 from ..core.policies.lanes import (
     DEFAULT_AGENT_ROLE,
     DEFAULT_DISPATCH_MODE,
     DEFAULT_LANE_GROUP,
     DEFAULT_MAX_AGENTS,
 )
-from ..core.policies.maintenance import check_archive_mode, is_visible
-from ..core.policies.planning import is_archived as _is_archived_policy
 from ..core.policies.planning import next_status, rollup_target
 from ..core.ports.coordination import CoordinationPort
 from ..core.ports.planning import PlanningPort
-from ..core.ports.repos import ReposPort
 from .doing_claims import check_claimable, claim_for_doing
+from .tree_view import (
+    TreeSource as TreeSource,
+)
+from .tree_view import (
+    _filtered_milestones as _filtered_milestones,
+)
+from .tree_view import (
+    _is_finished as _is_finished,
+)
+from .tree_view import (
+    _plan_activity as _plan_activity,
+)
+from .tree_view import (
+    _plan_matches_repo as _plan_matches_repo,
+)
+from .tree_view import (
+    _repo_match as _repo_match,
+)
+from .tree_view import (
+    _visible_plan as _visible_plan,
+)
+from .tree_view import (
+    activity_source as activity_source,
+)
+from .tree_view import (
+    plan_activity as plan_activity,
+)
+from .tree_view import (
+    tree as tree,
+)
 
 DEFAULT_PLAN_LIMIT = 5
 
@@ -341,240 +366,6 @@ def reconcile(
 def is_finished(port: PlanningPort, plan: Plan) -> bool:
     """Age-based finished rule: done longer than a day. No proof: never hide."""
     return _is_finished(plan, port.plan_status_events_map(), time.time())
-
-
-def _is_finished(plan: Plan, events: dict[int, tuple[float, str]], now: float) -> bool:
-    """Age-based finished decision from a preloaded latest-status map."""
-    return _is_archived_policy(plan, events, now)
-
-
-def _plan_activity(
-    milestones: dict[int, list[Milestone]],
-    tasks: dict[int, list[Task]],
-    criteria: dict[tuple[str, int], list[Criterion]],
-    events: list[dict],
-) -> dict[int, float]:
-    """Latest event timestamp per plan from preloaded maps and events."""
-    milestone_plan: dict[int, int] = {
-        milestone.id: milestone.plan_id for items in milestones.values() for milestone in items
-    }
-    task_milestone: dict[int, int] = {
-        task.id: task.milestone_id for items in tasks.values() for task in items
-    }
-    criterion_parent: dict[int, tuple[str, int]] = {
-        criterion.id: (criterion.parent_kind, criterion.parent_id)
-        for items in criteria.values()
-        for criterion in items
-    }
-
-    def plan_for_milestone(mid: int | None) -> int | None:
-        return milestone_plan.get(mid) if mid is not None else None
-
-    def plan_for_task(tid: int | None) -> int | None:
-        if tid is None:
-            return None
-        return plan_for_milestone(task_milestone.get(tid))
-
-    def plan_for_criterion(cid: int | None) -> int | None:
-        if cid is None:
-            return None
-        found = criterion_parent.get(cid)
-        if found is None:
-            return None
-        kind, parent_id = found
-        if kind == "plan":
-            return parent_id
-        if kind == "milestone":
-            return plan_for_milestone(parent_id)
-        return plan_for_task(parent_id)
-
-    out: dict[int, float] = {}
-    for event in events:
-        detail = str(event.get("detail") or "")
-        plan_id: int | None = None
-        if detail.startswith("P#"):
-            plan_id = leading_int(detail, 2)
-        elif detail.startswith("plan #"):
-            plan_id = leading_int(detail, 6)
-        elif detail.startswith("M#"):
-            plan_id = plan_for_milestone(leading_int(detail, 2))
-        elif detail.startswith("milestone #"):
-            plan_id = plan_for_milestone(leading_int(detail, 11))
-        elif detail.startswith("T#"):
-            plan_id = plan_for_task(leading_int(detail, 2))
-        elif detail.startswith("task #"):
-            plan_id = plan_for_task(leading_int(detail, 6))
-        elif detail.startswith("criteria #"):
-            plan_id = plan_for_criterion(leading_int(detail, 10))
-        elif detail.startswith("criterion #"):
-            plan_id = plan_for_criterion(leading_int(detail, 11))
-        if plan_id is None:
-            continue
-        stamp = float(event.get("ts") or 0.0)
-        if stamp > out.get(plan_id, 0.0):
-            out[plan_id] = stamp
-    return out
-
-
-def plan_activity(port: PlanningPort) -> dict[int, float]:
-    """Latest event timestamp per plan (whole subtree), for recent-first ordering."""
-    return port.plan_activity_map()
-
-
-def _filtered_milestones(
-    milestones: dict[int, list[Milestone]],
-    tasks: dict[int, list[Task]],
-    plan_id: int,
-    status: Status | None,
-) -> list[tuple[Milestone, list[Task]]]:
-    """Milestone/task pairs of one plan honoring the status filter."""
-    out = []
-    for milestone in milestones.get(plan_id, ()):
-        items = tasks.get(milestone.id, [])
-        if status is not None:
-            items = [task for task in items if task.status == status]
-            if milestone.status != status and not items:
-                continue
-        out.append((milestone, items))
-    return out
-
-
-def _repo_match(want: str, repos: list[dict]) -> bool:
-    """True when a repo filter matches any effective repo (path or remote)."""
-    needle = (want or "").strip()
-    if not needle:
-        return True
-    try:
-        norm = str(Path(needle).expanduser().resolve())
-    except OSError:
-        norm = str(Path(needle).expanduser().absolute())
-    lowered = needle.lower()
-    for repo in repos:
-        path = str(repo.get("repo_path", "") or "")
-        remote = str(repo.get("repo_remote", "") or "")
-        if path and (path == norm or path == needle):
-            return True
-        if remote and (remote == needle or lowered in remote.lower()):
-            return True
-        if needle in path:
-            return True
-    return False
-
-
-def _plan_matches_repo(
-    plan_id: int,
-    milestones: dict[int, list[Milestone]],
-    tasks: dict[int, list[Task]],
-    repos: dict[tuple[str, int], list[dict]],
-    want: str,
-) -> bool:
-    """True when a plan or any descendant effectively links the wanted repo."""
-    plan_repos = repos.get(("plan", plan_id), [])
-    if _repo_match(want, plan_repos):
-        return True
-    for milestone in milestones.get(plan_id, ()):
-        milestone_repos = repos.get(("milestone", milestone.id), []) or plan_repos
-        if _repo_match(want, milestone_repos):
-            return True
-        for task in tasks.get(milestone.id, ()):
-            task_repos = repos.get(("task", task.id), []) or milestone_repos
-            if _repo_match(want, task_repos):
-                return True
-    return False
-
-
-def _visible_plan(
-    plan: Plan,
-    milestones: list[tuple[Milestone, list[Task]]],
-    status: Status | None,
-    finished: str,
-    past_finished_window: bool,
-    archived: str,
-) -> bool:
-    """Whether a plan survives status, finished, and archive filters."""
-    if not is_visible(plan, archived):
-        return False
-    if finished == "only" and not past_finished_window:
-        return False
-    if finished == "hide" and past_finished_window:
-        return False
-    if status is not None and plan.status != status and not milestones:
-        return False
-    return True
-
-
-def _keep_plan(
-    plan: Plan,
-    plan_id: int | None,
-    plan_mode: str,
-    repo: str | None,
-    milestones: dict[int, list[Milestone]],
-    tasks: dict[int, list[Task]],
-    repos: dict[tuple[str, int], list[dict]],
-) -> bool:
-    """Whether one plan survives mode, id, and repo filters."""
-    if plan_id is not None and plan.id != plan_id:
-        return False
-    if plan_mode == "active" and plan.status is Status.DONE:
-        return False
-    if plan_mode == "finished" and plan.status is not Status.DONE:
-        return False
-    if repo and not _plan_matches_repo(plan.id, milestones, tasks, repos, repo):
-        return False
-    return True
-
-
-def tree(
-    port: ReposPort,
-    status: Status | None = None,
-    plan_id: int | None = None,
-    finished: str = "hide",
-    archived: str = "hide",
-    limit: int | None = None,
-    repo: str | None = None,
-    milestone_id: int | None = None,
-    plan_mode: str = "all",
-) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
-    """Nested plans, milestones, and tasks with filters."""
-    check_archive_mode(finished)
-    check_archive_mode(archived)
-    if archived != "hide" and finished == "hide":
-        finished = "show"
-    if plan_mode not in ("all", "active", "finished"):
-        raise ValueError("plan_mode must be all|active|finished")
-    plans = port.list_plans(archived="show")
-    milestones = port.milestones_map()
-    tasks = port.tasks_map()
-    status_events = port.plan_status_events_map() if finished != "show" else {}
-    repos = port.repos_map() if repo else {}
-    now = time.time()
-    out = []
-    for plan in plans:
-        if not _keep_plan(plan, plan_id, plan_mode, repo, milestones, tasks, repos):
-            continue
-        items = _filtered_milestones(milestones, tasks, plan.id, status)
-        if milestone_id is not None:
-            items = [(item, task_list) for item, task_list in items if item.id == milestone_id]
-        if _visible_plan(
-            plan,
-            items,
-            status,
-            finished,
-            _is_finished(plan, status_events, now),
-            archived,
-        ):
-            out.append((plan, items))
-    if plan_id is None and milestone_id is None:
-        activity = _plan_activity(
-            milestones,
-            tasks,
-            port.criteria_map(),
-            port.feed(limit=100_000),
-        )
-        out.sort(key=lambda entry: (activity.get(entry[0].id, 0.0), entry[0].id), reverse=True)
-        if limit is not None:
-            out = out[: max(limit, 0)]
-    return out
 
 
 __all__ = [

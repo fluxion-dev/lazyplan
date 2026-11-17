@@ -56,6 +56,25 @@ the failing unittest module names.
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.
 
+## Performance
+
+`tools/perf_bench.py --check` is the performance gate. It builds a deterministic
+journal in a temp directory and holds exact query ceilings for the tree, list,
+show, export, audit, fingerprint, and TUI paint/reconcile/expand paths, plus
+cold CLI startup. Wall ceilings stay generous so runner variance does not fail
+a pull request.
+
+When you change a measured path:
+
+1. Run `python tools/perf_bench.py --repeat 3` before and after, and put both
+   numbers in the commit message and the plan note.
+2. Lower a budget only to the measured ceiling. A new metric needs a budget
+   entry in the same commit.
+3. For `site/` or either capture tool, run `python tools/time_phases.py --check`
+   and keep the PNG/WebP bytes identical; report the phase numbers.
+
+Do not trade a contract, determinism, or error handling for a number.
+
 ## Screenshots and the UX review board
 
 Two capture tools build every screenshot from deterministic fixtures — fixed

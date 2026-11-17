@@ -31,8 +31,6 @@ class LazyBranchMixin:
     _progress: dict[tuple[str, int], tuple[int, int]]
     _source_stats: dict[tuple[str, int], tuple[int, int, int, int]]
     _attention: set[tuple[str, int]]
-    _forge_map: dict
-    _vcs_map: dict
     _loading: bool
 
     def has_model_children(self, key: tuple[str, int]) -> bool:

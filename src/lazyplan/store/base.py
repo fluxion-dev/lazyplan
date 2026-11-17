@@ -233,6 +233,27 @@ class StoreBase(_StoreContract):
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def events_by_prefix(self, prefixes: Sequence[str], limit: int = 100_000) -> list[dict]:
+        """Newest bounded events whose detail starts with one of *prefixes*.
+
+        GLOB is case-sensitive exactly like ``str.startswith``, so the SQL
+        filter keeps the rows a Python prefix check would keep while the
+        largest table never becomes a list of dicts.
+        """
+        wanted = [prefix for prefix in prefixes if prefix]
+        if not wanted:
+            return []
+        marks = " OR ".join("detail GLOB ?" for _ in wanted)
+        params: list[object] = [max(limit, 1), *(f"{prefix}*" for prefix in wanted)]
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM events WHERE id IN"
+                " (SELECT id FROM events ORDER BY id DESC LIMIT ?)"
+                f" AND ({marks}) ORDER BY id DESC",
+                params,
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def fingerprint(self) -> tuple:
         """Structural poll key: counts, max ids, and the events watermark.
 
@@ -241,34 +262,31 @@ class StoreBase(_StoreContract):
         edit through the store appends an event, so the watermark covers
         status, title, and description updates that leave ids unchanged.
         """
-        c = self.counts()
-        with self._connect() as conn:
-            mp = conn.execute("SELECT COALESCE(MAX(id),0) m FROM plans").fetchone()["m"]
-            ms = conn.execute("SELECT COALESCE(MAX(id),0) m FROM milestones").fetchone()["m"]
-            mt = conn.execute("SELECT COALESCE(MAX(id),0) m FROM tasks").fetchone()["m"]
-            me = conn.execute("SELECT COALESCE(MAX(id),0) m FROM events").fetchone()["m"]
-            mc = conn.execute("SELECT COALESCE(MAX(id),0) m FROM criteria").fetchone()["m"]
-            ml = conn.execute("SELECT COALESCE(MAX(id),0) m FROM vcs_links").fetchone()["m"]
-            try:
-                mf = conn.execute("SELECT COALESCE(MAX(id),0) m FROM forge_links").fetchone()["m"]
-            except Exception:
-                mf = 0
-            try:
-                mr = conn.execute("SELECT COALESCE(MAX(id),0) m FROM entity_repos").fetchone()["m"]
-            except Exception:
-                mr = 0
+        with self.transaction():
+            c = self.counts()
+            with self._connect() as conn:
+                row = conn.execute(
+                    "SELECT (SELECT COALESCE(MAX(id),0) FROM plans) AS mp,"
+                    " (SELECT COALESCE(MAX(id),0) FROM milestones) AS ms,"
+                    " (SELECT COALESCE(MAX(id),0) FROM tasks) AS mt,"
+                    " (SELECT COALESCE(MAX(id),0) FROM events) AS me,"
+                    " (SELECT COALESCE(MAX(id),0) FROM criteria) AS mc,"
+                    " (SELECT COALESCE(MAX(id),0) FROM vcs_links) AS ml,"
+                    " (SELECT COALESCE(MAX(id),0) FROM entity_repos) AS mr,"
+                    " (SELECT COALESCE(MAX(id),0) FROM forge_links) AS mf"
+                ).fetchone()
         return (
             c["plans"],
             c["milestones"],
             c["tasks"],
-            mp,
-            ms,
-            mt,
-            me,
-            mc,
-            ml,
-            mr,
-            mf,
+            row["mp"],
+            row["ms"],
+            row["mt"],
+            row["me"],
+            row["mc"],
+            row["ml"],
+            row["mr"],
+            row["mf"],
         )
 
     def live_fingerprint(self) -> tuple:

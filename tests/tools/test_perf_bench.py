@@ -97,11 +97,16 @@ class PerfBenchCase(unittest.TestCase):
             "list_text",
             "list_json",
             "show_plan",
+            "store.counts",
+            "tui_preview",
             "store.fingerprint",
             "export_all",
             "audit_report",
             "git_status",
             "git_show",
+            "cli_import",
+            "cli_version",
+            "cli_list",
             "tui_first_paint",
             "tui_expand",
             "tui_reconcile",
@@ -135,6 +140,16 @@ class PerfBenchCase(unittest.TestCase):
         self.assertEqual(reconcile["nodes"], first["nodes"])
         self.assertIsNotNone(expand["ms"])
         self.assertGreater(expand["nodes"] or 0, first["nodes"] or 0)
+
+    def test_every_measured_metric_has_a_budget(self):
+        result = self.bench.run(
+            self.bench.QUICK_COUNTS,
+            repeat=1,
+            include_tui=False,
+            include_cli=False,
+        )
+        measured = {metric["name"] for metric in result["metrics"]}
+        self.assertEqual(measured, set(self.bench.BUDGETS))
 
     def test_budget_check_accepts_a_clean_run(self):
         result = self.bench.run(self.bench.QUICK_COUNTS, repeat=1, include_tui=False)

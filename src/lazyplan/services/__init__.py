@@ -40,6 +40,8 @@ from .evidence import (
 )
 from .planning import (
     DEFAULT_PLAN_LIMIT,
+    TreeSource,
+    activity_source,
     create_milestone,
     create_plan,
     create_task,
@@ -203,6 +205,8 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "TreeSource",
+    "activity_source",
     "ReviewPacket",
     "build_review",
     "active_plan",

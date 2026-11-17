@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from ....core.entities import Milestone, Plan, Task
     from ....core.ports.insights import InsightsPort
 
+    RepoMap = dict[tuple[str, int], list[dict]]
+
 DEFAULT_ROW_WIDTH = 80
 
 _CORE_SPEC: dict[str, tuple[str, str]] = {
@@ -70,12 +72,23 @@ def _render_row(
     return f"{prefix_rich}[{style}]{_escape_markup(title)}[/]{pad}{stats_rich}"
 
 
-def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -> str:
-    """Canonical row label for a plan (plain text: CLI, tests)."""
+def plan_label(
+    p: Plan,
+    store: InsightsPort | None = None,
+    dot: str = "plain",
+    repos: RepoMap | None = None,
+) -> str:
+    """Canonical row label for a plan (plain text: CLI, tests).
+
+    Pass `repos` when labeling a list so one repo read serves every row.
+    """
     base = _label("plan", p, store, dot)
     if store is None:
         return base
-    names = [n for n in (repo_project_name(r) for r in store.effective_repos("plan", p.id)) if n]
+    linked = (
+        repos.get(("plan", p.id), []) if repos is not None else store.effective_repos("plan", p.id)
+    )
+    names = [n for n in (repo_project_name(r) for r in linked) if n]
     return f"{base} [{', '.join(names)}]" if names else base
 
 

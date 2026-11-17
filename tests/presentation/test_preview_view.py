@@ -77,19 +77,17 @@ class PreviewDocumentTest(unittest.TestCase):
             "header\nmeta line\n## WHY\nbecause\n\nfooter",
         )
 
-    def test_section_headings_become_markdown_h2(self) -> None:
+    def test_heading_grammar_and_spacing(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
+
         body = build_preview("plan", self.plan.id, full).render_markdown()
         headings = [line for line in body.splitlines() if line.startswith("## ")]
         self.assertGreaterEqual(len(headings), 2)
         for heading in headings:
             self.assertEqual(heading, heading.upper())
 
-    def test_section_spacing_keeps_one_blank_between_sections(self) -> None:
-        full = self.store.get_full("plan", self.plan.id)
-        assert full is not None
-        lines = build_preview("plan", self.plan.id, full).render_markdown().splitlines()
+        lines = body.splitlines()
         self.assertNotEqual(lines[0], "")
         self.assertNotEqual(lines[-1], "")
         self.assertFalse(
@@ -105,9 +103,6 @@ class PreviewDocumentTest(unittest.TestCase):
                 self.assertEqual(lines[index - 1], "")
             self.assertNotEqual(lines[index + 1], "")
 
-    def test_plain_render_keeps_the_markdown_heading_grammar(self) -> None:
-        full = self.store.get_full("plan", self.plan.id)
-        assert full is not None
         text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("## MILESTONES 1", text)
         self.assertNotIn("[on $lp-surface-raised]", text)

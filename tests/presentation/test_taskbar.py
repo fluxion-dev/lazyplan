@@ -49,21 +49,20 @@ def plain(markup: str) -> str:
 
 
 class VersionTextTest(unittest.TestCase):
-    def test_running_version_is_prefixed_once(self) -> None:
-        self.assertEqual(version_text("0.47.0"), "v0.47.0")
-        self.assertEqual(version_text("v0.47.0"), "v0.47.0")
-
-    def test_a_newer_release_adds_an_arrow(self) -> None:
-        self.assertEqual(version_text("0.47.0", "0.48.0"), "v0.47.0 → v0.48.0")
-
-    def test_equal_or_older_cache_keeps_the_running_version(self) -> None:
-        self.assertEqual(version_text("0.47.0", "0.47.0"), "v0.47.0")
-        self.assertEqual(version_text("0.47.0", "0.46.0"), "v0.47.0")
-        self.assertEqual(version_text("0.47.0", "not-a-version"), "v0.47.0")
-
-    def test_an_empty_running_version_renders_nothing(self) -> None:
-        self.assertEqual(version_text(""), "")
-        self.assertEqual(version_text("  "), "")
+    def test_version_text_matrix(self) -> None:
+        cases = (
+            (("0.47.0",), "v0.47.0"),
+            (("v0.47.0",), "v0.47.0"),
+            (("0.47.0", "0.48.0"), "v0.47.0 → v0.48.0"),
+            (("0.47.0", "0.47.0"), "v0.47.0"),
+            (("0.47.0", "0.46.0"), "v0.47.0"),
+            (("0.47.0", "not-a-version"), "v0.47.0"),
+            (("",), ""),
+            (("  ",), ""),
+        )
+        for args, expected in cases:
+            with self.subTest(args=args):
+                self.assertEqual(version_text(*args), expected)
 
     def test_the_badge_starts_at_the_right_edge(self) -> None:
         line = taskbar_markup(" ? help", running="0.47.0", width=40)
@@ -72,7 +71,7 @@ class VersionTextTest(unittest.TestCase):
 
 
 class TaskbarMarkupTest(unittest.TestCase):
-    def test_the_line_fills_the_width_and_ends_with_the_badge(self) -> None:
+    def test_markup_matrix(self) -> None:
         line = taskbar_markup(
             " ? help · c commands",
             running="0.47.0",
@@ -84,8 +83,7 @@ class TaskbarMarkupTest(unittest.TestCase):
         self.assertTrue(text.endswith("v0.47.0 → v0.48.0"))
         self.assertIn("help", text)
 
-    def test_health_sits_left_of_the_version(self) -> None:
-        text = plain(
+        health = plain(
             taskbar_markup(
                 " ? help",
                 health=" · health 2 issues",
@@ -93,19 +91,18 @@ class TaskbarMarkupTest(unittest.TestCase):
                 width=60,
             )
         )
-        self.assertLess(text.index("health"), text.index("v0.47.0"))
+        self.assertLess(health.index("health"), health.index("v0.47.0"))
 
-    def test_a_narrow_bar_keeps_the_version_and_drops_hints(self) -> None:
-        text = plain(
+        narrow = plain(
             taskbar_markup(
                 " ? help · c commands · / filter",
                 running="0.47.0",
                 width=24,
             )
         )
-        self.assertTrue(text.endswith("v0.47.0"))
-        self.assertNotIn("filter", text)
-        self.assertLessEqual(len(text), 24)
+        self.assertTrue(narrow.endswith("v0.47.0"))
+        self.assertNotIn("filter", narrow)
+        self.assertLessEqual(len(narrow), 24)
 
     def test_no_version_keeps_the_hints_untouched(self) -> None:
         line = taskbar_markup(" ? help", running="", width=40)

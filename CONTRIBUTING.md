@@ -121,6 +121,23 @@ and `tests/support`:
 python -m unittest discover -s tests -t .
 ```
 
+### Core suite policy
+
+The suite proves contracts, not implementation. A test belongs in the core
+suite when it covers a store row or transaction, a core policy, a service, a
+CLI command, an MCP tool, setup acceptance, or a TUI screen's smoke, status, or
+resize behavior. `python tools/test_inventory.py --check` holds that matrix:
+every core contract names its proving test, and a missing one fails the check.
+
+Use a contract table when cases differ only by an input variant: a host, scope,
+status, alias, or backend. Add a row and a `subTest` label instead of a new test
+method. Keep one smoke test per screen for mount, render, and focus, and leave
+exact markup, mount order, and widget internals out of the suite.
+
+Delete a test only when the behavior it proved is gone or moves into a named
+row of a contract table. Error paths, empty states, platform branches, and
+safety rules stay direct.
+
 ## Flaky tests
 
 A failing gate is never retried to green. A flake is a defect in the test or

@@ -22,13 +22,12 @@ def _write(path: Path, text: str) -> None:
 
 
 class TestParseTemplate(unittest.TestCase):
-    def test_full_frontmatter(self):
-        text = (
+    def test_parse_shapes(self):
+        full = (
             "---\n"
             "defaults:\n"
             '  why: "W"\n'
             "  what: ''\n"
-            "  priority: p1\n"
             "required: [title, why]\n"
             "criteria:\n"
             '  - "First"\n'
@@ -36,14 +35,12 @@ class TestParseTemplate(unittest.TestCase):
             "---\n"
             "# guidance ignored\n"
         )
-        t = templates.parse_template("plan", text)
-        # retired priority key in old templates is ignored, not rejected
-        self.assertEqual(t.defaults, {"why": "W", "what": ""})
-        self.assertEqual(t.required, ["title", "why"])
-        self.assertEqual(t.criteria, ["First", "Second"])
+        parsed = templates.parse_template("plan", full)
+        self.assertEqual(parsed.defaults, {"why": "W", "what": ""})
+        self.assertEqual(parsed.required, ["title", "why"])
+        self.assertEqual(parsed.criteria, ["First", "Second"])
 
-    def test_block_lists(self):
-        text = (
+        block = (
             "---\n"
             "defaults:\n"
             '  desc: "D"\n'
@@ -54,14 +51,13 @@ class TestParseTemplate(unittest.TestCase):
             "  - Given x, when y, then z\n"
             "---\n"
         )
-        t = templates.parse_template("milestone", text)
-        self.assertEqual(t.defaults, {"desc": "D"})
-        self.assertEqual(t.required, ["title", "desc"])
-        self.assertEqual(t.criteria, ["Given x, when y, then z"])
+        parsed = templates.parse_template("milestone", block)
+        self.assertEqual(parsed.defaults, {"desc": "D"})
+        self.assertEqual(parsed.required, ["title", "desc"])
+        self.assertEqual(parsed.criteria, ["Given x, when y, then z"])
 
-    def test_no_frontmatter_is_empty(self):
-        t = templates.parse_template("task", "# just guidance\n")
-        self.assertEqual((t.defaults, t.required, t.criteria), ({}, [], []))
+        empty = templates.parse_template("task", "# just guidance\n")
+        self.assertEqual((empty.defaults, empty.required, empty.criteria), ({}, [], []))
 
     def test_starters_parse_and_stay_opinionated(self):
         expected_required = {
@@ -132,28 +128,21 @@ class TestParseTemplate(unittest.TestCase):
         with self.assertRaises(ValueError):
             templates.render_starter("nope", templates.OPINIONATED)
 
-    def test_unknown_field_rejected(self):
+    def test_parse_rejections_and_retired_keys(self):
         with self.assertRaises(ValueError):
             templates.parse_template("plan", "---\ndefaults:\n  nope: x\n---\n")
         with self.assertRaises(ValueError):
-            templates.parse_template(
-                "milestone",
-                "---\nrequired: [title, why]\n---\n",  # why is plan-only
-            )
-
-    def test_retired_priority_key_ignored(self):
-        # Old template files still carry priority; parsing must not fail.
-        t = templates.parse_template(
-            "task", "---\ndefaults:\n  priority: p9\nrequired: [title]\n---\n"
-        )
-        self.assertEqual(t.required, ["title"])
-        self.assertNotIn("priority", t.defaults)
-        t2 = templates.parse_template("task", "---\nrequired:\n  - title\n  - priority\n---\n")
-        self.assertEqual(t2.required, ["title"])
-
-    def test_unclosed_frontmatter_rejected(self):
+            templates.parse_template("milestone", "---\nrequired: [title, why]\n---\n")
         with self.assertRaises(ValueError):
             templates.parse_template("plan", "---\ndefaults:\n  why: x\n")
+
+        retired = templates.parse_template(
+            "task", "---\ndefaults:\n  priority: p9\nrequired: [title]\n---\n"
+        )
+        self.assertEqual(retired.required, ["title"])
+        self.assertNotIn("priority", retired.defaults)
+        retired = templates.parse_template("task", "---\nrequired:\n  - title\n  - priority\n---\n")
+        self.assertEqual(retired.required, ["title"])
 
 
 class TestReadability(unittest.TestCase):
@@ -163,7 +152,7 @@ class TestReadability(unittest.TestCase):
         )
         self.assertEqual(out["desc"], "Do the thing")
 
-    def test_long_single_blob_rejected_per_field(self):
+    def test_readability_thresholds(self):
         blob = "x" * (templates.READABILITY_THRESHOLD + 1)
         for kind, fields in [
             ("plan", {"title": "P", "why": blob, "what": "short"}),
@@ -176,12 +165,12 @@ class TestReadability(unittest.TestCase):
                     templates.apply_template(kind, fields, "/tmp/nonexistent.db")
                 self.assertIn("paragraphs and sections", str(ctx.exception))
 
-    def test_boundary_length_passes(self):
-        ok = "x" * templates.READABILITY_THRESHOLD
-        out = templates.apply_template("task", {"title": "T", "desc": ok}, "/tmp/nonexistent.db")
-        self.assertEqual(out["desc"], ok)
+        boundary = "x" * templates.READABILITY_THRESHOLD
+        out = templates.apply_template(
+            "task", {"title": "T", "desc": boundary}, "/tmp/nonexistent.db"
+        )
+        self.assertEqual(out["desc"], boundary)
 
-    def test_long_sectioned_text_passes(self):
         bodies = [
             "First paragraph.\n\nSecond paragraph. " + "y" * templates.READABILITY_THRESHOLD,
             "# Head\n\n" + "y" * templates.READABILITY_THRESHOLD,

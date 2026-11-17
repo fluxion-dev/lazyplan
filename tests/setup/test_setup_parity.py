@@ -278,14 +278,11 @@ class SetupParityCase(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(mapping["tiers"]["deep"]["claude"], "large-model")
 
     def test_snapshot_ignores_a_transient_sqlite_journal(self) -> None:
-        journal = self.home / ".lazyplan" / "lazyplan.db-journal"
-        journal.parent.mkdir(parents=True)
-        journal.write_text("transient", encoding="utf-8")
+        transient = self.home / ".lazyplan" / "lazyplan.db-journal"
+        transient.parent.mkdir(parents=True)
+        transient.write_text("transient", encoding="utf-8")
         self.assertNotIn("home/.lazyplan/lazyplan.db-journal", self.snapshot())
-
-    def test_snapshot_still_reports_a_real_extra_file(self) -> None:
         extra = self.home / ".lazyplan" / "real.txt"
-        extra.parent.mkdir(parents=True)
         extra.write_text("kept", encoding="utf-8")
         self.assertIn("home/.lazyplan/real.txt", self.snapshot())
 

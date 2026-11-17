@@ -2,26 +2,20 @@
 
 from __future__ import annotations
 
-import os
-import tempfile
 import unittest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
-from lazyplan.store import ClaimConflict, ClaimMissing, Store
+from lazyplan.store import ClaimConflict, ClaimMissing
+from tests.support.state import StoreCase, temp_store
 
 
-class TestClaims(unittest.TestCase):
+class TestClaims(StoreCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.db = os.path.join(self.tmp.name, "claims.db")
-        self.store = Store(self.db)
+        super().setUp()
         plan = self.store.add_plan("P", actor="fixture", worktree_required=False)
         milestone = self.store.add_milestone(plan.id, "M", actor="fixture")
         self.task = self.store.add_task(milestone.id, "T", actor="fixture")
-
-    def tearDown(self):
-        self.tmp.cleanup()
 
     def test_claim_sets_actor_ttl_and_note(self):
         claim, previous = self.store.claim_task(
@@ -93,15 +87,12 @@ class TestClaims(unittest.TestCase):
         self.assertEqual(self.store.list_claims(plan_id=1, now=1001)[0]["task_id"], self.task.id)
         self.assertEqual(self.store.list_claims(plan_id=99, now=1001), [])
 
-    def test_moving_to_todo_releases_the_lease(self):
-        self.store.claim_task(self.task.id, "alice", 60, now=1000)
-        services.set_status(self.store, "task", self.task.id, Status.TODO, actor="alice")
-        self.assertIsNone(self.store.get_claim(self.task.id))
-
-    def test_moving_to_done_releases_the_lease(self):
-        self.store.claim_task(self.task.id, "alice", 60, now=1000)
-        services.set_status(self.store, "task", self.task.id, Status.DONE, actor="alice")
-        self.assertIsNone(self.store.get_claim(self.task.id))
+    def test_moving_off_doing_releases_the_lease(self):
+        for status in (Status.TODO, Status.DONE):
+            with self.subTest(status=status):
+                self.store.claim_task(self.task.id, "alice", 60, now=1000)
+                services.set_status(self.store, "task", self.task.id, status, actor="alice")
+                self.assertIsNone(self.store.get_claim(self.task.id))
 
     def test_moving_to_doing_keeps_an_existing_lease(self):
         self.store.claim_task(self.task.id, "alice", 60, now=1000)
@@ -110,29 +101,32 @@ class TestClaims(unittest.TestCase):
         assert claim is not None
         self.assertEqual(claim.actor, "alice")
 
-    def test_reconcile_releases_a_lease_on_a_todo_task(self):
-        self.store.claim_task(self.task.id, "alice", 3600)
-        report = services.reconcile(self.store, actor="reconciler")
-        self.assertEqual(report["released"], [self.task.id])
-        self.assertIsNone(self.store.get_claim(self.task.id))
+    def test_reconcile_releases_and_expires_leases(self):
+        with self.subTest(case="released"):
+            self.store.claim_task(self.task.id, "alice", 3600)
+            report = services.reconcile(self.store, actor="reconciler")
+            self.assertEqual(report["released"], [self.task.id])
+            self.assertIsNone(self.store.get_claim(self.task.id))
 
-    def test_reconcile_removes_an_expired_lease(self):
-        self.store.claim_task(self.task.id, "alice", 1, now=1000)
-        report = services.reconcile(self.store, actor="reconciler")
-        self.assertEqual(report["expired"], [self.task.id])
-        self.assertIsNone(self.store.get_claim(self.task.id))
+        with self.subTest(case="expired"):
+            self.store.claim_task(self.task.id, "alice", 1, now=1000)
+            report = services.reconcile(self.store, actor="reconciler")
+            self.assertEqual(report["expired"], [self.task.id])
+            self.assertIsNone(self.store.get_claim(self.task.id))
 
-    def test_reconcile_check_reports_leases_without_writing(self):
-        self.store.claim_task(self.task.id, "alice", 3600)
-        report = services.reconcile(self.store, actor="reconciler", check=True)
-        self.assertEqual(report["released"], [self.task.id])
-        self.assertIsNotNone(self.store.get_claim(self.task.id))
+    def test_reconcile_check_reports_without_writing(self):
+        with self.subTest(case="released"):
+            self.store.claim_task(self.task.id, "alice", 3600)
+            report = services.reconcile(self.store, actor="reconciler", check=True)
+            self.assertEqual(report["released"], [self.task.id])
+            self.assertIsNotNone(self.store.get_claim(self.task.id))
+            self.store.release_claim(self.task.id, "alice")
 
-    def test_reconcile_check_reports_expired_without_deleting(self):
-        self.store.claim_task(self.task.id, "alice", 1, now=1000)
-        report = services.reconcile(self.store, actor="reconciler", check=True)
-        self.assertEqual(report["expired"], [self.task.id])
-        self.assertIsNotNone(self.store.get_claim(self.task.id))
+        with self.subTest(case="expired"):
+            self.store.claim_task(self.task.id, "bob", 1, now=1000)
+            report = services.reconcile(self.store, actor="reconciler", check=True)
+            self.assertEqual(report["expired"], [self.task.id])
+            self.assertIsNotNone(self.store.get_claim(self.task.id))
 
     def test_deleting_a_task_removes_its_claim(self):
         self.store.claim_task(self.task.id, "alice", 60, now=1000)
@@ -151,7 +145,7 @@ class TestClaims(unittest.TestCase):
         claim = data["plans"][0]["milestones"][0]["tasks"][0]["claim"]
         self.assertEqual(claim["actor"], "alice")
 
-        other = Store(os.path.join(self.tmp.name, "other.db"))
+        other = temp_store(self, "other.db")
         counts = services.import_all(other, data, actor="fixture")
         self.assertEqual(counts["claims"], 1)
         imported = other.get_claim(1)
@@ -162,7 +156,7 @@ class TestClaims(unittest.TestCase):
     def test_export_import_skips_expired_claims(self):
         self.store.claim_task(self.task.id, "alice", 1, now=1)
         data = services.export_all(self.store)
-        other = Store(os.path.join(self.tmp.name, "expired.db"))
+        other = temp_store(self, "expired.db")
         counts = services.import_all(other, data, actor="fixture")
         self.assertEqual(counts["claims"], 0)
         self.assertIsNone(other.get_claim(1))

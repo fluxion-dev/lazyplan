@@ -481,11 +481,6 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
         ),
         measure("show_plan", lambda: store.get_full("plan", fixture.first_plan_id), repeat=repeat),
         measure("store.counts", store.counts, repeat=repeat),
-        measure(
-            "tui_preview",
-            lambda: _preview_render(store, fixture.first_plan_id),
-            repeat=repeat,
-        ),
         measure("store.fingerprint", store.fingerprint, repeat=repeat),
         measure("full_many", lambda: store.get_full_many("plan", plan_ids), repeat=repeat),
         measure(
@@ -572,7 +567,7 @@ def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
     ]
 
 
-def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
+def _tui_measurements(fixture: Fixture, repeat: int) -> list[Measurement]:
     try:
         from lazyplan.presentation import tui
         from lazyplan.presentation.tui.controllers import updates as update_mod
@@ -581,6 +576,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
             Measurement("tui_first_paint", None, None, None, "textual not installed"),
             Measurement("tui_expand", None, None, None, "textual not installed"),
             Measurement("tui_reconcile", None, None, None, "textual not installed"),
+            Measurement("tui_preview", None, None, None, "textual not installed"),
         ]
 
     old_spinner = os.environ.get("LAZYPLAN_NO_SPINNER")
@@ -588,7 +584,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
     try:
 
         async def run() -> list[Measurement]:
-            app = tui.create_app(str(db))
+            app = tui.create_app(str(fixture.db))
             with mock.patch.object(update_mod, "refresh_update", return_value=None):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()
@@ -650,7 +646,16 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
                         ),
                     ]
 
-        return asyncio.run(run())
+        measurements = asyncio.run(run())
+        store = Store(fixture.db)
+        measurements.append(
+            measure(
+                "tui_preview",
+                lambda: _preview_render(store, fixture.first_plan_id),
+                repeat=repeat,
+            )
+        )
+        return measurements
     finally:
         if old_spinner is None:
             os.environ.pop("LAZYPLAN_NO_SPINNER", None)
@@ -678,11 +683,12 @@ def run(
             for name in ("cli_import", "cli_version", "cli_list"):
                 metrics.append(Measurement(name, None, None, None, "disabled by --no-cli"))
         if include_tui:
-            metrics.extend(_tui_measurements(fixture.db, max(1, repeat)))
+            metrics.extend(_tui_measurements(fixture, max(1, repeat)))
         else:
             metrics.append(Measurement("tui_first_paint", None, None, None, "disabled by --no-tui"))
             metrics.append(Measurement("tui_expand", None, None, None, "disabled by --no-tui"))
             metrics.append(Measurement("tui_reconcile", None, None, None, "disabled by --no-tui"))
+            metrics.append(Measurement("tui_preview", None, None, None, "disabled by --no-tui"))
         return {
             "fixture": fixture.counts,
             "metrics": [asdict(metric) for metric in metrics],

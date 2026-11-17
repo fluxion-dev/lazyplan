@@ -1,10 +1,6 @@
 {
   "modules": [
     {
-      "module": "lazyplan.presentation.cli.main",
-      "reason": "CLI composition root opens the store"
-    },
-    {
       "module": "lazyplan.presentation.cli.store",
       "reason": "shared CLI store factory"
     },

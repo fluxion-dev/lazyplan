@@ -19,6 +19,26 @@ from .base import (
 class LinksMixin(StoreBase):
     """Links persistence."""
 
+    def _parent_counts(self, table: str) -> dict[tuple[str, int], tuple[int, int]]:
+        """(parent_kind, parent_id) -> (rows, stale rows) for one link table.
+
+        One grouped read replaces building a record per link when a surface only
+        needs the badge counts.
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                f"SELECT parent_kind, parent_id, COUNT(*) AS total,"
+                f" COALESCE(SUM(stale), 0) AS stale FROM {table}"
+                " GROUP BY parent_kind, parent_id"
+            ).fetchall()
+        return {
+            (str(row["parent_kind"]), int(row["parent_id"])): (
+                int(row["total"]),
+                int(row["stale"]),
+            )
+            for row in rows
+        }
+
     @staticmethod
     def _row_to_link(r: sqlite3.Row) -> VcsLink:
         """Row to VcsLink."""
@@ -419,19 +439,7 @@ class LinksMixin(StoreBase):
 
     def forge_counts_map(self) -> dict[tuple[str, int], tuple[int, int]]:
         """(parent_kind, parent_id) -> (links, stale links) from one grouped read."""
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT parent_kind, parent_id, COUNT(*) AS total,"
-                " COALESCE(SUM(stale), 0) AS stale FROM forge_links"
-                " GROUP BY parent_kind, parent_id"
-            ).fetchall()
-        return {
-            (str(row["parent_kind"]), int(row["parent_id"])): (
-                int(row["total"]),
-                int(row["stale"]),
-            )
-            for row in rows
-        }
+        return self._parent_counts("forge_links")
 
     def vcs_links_map(self) -> dict[tuple[str, int], list[VcsLink]]:
         """Every commit link grouped by (parent_kind, parent_id), oldest first."""
@@ -448,19 +456,7 @@ class LinksMixin(StoreBase):
         Row badges need counts, not link records; this skips building one
         `VcsLink` per commit.
         """
-        with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT parent_kind, parent_id, COUNT(*) AS total,"
-                " COALESCE(SUM(stale), 0) AS stale FROM vcs_links"
-                " GROUP BY parent_kind, parent_id"
-            ).fetchall()
-        return {
-            (str(row["parent_kind"]), int(row["parent_id"])): (
-                int(row["total"]),
-                int(row["stale"]),
-            )
-            for row in rows
-        }
+        return self._parent_counts("vcs_links")
 
     def cache_get(self, key: str) -> dict | None:
         """Cached HTTP entry by key, or None."""

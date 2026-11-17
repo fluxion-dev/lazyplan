@@ -37,18 +37,40 @@ def _titles(task: str, plan: str, budget: int | None) -> tuple[str, str]:
 
 
 def claim_line(claim: dict[str, Any], now: float, width: int | None = None) -> str:
-    """One row: ``@actor T12 task title · P3 plan title · 5m``."""
+    """One row: ``@actor T12 task title · P3 plan title · 5m``.
+
+    A narrow row drops the plan title (then the task) instead of painting past
+    the panel, so a 40-column terminal still reads the actor and task.
+    """
     actor = str(claim["actor"])
     task_id = f"T{claim['task_id']}"
     plan_id = f"P{claim['plan_id']}"
     elapsed = age(float(claim["started_at"]), now)
-    fixed = len(f"@{actor} {task_id}  ·  {plan_id}  · {elapsed}")
-    budget = None if width is None else width - fixed
-    task, plan = _titles(str(claim["task_title"]), str(claim["plan_title"]), budget)
-    return (
-        f"[bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
-        f" · [dim]{plan_id}[/] {escape_markup(plan)} · [dim]{elapsed}[/]"
-    )
+    prefix = f"@{actor} {task_id} "
+    if width is None:
+        task, plan = _titles(str(claim["task_title"]), str(claim["plan_title"]), None)
+        return (
+            f"[bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
+            f" · [dim]{plan_id}[/] {escape_markup(plan)} · [dim]{elapsed}[/]"
+        )
+    full_fixed = len(prefix) + 3 + len(plan_id) + 1 + 3 + len(elapsed)
+    budget = width - full_fixed
+    if budget >= 2 * MIN_TITLE:
+        task, plan = _titles(str(claim["task_title"]), str(claim["plan_title"]), budget)
+        return (
+            f"[bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
+            f" · [dim]{plan_id}[/] {escape_markup(plan)} · [dim]{elapsed}[/]"
+        )
+    compact_fixed = len(prefix) + 3 + len(elapsed)
+    title_room = width - compact_fixed
+    if title_room >= 3:
+        task = truncate(str(claim["task_title"]), title_room)
+        return (
+            f"[bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
+            f" · [dim]{elapsed}[/]"
+        )
+    head = truncate(f"@{actor} {task_id}", max(1, width))
+    return f"[bold]{escape_markup(head)}[/]"
 
 
 def claims_summary(claims: list[dict[str, Any]]) -> str:

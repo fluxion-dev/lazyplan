@@ -231,7 +231,10 @@ if _TEXTUAL_OK:
             """Textual stops Resize at the App; re-apply the shell after it."""
             await super()._on_resize(event)
             changed = self._apply_layout(event.size.width)
-            if self._mounted and changed:
+            if not self._mounted:
+                return
+            self.metrics_controller.refresh()
+            if changed:
                 self.call_after_refresh(self.refresh_all)
 
         def on_unmount(self) -> None:

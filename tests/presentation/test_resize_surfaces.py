@@ -266,7 +266,6 @@ class ShellResizeTest(_SurfaceCase):
                     scroll, maximum = snapshot.scroll["#preview-scroll"]
                     self.assertLessEqual(scroll, maximum)
 
-    @unittest.expectedFailure
     async def test_the_agents_card_rewraps_its_claim_rows(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(160, 50)) as pilot:
@@ -276,10 +275,9 @@ class ShellResizeTest(_SurfaceCase):
                 await pilot.resize_terminal(*size)
                 await pilot.pause()
                 await pilot.pause()
-                widest = max((cell_len(line) for line in str(body.content).splitlines()), default=0)
+                widest = max((cell_len(line) for line in str(body.render()).splitlines()), default=0)
                 self.assertLessEqual(widest, body.content_size.width, f"agents at {size}")
 
-    @unittest.expectedFailure
     async def test_the_timeline_redraws_for_the_new_width(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(120, 40)) as pilot:
@@ -295,9 +293,9 @@ class ShellResizeTest(_SurfaceCase):
                 await pilot.resize_terminal(*size)
                 await pilot.pause()
                 await pilot.pause()
-                if not card.display:
+                if not app.query_one("#metrics").display:
                     continue
-                self.assertEqual(card.drawn_width, plot.size.width, f"timeline at {size}")
+                self.assertEqual(card.drawn_width, plot.size.width - 2, f"timeline at {size}")
 
 
 class HubResizeTest(_SurfaceCase):

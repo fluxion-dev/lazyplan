@@ -417,6 +417,22 @@ class LinksMixin(StoreBase):
             lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
         )
 
+    def forge_counts_map(self) -> dict[tuple[str, int], tuple[int, int]]:
+        """(parent_kind, parent_id) -> (links, stale links) from one grouped read."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT parent_kind, parent_id, COUNT(*) AS total,"
+                " COALESCE(SUM(stale), 0) AS stale FROM forge_links"
+                " GROUP BY parent_kind, parent_id"
+            ).fetchall()
+        return {
+            (str(row["parent_kind"]), int(row["parent_id"])): (
+                int(row["total"]),
+                int(row["stale"]),
+            )
+            for row in rows
+        }
+
     def vcs_links_map(self) -> dict[tuple[str, int], list[VcsLink]]:
         """Every commit link grouped by (parent_kind, parent_id), oldest first."""
         return self._grouped(
@@ -425,6 +441,26 @@ class LinksMixin(StoreBase):
             self._row_to_link,
             lambda row: (str(row["parent_kind"]), int(row["parent_id"])),
         )
+
+    def vcs_counts_map(self) -> dict[tuple[str, int], tuple[int, int]]:
+        """(parent_kind, parent_id) -> (links, stale links) from one grouped read.
+
+        Row badges need counts, not link records; this skips building one
+        `VcsLink` per commit.
+        """
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT parent_kind, parent_id, COUNT(*) AS total,"
+                " COALESCE(SUM(stale), 0) AS stale FROM vcs_links"
+                " GROUP BY parent_kind, parent_id"
+            ).fetchall()
+        return {
+            (str(row["parent_kind"]), int(row["parent_id"])): (
+                int(row["total"]),
+                int(row["stale"]),
+            )
+            for row in rows
+        }
 
     def cache_get(self, key: str) -> dict | None:
         """Cached HTTP entry by key, or None."""

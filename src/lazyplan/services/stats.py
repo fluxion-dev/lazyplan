@@ -137,12 +137,18 @@ def attention_reasons(
     claims: dict[int, Claim] | None = None,
     forge: dict | None = None,
     open_criteria: set[int] | None = None,
+    events: list[dict] | None = None,
 ) -> dict[int, list[str]]:
-    """Task ids the TUI should surface as needing attention, with reasons."""
+    """Task ids the TUI should surface as needing attention, with reasons.
+
+    Callers that already read one of the inputs pass it here; `events` must be
+    oldest first, like ``_events``.
+    """
     stamp = time.time() if now is None else now
     with store.transaction():
         task_rows = tasks if tasks is not None else active.all_tasks(store)
-        _added, transitions = _event_maps(_events(store), {task.id for task in task_rows})
+        stream = events if events is not None else _events(store)
+        _added, transitions = _event_maps(stream, {task.id for task in task_rows})
         claims = claims if claims is not None else store.claims_map()
         forge = forge if forge is not None else store.forge_links_map()
         open_criteria = (

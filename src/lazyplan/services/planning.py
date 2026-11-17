@@ -375,10 +375,14 @@ def activity_source(
     port: PlanningPort,
     criteria: dict[tuple[str, int], list[Criterion]] | None = None,
 ) -> TreeSource:
-    """Load the activity sort's inputs once for several tree reads."""
+    """Load the activity sort's inputs once for several tree reads.
+
+    Events are oldest first so a caller can also feed them to the attention
+    parser, which reads transitions in order.
+    """
     return TreeSource(
         criteria=port.criteria_map() if criteria is None else criteria,
-        events=port.events_by_prefix(ACTIVITY_EVENT_PREFIXES, limit=100_000),
+        events=list(reversed(port.events_by_prefix(ACTIVITY_EVENT_PREFIXES, limit=100_000))),
     )
 
 

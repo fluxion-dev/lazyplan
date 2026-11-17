@@ -106,6 +106,23 @@ class CriterionFormTest(unittest.IsolatedAsyncioTestCase):
                 ["Attention fits"],
             )
 
+    async def test_the_criteria_hub_rows_use_status_marks(self) -> None:
+        app, store, plan = await self._app_and_plan()
+        done = store.add_criteria("plan", plan.id, "Finished", actor="test")
+        store.update_criterion(done.id, done=True, actor="test")
+        store.add_criteria("plan", plan.id, "Open", actor="test")
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            hub = CriteriaHub(store, "plan", plan.id)
+            app.push_screen(hub)
+            await pilot.pause()
+            labels = [entry.label for entry in hub.entries]
+            self.assertTrue(any(label.startswith("✅ C") for label in labels))
+            self.assertTrue(any(label.startswith("📝 C") for label in labels))
+            for label in labels:
+                self.assertNotIn("[x]", label)
+                self.assertNotIn("[ ]", label)
+
     async def test_the_hub_edits_the_same_prefilled_form(self) -> None:
         app, store, plan = await self._app_and_plan()
         criterion = store.add_criteria("plan", plan.id, "Old text", actor="test")

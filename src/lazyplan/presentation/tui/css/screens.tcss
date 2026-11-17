@@ -311,6 +311,24 @@ Screen.compact #source-head {
     border: round $lp-border-focus;
 }
 
+Screen.compact #hub-main {
+    layout: vertical;
+}
+
+Screen.compact #hub-list-wrap {
+    width: 100%;
+    min-width: 0;
+    height: 2fr;
+    min-height: 5;
+}
+
+Screen.compact #hub-preview {
+    width: 100%;
+    min-width: 0;
+    height: 3fr;
+    min-height: 7;
+}
+
 #hub-list > .option-list--option {
     padding: 0 1;
 }

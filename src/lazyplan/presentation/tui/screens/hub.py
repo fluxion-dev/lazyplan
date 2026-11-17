@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 try:
-    from textual import on
+    from textual import events, on
     from textual.app import ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -82,14 +82,21 @@ if _TEXTUAL_OK:
                 yield Taskbar("", id="hub-hints")
 
         def on_mount(self) -> None:
-            width = self.app.size.width
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            self._apply_size(self.app.size.width)
             self.query_one("#hub-page").border_title = f" {self.title} "
             self.query_one("#hub-list-wrap").border_title = " list "
             self.query_one("#hub-preview").border_title = " overview "
             self._reload()
             self.query_one("#hub-list", OptionList).focus()
+
+        def _apply_size(self, width: int) -> None:
+            """Mirror the shell tiers; the compact split stacks the panes."""
+            self.set_class(width < 80, "compact")
+            self.set_class(width >= 120, "wide")
+
+        def on_resize(self, event: events.Resize) -> None:
+            """Keep the split and its classes in step with the new width."""
+            self._apply_size(event.size.width)
 
         def _reload(self) -> None:
             entries = self.load_entries()

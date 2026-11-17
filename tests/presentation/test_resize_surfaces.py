@@ -275,7 +275,9 @@ class ShellResizeTest(_SurfaceCase):
                 await pilot.resize_terminal(*size)
                 await pilot.pause()
                 await pilot.pause()
-                widest = max((cell_len(line) for line in str(body.render()).splitlines()), default=0)
+                widest = max(
+                    (cell_len(line) for line in str(body.render()).splitlines()), default=0
+                )
                 self.assertLessEqual(widest, body.content_size.width, f"agents at {size}")
 
     async def test_the_timeline_redraws_for_the_new_width(self) -> None:
@@ -329,7 +331,6 @@ class HubResizeTest(_SurfaceCase):
                     self.assertEqual(hub.query_one("#hub-list").highlighted, highlighted)
                     self.assertEqual(str(hub.query_one("#hub-preview-body", Static).content), body)
 
-    @unittest.expectedFailure
     async def test_every_hub_split_fits_the_screen(self) -> None:
         for label, hub in self.hubs():
             with self.subTest(hub=label):

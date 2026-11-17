@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from ...shared import registry
-from ...shared.design import action_bar
+from ...shared.design import action_bar, status_mark
 
 
 @dataclass(frozen=True)
@@ -71,6 +71,11 @@ if _TEXTUAL_OK:
         def source_parent(self) -> tuple[str, int] | None:
             """Row whose source trail this hub can open with `g`."""
             return None
+
+        def _mark(self, state: str) -> str:
+            """One status mark using the shell's live emoji decision."""
+            emoji = getattr(getattr(self.app, "state", None), "emoji", True)
+            return status_mark(state, emoji=bool(emoji))
 
         def compose(self) -> ComposeResult:
             with Vertical(id="hub-page"):

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ...shared.design import escape_markup, truncate
+from ...shared.design import cell_width, escape_markup, status_mark, truncate
 
 TASK_SHARE = 0.6
 MIN_TITLE = 6
@@ -36,17 +36,24 @@ def _titles(task: str, plan: str, budget: int | None) -> tuple[str, str]:
     return truncate(task, task_room), truncate(plan, max(MIN_TITLE, room - task_room))
 
 
-def claim_line(claim: dict[str, Any], now: float, width: int | None = None) -> str:
-    """One row: ``@actor T12 task title · P3 plan title · 5m``."""
+def claim_line(
+    claim: dict[str, Any],
+    now: float,
+    width: int | None = None,
+    *,
+    emoji: bool = True,
+) -> str:
+    """One row: ``🔨 @actor T12 task title · P3 plan title · 5m``."""
     actor = str(claim["actor"])
     task_id = f"T{claim['task_id']}"
     plan_id = f"P{claim['plan_id']}"
     elapsed = age(float(claim["started_at"]), now)
-    fixed = len(f"@{actor} {task_id}  ·  {plan_id}  · {elapsed}")
+    mark = status_mark("doing", emoji=emoji)
+    fixed = cell_width(f"{mark} @{actor} {task_id}  ·  {plan_id}  · {elapsed}")
     budget = None if width is None else width - fixed
     task, plan = _titles(str(claim["task_title"]), str(claim["plan_title"]), budget)
     return (
-        f"[bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
+        f"{mark} [bold]@{escape_markup(actor)}[/] [dim]{task_id}[/] {escape_markup(task)}"
         f" · [dim]{plan_id}[/] {escape_markup(plan)} · [dim]{elapsed}[/]"
     )
 

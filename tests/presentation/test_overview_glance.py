@@ -94,8 +94,8 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
                     milestone_body = app.query_one("#preview-body", Markdown).source or ""
                     self.assertIn("## DETAILS", milestone_body)
                     self.assertIn("## TASKS 3", milestone_body)
-                    self.assertIn(f"T{self.doing.id}  Trim the overview · doing", milestone_body)
-                    self.assertIn(f"T{self.blocked.id}  Wait on review · blocked", milestone_body)
+                    self.assertIn(f"T{self.doing.id}  Trim the overview · 🔨", milestone_body)
+                    self.assertIn(f"T{self.blocked.id}  Wait on review · 🚧", milestone_body)
                     for hidden in ("## NOTES", "## SOURCE", "## PROOF"):
                         self.assertNotIn(hidden, milestone_body)
 

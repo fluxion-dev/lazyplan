@@ -1588,7 +1588,7 @@
   "counts": {
     "cli_commands": 51,
     "doc_files": 9,
-    "doc_headings": 97,
+    "doc_headings": 98,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
@@ -1664,6 +1664,7 @@
           "Setup files",
           "Everyday commands",
           "The screen",
+          "Notification log",
           "Trust hubs",
           "Coordination hubs",
           "Provenance and activity hubs",
@@ -2827,7 +2828,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "L",
         "label": "Log",
-        "line": "110",
+        "line": "108",
         "screen": "app"
       },
       {
@@ -2835,7 +2836,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "S",
         "label": "Setup",
-        "line": "96",
+        "line": "94",
         "screen": "app"
       },
       {
@@ -2843,7 +2844,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "T",
         "label": "Timeline",
-        "line": "95",
+        "line": "93",
         "screen": "app"
       },
       {
@@ -2851,7 +2852,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "U",
         "label": "Update",
-        "line": "108",
+        "line": "106",
         "screen": "app"
       },
       {
@@ -2859,7 +2860,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "W",
         "label": "Notes",
-        "line": "109",
+        "line": "107",
         "screen": "app"
       },
       {
@@ -2867,7 +2868,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "Z",
         "label": "Fold all",
-        "line": "104",
+        "line": "102",
         "screen": "app"
       },
       {
@@ -2875,7 +2876,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "a",
         "label": "Criterion",
-        "line": "100",
+        "line": "98",
         "screen": "app"
       },
       {
@@ -2883,7 +2884,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "d",
         "label": "Delete",
-        "line": "101",
+        "line": "99",
         "screen": "app"
       },
       {
@@ -2891,7 +2892,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "e",
         "label": "Edit",
-        "line": "98",
+        "line": "96",
         "screen": "app"
       },
       {
@@ -2899,7 +2900,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "escape",
         "label": "Back",
-        "line": "93",
+        "line": "91",
         "screen": "app"
       },
       {
@@ -2907,7 +2908,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "g",
         "label": "Source",
-        "line": "102",
+        "line": "100",
         "screen": "app"
       },
       {
@@ -2915,7 +2916,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "m",
         "label": "Maintain",
-        "line": "107",
+        "line": "105",
         "screen": "app"
       },
       {
@@ -2923,7 +2924,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "n",
         "label": "New",
-        "line": "97",
+        "line": "95",
         "screen": "app"
       },
       {
@@ -2931,7 +2932,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "r",
         "label": "Refresh",
-        "line": "106",
+        "line": "104",
         "screen": "app"
       },
       {
@@ -2939,7 +2940,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "s",
         "label": "Status",
-        "line": "99",
+        "line": "97",
         "screen": "app"
       },
       {
@@ -2947,7 +2948,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "slash",
         "label": "Filter",
-        "line": "105",
+        "line": "103",
         "screen": "app"
       },
       {
@@ -2955,7 +2956,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "t",
         "label": "Theme",
-        "line": "94",
+        "line": "92",
         "screen": "app"
       },
       {
@@ -2963,7 +2964,7 @@
         "file": "src/lazyplan/presentation/tui/app.py",
         "key": "z",
         "label": "Fold",
-        "line": "103",
+        "line": "101",
         "screen": "app"
       },
       {
@@ -3445,7 +3446,7 @@
           {
             "action": "update_prompt",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "108"
+            "line": "106"
           },
           {
             "action": "update_prompt",
@@ -3475,7 +3476,7 @@
           {
             "action": "add_criterion",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "100"
+            "line": "98"
           },
           {
             "action": "add",
@@ -3495,7 +3496,7 @@
           {
             "action": "delete",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "101"
+            "line": "99"
           },
           {
             "action": "delete",
@@ -3510,7 +3511,7 @@
           {
             "action": "edit_selection",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "98"
+            "line": "96"
           },
           {
             "action": "edit_row",
@@ -3530,7 +3531,7 @@
           {
             "action": "clear_filter",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "93"
+            "line": "91"
           },
           {
             "action": "cancel",
@@ -3605,7 +3606,7 @@
           {
             "action": "source_trail",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "102"
+            "line": "100"
           },
           {
             "action": "source_hub",
@@ -3635,7 +3636,7 @@
           {
             "action": "new_context",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "97"
+            "line": "95"
           },
           {
             "action": "note",
@@ -3690,7 +3691,7 @@
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "106"
+            "line": "104"
           },
           {
             "action": "refresh",
@@ -3715,7 +3716,7 @@
           {
             "action": "toggle_status",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "99"
+            "line": "97"
           },
           {
             "action": "toggle_split",
@@ -3730,7 +3731,7 @@
           {
             "action": "filter_text",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "105"
+            "line": "103"
           },
           {
             "action": "filter",
@@ -3745,7 +3746,7 @@
           {
             "action": "cycle_theme",
             "file": "src/lazyplan/presentation/tui/app.py",
-            "line": "94"
+            "line": "92"
           },
           {
             "action": "apply_trim",

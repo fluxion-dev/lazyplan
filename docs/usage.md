@@ -397,14 +397,29 @@ their order in the stacked left column. The footer names only `?`, `c`, and
 The bottom bar also pins the running version at its right edge, for example
 `v0.47.0`. A newer release already in the update cache adds an arrow,
 `v0.47.0 → v0.48.0`; click the badge or press `U` to open the update screen.
-The health count, when present, sits just left of the version. The same bar
-appears at the bottom of the source, hub, plan diff, and setup views.
+The health count, when present, sits just left of the version. The unread
+warning and error count, when present, sits left of the health count and opens
+the notification log when clicked. The same bar appears at the bottom of the
+source, hub, plan diff, setup, and log views.
 
 The update screen names the installed and latest versions and the install
 method. **Download** fetches and verifies the release, which applies the next
 time `lpui` starts; on Windows, **Restart now** applies it without leaving the
 screen. An install lazyplan cannot own, such as a system package or a source
 checkout, gets the command to run instead.
+
+### Notification log
+
+Messages that would once have flashed a toast land in one session log instead:
+time, severity, text, and the screen they came from. Press `L` from any view,
+or run **Notification log** in the palette, to read it. The overlay opens at
+the newest entry and scrolls; `x` clears it, `y` copies the selected line, and
+`escape` closes it. The log keeps the last 500 entries for this session and
+writes nothing to disk. Warnings and errors raise the unread count on the
+taskbar until the log is opened; ordinary messages never badge.
+
+Two notices still toast because they interrupt: the startup update notice and
+the once-per-version update announcement. Both also appear in the log.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter
@@ -436,6 +451,7 @@ before it.
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
 | `S` | setup wizard, from any screen |
+| `L` | notification log: unread warnings and errors |
 | `U` | update screen: version badge and download |
 | `W` | release notes for the installed version |
 | `t` | cycle theme: mocha, void, latte |
@@ -457,7 +473,7 @@ Criteria, evidence, questions, and references are selectable hubs, not
 read-only text. From the tree, open **criteria hub**, **evidence hub**,
 **questions hub**, or **references hub** from the palette (`c`).
 
-- Criteria: `a` adds, `e` edits the text and done state, `l` and `L` relate or
+- Criteria: `a` adds, `e` edits the text and done state, `l` and `X` relate or
   unrelate a proving task, `d` deletes, and `enter` opens the evidence rows for
   the selected criterion.
 - Evidence: each row shows pass or fail, the command, exit code, commit, note,
@@ -482,7 +498,7 @@ is a read-only summary; it does not open a hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
-  releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
+  releases, `D` forces a takeover, and `l`/`X` add or remove touch-points.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 

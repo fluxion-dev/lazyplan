@@ -92,7 +92,7 @@ class UpdateController:
         self.info = info
         if latest and latest != self.toasted_version:
             self.toasted_version = latest
-            self.app.notify(notice, timeout=8)
+            self.app.notify_toast(notice, timeout=8, source="update")
         self.app.refresh_taskbar()
 
     def prompt(self) -> None:

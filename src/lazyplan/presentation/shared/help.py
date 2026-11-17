@@ -19,6 +19,11 @@ HINT_ITEMS: tuple[tuple[str, str], ...] = (
 )
 
 HELP_GROUPS: tuple[str, ...] = ("MOVE", "FIND", "APP", "CHANGE", "TRUST")
+_LOG_ROWS: tuple[tuple[str, str], ...] = (
+    ("L", "open: unread warnings and errors, newest last"),
+    ("x / y / escape", "clear · copy the selected entry · close"),
+    ("session only", "last 500 entries; startup and update notices still toast"),
+)
 _SOURCE_ROWS: tuple[tuple[str, str], ...] = (
     ("n / p", "next / previous file in a commit"),
     ("s", "toggle split or unified diff"),
@@ -73,6 +78,10 @@ def help_text() -> str:
         lines.append("")
     lines.append("SOURCE")
     for key, hint in _SOURCE_ROWS:
+        lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")
+    lines.append("")
+    lines.append("NOTIFICATION LOG")
+    for key, hint in _LOG_ROWS:
         lines.append(f"  {key:<{_HELP_WIDTH}} {hint}")
     lines.append("")
     lines.append("  lpui help".ljust(_HELP_WIDTH + 2) + " same help at the shell")

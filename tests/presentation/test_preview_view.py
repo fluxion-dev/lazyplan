@@ -664,21 +664,17 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 panel = app.query_one("#preview", PreviewPanel)
                 body = app.query_one("#preview-body", Markdown)
                 for href in ("https://example.com/doc", "http://example.com/doc"):
-                    with (
-                        mock.patch.object(app, "open_url") as opener,
-                        mock.patch.object(app, "notify") as notify,
-                    ):
+                    before = len(app.notification_log)
+                    with mock.patch.object(app, "open_url") as opener:
                         panel._open_link(Markdown.LinkClicked(body, href))
                         opener.assert_called_once_with(href)
-                        notify.assert_called_once()
+                    self.assertEqual(len(app.notification_log), before + 1)
                 for href in ("file:///etc/passwd", "javascript:alert(1)"):
-                    with (
-                        mock.patch.object(app, "open_url") as opener,
-                        mock.patch.object(app, "notify") as notify,
-                    ):
+                    before = len(app.notification_log)
+                    with mock.patch.object(app, "open_url") as opener:
                         panel._open_link(Markdown.LinkClicked(body, href))
                         opener.assert_not_called()
-                        notify.assert_called_once()
+                    self.assertEqual(len(app.notification_log), before + 1)
 
 
 if __name__ == "__main__":

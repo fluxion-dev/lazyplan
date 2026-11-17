@@ -15,10 +15,9 @@ from typing import Any
 
 try:
     from textual import events
-    from textual.app import ComposeResult, SeverityLevel
+    from textual.app import ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
-    from textual.message import Message
     from textual.reactive import reactive
     from textual.widgets import Static, Tree
     from textual.widgets.tree import TreeNode
@@ -54,6 +53,7 @@ from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .launch import Restart, launch_notes, launch_update, relaunch, take_restart_notice
 from .metrics import MetricsSection
+from .notifications import NotificationMixin
 from .preview import PreviewMixin
 from .screens import NotificationLogScreen, ReleaseNotesScreen
 from .state import AppState
@@ -69,14 +69,12 @@ CSS_DIR = Path(__file__).parent / "css"
 
 if _TEXTUAL_OK:
 
-    class NotificationsChanged(Message):
-        """A notification joined the log; every visible bar may need a repaint."""
-
     class LazyplanApp(
         TreeMixin,
         PreviewMixin,
         FilterMixin,
         ActionMixin,
+        NotificationMixin,
         AppBase,
     ):
         """Single-panel TUI: the plan tree."""
@@ -178,56 +176,6 @@ if _TEXTUAL_OK:
             self._startup_notes: str = ""
             self.notification_log = NotificationLog()
 
-        def notify(
-            self,
-            message: str,
-            *,
-            title: str = "",
-            severity: SeverityLevel = "information",
-            timeout: float | None = None,
-            markup: bool = True,
-            source: str = "",
-        ) -> None:
-            """Log every message; ordinary notices never raise a toast."""
-            self.notification_log.append(
-                message,
-                severity=severity,
-                source=source or self._notification_source(),
-            )
-            self.post_message(NotificationsChanged())
-
-        def notify_toast(
-            self,
-            message: str,
-            *,
-            title: str = "",
-            severity: SeverityLevel = "information",
-            timeout: float | None = None,
-            markup: bool = True,
-            source: str = "",
-        ) -> None:
-            """Log the message and toast it; startup and update notices only."""
-            self.notify(message, severity=severity, source=source)
-            super().notify(
-                message,
-                title=title,
-                severity=severity,
-                timeout=timeout,
-                markup=markup,
-            )
-
-        def _notification_source(self) -> str:
-            """The active screen's name, so every entry says where it came from."""
-            try:
-                screen = self.screen
-            except Exception:  # noqa: BLE001 - a closing screen may race a worker
-                return "tree"
-            named = str(getattr(screen, "navigation_name", "") or "")
-            if named:
-                return named
-            class_name = type(screen).__name__.removesuffix("Screen")
-            return class_name.lower() or "tree"
-
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
             self.update_controller.prompt()
@@ -247,16 +195,6 @@ if _TEXTUAL_OK:
                         bar.set_log_count(unread)
                 except Exception:  # noqa: BLE001 - a closing screen may race a poll
                     continue
-
-        def on_notifications_changed(self, _event: NotificationsChanged) -> None:
-            """Repaint every bar and an open log when a message arrives."""
-            self.refresh_taskbar()
-            try:
-                refresh = getattr(self.screen, "refresh_entries", None)
-            except Exception:  # noqa: BLE001 - a closing screen may race a worker
-                return
-            if callable(refresh):
-                refresh()
 
         def action_notification_log(self) -> None:
             """Open the session notification log above the current screen."""

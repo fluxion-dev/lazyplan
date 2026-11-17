@@ -130,15 +130,15 @@ class ToastExceptionTest(unittest.TestCase):
                 calls.append(f"{path.relative_to(TUI).as_posix()}")
         self.assertEqual(sorted(calls), ["app.py", "controllers/updates.py"])
 
-    def test_one_helper_owns_the_toast(self) -> None:
-        source = (TUI / "app.py").read_text(encoding="utf-8")
+    def test_one_module_owns_the_toast(self) -> None:
+        source = (TUI / "notifications.py").read_text(encoding="utf-8")
         self.assertEqual(source.count("super().notify("), 1)
 
     def test_no_direct_textual_notify_survives_elsewhere(self) -> None:
         offenders = []
         for path in sorted(TUI.rglob("*.py")):
             text = path.read_text(encoding="utf-8")
-            if "super().notify(" in text and path.name != "app.py":
+            if "super().notify(" in text and path.name != "notifications.py":
                 offenders.append(path.name)
         self.assertEqual(offenders, [])
 

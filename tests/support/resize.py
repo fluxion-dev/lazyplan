@@ -41,12 +41,18 @@ def region_of(widget: Any) -> Region | None:
 
 
 def content_width(widget: Any) -> int:
-    """Widest rendered line of *widget* in cells, zero when it renders nothing."""
-    try:
-        rendered = str(widget.render())
-    except Exception:  # noqa: BLE001 - containers may not render text
+    """Widest source line of *widget* in cells.
+
+    Only text widgets expose their source (``Static.content`` or the Markdown
+    ``source``); containers report zero. Wrapping is measured from
+    ``virtual_size`` in :class:`Part`, not from this raw source.
+    """
+    text = getattr(widget, "content", None)
+    if not isinstance(text, str):
+        text = getattr(widget, "source", None)
+    if not isinstance(text, str):
         return 0
-    return max((_cell_len(line) for line in rendered.splitlines()), default=0)
+    return max((_cell_len(line) for line in text.splitlines()), default=0)
 
 
 def _size_of(value: Any) -> tuple[int, int]:
@@ -85,10 +91,10 @@ class Part:
 
     @property
     def clipped(self) -> bool:
-        """True when the widget renders wider or taller than its region."""
+        """True when the widget's content is wider than the cells it paints."""
         if self.region is None:
             return False
-        return self.virtual[0] > self.region[2] or self.content > self.region[2]
+        return self.virtual[0] > self.region[2]
 
 
 @dataclass(frozen=True)
@@ -136,6 +142,16 @@ class Snapshot:
                     f"{first_name} {first.region} overlaps "
                     f"{second_name} {second.region} at {self.size[0]}x{self.size[1]}",
                 )
+
+    def assert_unclipped(self, case: Any, names: Iterable[str]) -> None:
+        """Fail when a part's content is wider than the cells it paints."""
+        for name in names:
+            part = self.parts[name]
+            case.assertFalse(
+                part.clipped,
+                f"{name} content {part.virtual[0]} wider than "
+                f"{part.region[2] if part.region else 0} at {self.size[0]}x{self.size[1]}",
+            )
 
 
 @dataclass

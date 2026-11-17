@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 try:
-    from textual import on  # noqa: F401
+    from textual import events, on  # noqa: F401
     from textual.app import ComposeResult  # noqa: F401
     from textual.binding import Binding  # noqa: F401
     from textual.containers import Horizontal, Vertical, VerticalScroll  # noqa: F401
@@ -63,15 +63,21 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             """Snapshot the starting values so Esc can tell a draft from a no-op."""
-            width = self.app.size.width
-            height = self.app.size.height
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
-            self.set_class(height < 30, "short")
+            self._apply_size(self.app.size.width, self.app.size.height)
             dialog = query_one_opt(self, "#dlg")
             if dialog is not None:
                 dialog.border_title = self.dialog_title
             self._initial = self._snapshot()
+
+        def _apply_size(self, width: int, height: int) -> None:
+            """Mirror the shell's compact, wide, and short size classes."""
+            self.set_class(width < 80, "compact")
+            self.set_class(width >= 120, "wide")
+            self.set_class(height < 30, "short")
+
+        def on_resize(self, event: events.Resize) -> None:
+            """Keep a modal's size classes in step with the terminal."""
+            self._apply_size(event.size.width, event.size.height)
 
         def _snapshot(self) -> tuple[str, ...]:
             values: list[str] = []

@@ -527,6 +527,9 @@ class SetupResizeTest(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(
                     screen.query_one("#setup-rail").display, width >= 80, f"rail {width}"
                 )
+                focused = app.focused
+                if focused is not None:
+                    self.assertIn(screen.query_one("#setup-page"), focused.ancestors)
 
 
 class ModalResizeTest(_SurfaceCase):
@@ -551,7 +554,6 @@ class ModalResizeTest(_SurfaceCase):
                         if focused is not None:
                             self.assertIn(dialog, focused.ancestors)
 
-    @unittest.expectedFailure
     async def test_every_form_reapplies_its_size_classes(self) -> None:
         for label, factory in FORM_MODALS:
             with self.subTest(modal=label):
@@ -581,7 +583,6 @@ class ModalResizeTest(_SurfaceCase):
                 self.assertEqual(screen.has_class("compact"), width < 80, f"export {width}")
                 self.assertEqual(screen.has_class("wide"), width >= 120, f"export {width}")
 
-    @unittest.expectedFailure
     async def test_the_palette_has_no_horizontal_overflow(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(120, 40)) as pilot:
@@ -595,7 +596,6 @@ class ModalResizeTest(_SurfaceCase):
                 snapshot.assert_inside(self)
                 snapshot.assert_unclipped(self, ("dlg",))
 
-    @unittest.expectedFailure
     async def test_the_export_picker_has_no_horizontal_overflow(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(120, 40)) as pilot:

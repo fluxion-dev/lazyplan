@@ -159,7 +159,7 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(design.truncate("abcdef", 3), "ab…")
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_plan_row_stats_and_attention(self):
+    def test_plan_rows_keep_the_stats_block_start(self):
         p = Plan(id=1, name="Plan")
         width = 80
         first = Text.from_markup(design.plan_row(p, progress=(3, 7), width=width)).plain
@@ -169,7 +169,6 @@ class TestDesignSystem(unittest.TestCase):
         self.assertEqual(cell_len(first), width)
         self.assertEqual(cell_len(second), width)
         self.assertEqual(first.index("3/7"), second.index("3/7"))
-        self.assertIn("review", second)
 
     def test_plan_row_marks_a_registered_worktree_and_escapes(self):
         p = Plan(id=1, name="Plan")

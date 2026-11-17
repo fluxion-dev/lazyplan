@@ -12,6 +12,7 @@ try:
 
     from ..controllers.notifications import NotificationEntry, NotificationLog
     from ..navigation import NAV_BINDINGS
+    from ..size import apply_classes, classes_for
     from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
@@ -53,9 +54,7 @@ if _TEXTUAL_OK:
                 yield Taskbar("", id="log-hints")
 
         def on_mount(self) -> None:
-            width = self.app.size.width
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            apply_classes(self, classes_for(self.app.size.width), ("compact", "wide"))
             self.query_one("#log-page").border_title = " notification log "
             self.query_one("#log-scroll").border_title = " entries "
             # Opening the log reads every warning and error.

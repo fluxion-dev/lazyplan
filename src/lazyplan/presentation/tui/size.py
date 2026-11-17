@@ -47,5 +47,14 @@ def classes_for(width: int, height: int | None = None) -> SizeClasses:
 
 def apply_classes(node: Any, classes: SizeClasses, names: Iterable[str]) -> None:
     """Set the named CSS classes on *node* from *classes*."""
-    for name in names:
-        node.set_class(getattr(classes, name), name)
+    selected = set(names)
+    if "narrow" in selected:
+        node.set_class(classes.narrow, "narrow")
+    if "compact" in selected:
+        node.set_class(classes.compact, "compact")
+    if "wide" in selected:
+        node.set_class(classes.wide, "wide")
+    if "short" in selected:
+        node.set_class(classes.short, "short")
+    if "stacked" in selected:
+        node.set_class(classes.stacked, "stacked")

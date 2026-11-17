@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib
 import json
 import os
 import subprocess
@@ -263,11 +264,29 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
+def fixture_map_errors(inventory: Inventory) -> list[str]:
+    """Return errors for fixture-map entries naming a missing module or helper."""
+    errors: list[str] = []
+    for helper, modules in FIXTURE_MAP.items():
+        module_path, _, name = helper.partition(":")
+        if module_source(module_path) is None:
+            errors.append(f"fixture map: no module for {helper}")
+        elif not hasattr(importlib.import_module(module_path), name):
+            errors.append(f"fixture map: no helper {name} in {module_path}")
+        errors.extend(
+            f"fixture map: {module} does not exist"
+            for module in modules
+            if module not in inventory.modules
+        )
+    return errors
+
+
 def check(inventory: Inventory) -> list[str]:
-    """Return errors for missing keep-matrix and duplicate-map tests."""
+    """Return errors for missing keep-matrix, duplicate-map, and fixture entries."""
     return [
         *keep_matrix_errors(inventory.method_ids),
         *duplicate_map_errors(inventory.method_ids),
+        *fixture_map_errors(inventory),
     ]
 
 
@@ -460,6 +479,7 @@ FIXTURE_MAP: dict[str, tuple[str, ...]] = {
         "tests.services.test_audit",
         "tests.services.test_claims",
         "tests.services.test_lint",
+        "tests.store.test_evidence",
     ),
 }
 

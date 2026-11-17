@@ -71,6 +71,15 @@ class InventoryTest(unittest.TestCase):
         for canonical, absorbed in self.tool.DUPLICATE_MAP.items():
             self.assertNotIn(canonical, absorbed)
 
+    def test_fixture_map_resolves_its_helper_and_modules(self) -> None:
+        inventory = self.tool.build_inventory()
+        self.assertEqual(self.tool.fixture_map_errors(inventory), [])
+        self.tool.FIXTURE_MAP["tests.support.missing:helper"] = ()
+        try:
+            self.assertEqual(len(self.tool.fixture_map_errors(inventory)), 1)
+        finally:
+            self.tool.FIXTURE_MAP.pop("tests.support.missing:helper")
+
     def test_render_is_deterministic(self) -> None:
         inventory = self.tool.build_inventory()
         self.assertEqual(self.tool.render(inventory), self.tool.render(inventory))

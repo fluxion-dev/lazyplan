@@ -218,9 +218,14 @@ if _TEXTUAL_OK:
         def _notification_source(self) -> str:
             """The active screen's name, so every entry says where it came from."""
             try:
-                return self._screen_name()
+                screen = self.screen
             except Exception:  # noqa: BLE001 - a closing screen may race a worker
                 return "tree"
+            named = str(getattr(screen, "navigation_name", "") or "")
+            if named:
+                return named
+            class_name = type(screen).__name__.removesuffix("Screen")
+            return class_name.lower() or "tree"
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""

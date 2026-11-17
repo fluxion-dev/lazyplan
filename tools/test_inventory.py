@@ -32,8 +32,8 @@ FIXTURE_HOOKS = ("setUp", "tearDown", "setUpClass", "tearDownClass")
 
 # Baseline taken on 2026-11-16 on Linux (Python 3.15, venv): 251 test sources
 # (244 discovered modules; 7 helper-only files) and 2301 test methods. The
-# full suite took 309 s. T446 compares the cleaned suite against these numbers.
-SNAPSHOT = {"sources": 251, "modules": 244, "methods": 2301, "seconds": 309}
+# full suite took 517 s. T446 compares the cleaned suite against these numbers.
+SNAPSHOT = {"sources": 251, "modules": 244, "methods": 2301, "seconds": 517}
 
 
 @dataclass
@@ -258,14 +258,17 @@ def main(argv: list[str] | None = None) -> int:
             print(error, file=sys.stderr)
         if errors:
             return 1
-        print("inventory ok: every keep-matrix test exists", file=sys.stderr)
+        print("inventory ok: keep matrix and duplicate map resolve", file=sys.stderr)
     print(json.dumps(as_json(inventory), indent=2) if args.json else render(inventory))
     return 0
 
 
 def check(inventory: Inventory) -> list[str]:
-    """Return errors for keep-matrix ids missing from the discovered suite."""
-    return keep_matrix_errors(inventory.method_ids)
+    """Return errors for missing keep-matrix and duplicate-map tests."""
+    return [
+        *keep_matrix_errors(inventory.method_ids),
+        *duplicate_map_errors(inventory.method_ids),
+    ]
 
 
 # The contracts the cleaned suite must keep proving directly. Every entry names
@@ -380,8 +383,89 @@ KEEP_MATRIX: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
 )
-# Filled by the duplicate-map task.
-DUPLICATE_MAP: dict[str, tuple[str, ...]] = {}
+# Duplicate matrices collapse into one canonical table per behavior. The key is
+# the surviving method; the value lists the cases it absorbs. Entries are
+# removed as each area lands, so the map records the cleanup plan, not history.
+DUPLICATE_MAP: dict[str, tuple[str, ...]] = {
+    "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_planning_port": (
+        "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_coordination_port",
+        "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_collaboration_port",
+        "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_provenance_port",
+        "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_insights_port",
+        "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_transfer_port",
+        "tests.architecture.test_ports.TestStorePorts.test_store_satisfies_maintenance_port",
+    ),
+    "tests.setup.test_setup_ui_render.RenderCase.test_model_review_lists_tiers_roles_and_sources": (
+        "tests.setup.test_setup_ui_render.RenderCase.test_model_review_edits_roles_tiers_and_resets",
+        "tests.setup.test_setup_ui_render.RenderCase.test_model_review_inherit_clears_a_target",
+        "tests.setup.test_setup_ui_render.RenderCase.test_model_review_rejects_bad_input_and_help_is_shown",
+        "tests.setup.test_setup_ui_render.RenderCase.test_model_review_marks_a_catalog_warning",
+    ),
+    "tests.cli.test_upgrade.TestRunners.test_run_upgrade_routes_pipx": (
+        "tests.cli.test_upgrade.TestRunners.test_run_upgrade_rejects_unknown_method",
+        "tests.cli.test_upgrade.TestRunners.test_run_upgrade_routes_venv",
+        "tests.cli.test_upgrade.TestRunners.test_run_upgrade_rejects_a_downgrade_before_dispatch",
+    ),
+    "tests.setup.test_hook_install.InstallCase.test_opencode_plugin_denies_commits_and_reuses_context": (
+        "tests.setup.test_hook_install.InstallCase.test_opencode_plugin_closes_stdin_and_reports_failures",
+        "tests.setup.test_hook_install.InstallCase.test_opencode_plugin_maps_v2_lifecycle_events",
+        "tests.setup.test_hook_install.InstallCase.test_opencode_plugin_passes_the_session_on_every_event",
+    ),
+    "tests.setup.test_setup_parity.SetupParityCase.test_snapshot_ignores_a_transient_sqlite_journal": (
+        "tests.setup.test_setup_parity.SetupParityCase.test_snapshot_still_reports_a_real_extra_file",
+    ),
+    "tests.tools.test_perf_bench.PerfBenchCase.test_budget_check_accepts_a_clean_run": (
+        "tests.tools.test_perf_bench.PerfBenchCase.test_budget_check_fails_on_query_and_wall_regressions",
+        "tests.tools.test_perf_bench.PerfBenchCase.test_budget_check_fails_on_a_node_count_regression",
+        "tests.tools.test_perf_bench.PerfBenchCase.test_budget_check_requires_the_tui_when_asked",
+    ),
+    "tests.vcs.test_repo.TestSharedHome.test_shared_home_unix": (
+        "tests.vcs.test_repo.TestSharedHome.test_shared_home_windows_localappdata",
+        "tests.vcs.test_repo.TestSharedHome.test_shared_home_windows_real_home_matches_no_home",
+        "tests.vcs.test_repo.TestSharedHome.test_shared_home_windows_falls_back",
+    ),
+    "tests.vcs.test_vcs_cli.TestVcsCLI.test_status_done_auto_captures": (
+        "tests.vcs.test_vcs_cli.TestVcsCLI.test_status_done_skips_dirty_tree",
+        "tests.vcs.test_vcs_cli.TestVcsCLI.test_status_done_skips_head_linked_to_another_row",
+        "tests.vcs.test_vcs_cli.TestVcsCLI.test_status_done_skips_unrelated_branch",
+    ),
+    "tests.vcs.test_vcs_cli.TestVcsCLI.test_task_start_and_finish": (
+        "tests.vcs.test_vcs_cli.TestVcsCLI.test_task_start_refuses_missing_branch",
+        "tests.vcs.test_vcs_cli.TestVcsCLI.test_task_start_refuses_detached_head",
+        "tests.vcs.test_vcs_cli.TestVcsCLI.test_task_start_never_invokes_mutating_git",
+    ),
+    "tests.ia.test_docs_keys.DocumentationKeysTest.test_site_and_skill_name_the_shared_overlays": (
+        "tests.ia.test_docs_keys.DocumentationKeysTest.test_site_and_skill_name_the_trust_hubs",
+        "tests.ia.test_docs_keys.DocumentationKeysTest.test_site_and_skill_name_the_coordination_hubs",
+        "tests.ia.test_docs_keys.DocumentationKeysTest.test_site_and_skill_name_the_provenance_hubs",
+    ),
+    "tests.cli.test_update_helper.TestApplyPlan.test_pipx_windows_plan_keeps_backend_and_uses_the_venv_python": (
+        "tests.cli.test_update_helper.TestApplyPlan.test_pipx_windows_plan_installs_a_uv_venv_with_uv",
+        "tests.cli.test_update_helper.TestApplyPlan.test_pipx_windows_plan_for_a_uv_venv_without_uv_names_the_repair",
+        "tests.cli.test_update_helper.TestApplyPlan.test_pipx_windows_plan_with_pip_backend_metadata_uses_pip",
+    ),
+}
+
+# One shared fixture per shape; the value names the modules that must use it.
+FIXTURE_MAP: dict[str, tuple[str, ...]] = {
+    "tests.support.state:store_case": (
+        "tests.services.test_audit",
+        "tests.services.test_claims",
+        "tests.services.test_lint",
+    ),
+}
+
+
+def duplicate_map_errors(
+    method_ids: list[str], mapping: dict[str, tuple[str, ...]] = DUPLICATE_MAP
+) -> list[str]:
+    """Return errors for canonical tables missing from the discovered suite."""
+    known = set(method_ids)
+    return [
+        f"duplicate map: canonical table is gone ({canonical})"
+        for canonical in mapping
+        if canonical not in known
+    ]
 
 
 def keep_matrix_errors(

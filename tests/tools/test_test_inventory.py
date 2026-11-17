@@ -65,6 +65,12 @@ class InventoryTest(unittest.TestCase):
         inventory = self.tool.build_inventory()
         self.assertEqual(self.tool.keep_matrix_errors(inventory.method_ids), [])
 
+    def test_duplicate_map_names_a_live_canonical_table(self) -> None:
+        inventory = self.tool.build_inventory()
+        self.assertEqual(self.tool.duplicate_map_errors(inventory.method_ids), [])
+        for canonical, absorbed in self.tool.DUPLICATE_MAP.items():
+            self.assertNotIn(canonical, absorbed)
+
     def test_render_is_deterministic(self) -> None:
         inventory = self.tool.build_inventory()
         self.assertEqual(self.tool.render(inventory), self.tool.render(inventory))

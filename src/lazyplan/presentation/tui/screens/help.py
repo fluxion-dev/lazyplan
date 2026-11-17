@@ -104,6 +104,18 @@ if _TEXTUAL_OK:
             """Keep arrow keys and page keys scrolling the notes, not the Close row."""
             self.query_one("#notes-scroll", VerticalScroll).focus()
 
+        def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+            """Open a note link in the browser without breaking the overlay."""
+            event.stop()
+            try:
+                self.app.open_url(event.href)
+            except Exception as exc:  # noqa: BLE001 - a missing browser cannot crash the screen
+                self.app.notify(
+                    f"could not open {event.href}: {exc}",
+                    severity="warning",
+                    source="notes",
+                )
+
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""
 

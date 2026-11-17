@@ -100,6 +100,42 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                 self.assertIn("MarkdownH3", children)
                 self.assertIn("MarkdownBulletList", children)
 
+    async def test_a_link_opens_in_the_browser(self) -> None:
+        text = "## v0.49.0 — 2026-11-17\n\n[release page](https://example.com/notes)\n"
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            app = create_app(os.path.join(tmp, "notes.db"), startup_notes=text)
+            async with app.run_test(size=(110, 35)) as pilot:
+                for _ in range(40):
+                    await pilot.pause(0.05)
+                    if isinstance(app.screen, ReleaseNotesScreen):
+                        break
+                markdown = app.screen.query_one("#notes-body", Markdown)
+                with mock.patch.object(app, "open_url") as opened:
+                    markdown.post_message(
+                        Markdown.LinkClicked(markdown, "https://example.com/notes")
+                    )
+                    await pilot.pause()
+                opened.assert_called_once_with("https://example.com/notes")
+
+    async def test_a_failed_link_open_is_a_warning_not_a_crash(self) -> None:
+        text = "## v0.49.0 — 2026-11-17\n\n[release page](https://example.com/notes)\n"
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            app = create_app(os.path.join(tmp, "notes.db"), startup_notes=text)
+            async with app.run_test(size=(110, 35)) as pilot:
+                for _ in range(40):
+                    await pilot.pause(0.05)
+                    if isinstance(app.screen, ReleaseNotesScreen):
+                        break
+                markdown = app.screen.query_one("#notes-body", Markdown)
+                with mock.patch.object(app, "open_url", side_effect=RuntimeError("no browser")):
+                    markdown.post_message(
+                        Markdown.LinkClicked(markdown, "https://example.com/notes")
+                    )
+                    await pilot.pause()
+                messages = [entry.message for entry in app.notification_log.snapshot()]
+                self.assertTrue(any("no browser" in message for message in messages), messages)
+                self.assertIsInstance(app.screen, ReleaseNotesScreen)
+
     async def test_key_opens_the_installed_notes(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             app = create_app(os.path.join(tmp, "notes.db"))

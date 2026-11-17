@@ -61,6 +61,7 @@ from .rows import task_row as task_row
 from .status import EMOJI_MIN_WIDTH as EMOJI_MIN_WIDTH
 from .status import STATUS_EMOJI as STATUS_EMOJI
 from .status import STATUS_FALLBACK as STATUS_FALLBACK
+from .status import STATUS_GLYPH as STATUS_GLYPH
 from .status import STATUS_LABEL as STATUS_LABEL
 from .status import STATUS_MARKS as STATUS_MARKS
 from .status import StatusMark as StatusMark
@@ -73,7 +74,6 @@ from .status import status_label as status_label
 from .status import status_mark as status_mark
 from .status import status_state as status_state
 from .text import STATUS_ANSI as STATUS_ANSI
-from .text import STATUS_GLYPH as STATUS_GLYPH
 from .text import STATUS_RICH as STATUS_RICH
 from .text import escape_markdown as escape_markdown
 from .text import escape_markup as escape_markup

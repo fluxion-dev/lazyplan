@@ -83,9 +83,7 @@ def status_state(
         return "review"
     if name == "done":
         return "done"
-    if attention:
-        return "review"
-    if name == "review":
+    if attention or name == "review":
         return "review"
     if name == "doing":
         return "doing"

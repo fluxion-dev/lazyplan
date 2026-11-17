@@ -355,11 +355,15 @@ tab-separated rows; `--json` wins when both are present.
 
 ## The screen
 
-Every row reads as plain words: an id, the title, and at most a right-aligned
-count. Plans and milestones end with `done/total`; any row that needs it ends
-with one word: `doing`, `blocked`, or `review`. Completed plans live in the
-`plan review` panel and stay dimmed. Plans start collapsed; `right` or `z`
-reveals milestones, and tasks appear when you open their milestone.
+Every row leads with one status mark: 📝 todo, 🔨 doing, 🔍 review, 🚧 blocked,
+✅ done. A completed plan in the `plan review` panel reads 🔍 review; a
+completed task reads ✅ done. The rest of the row is the id, the title, and at
+most a right-aligned count, with plans and milestones ending in `done/total`.
+The agents card and hub status rows use the same marks. On a terminal narrower
+than 80 columns, or one marked ASCII-only with `TERM=dumb`, rows use the
+single-cell glyphs ○ todo, ◐ doing, ? review, ! blocked, and ● done instead.
+Completed plans stay dimmed. Plans start collapsed; `right` or `z` reveals
+milestones, and tasks appear when you open their milestone.
 
 The main screen puts the work in one left column and the overview on the right.
 The left column stacks the plan queue, the agents card, plan review, and the git

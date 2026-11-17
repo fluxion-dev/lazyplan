@@ -39,6 +39,7 @@ from ..shared.design import (
     EMPTY_PLAN_QUEUE_TITLE,
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
+    emoji_enabled,
     empty_state,
 )
 from .actions import ActionMixin
@@ -132,10 +133,12 @@ if _TEXTUAL_OK:
                 return False
             available = self.size.width if width is None else width
             tiers = classes_for(available)
-            changed = self._narrow is not tiers.narrow
+            emoji = emoji_enabled(available)
+            changed = self._narrow is not tiers.narrow or self.state.emoji != emoji
             self._narrow = tiers.narrow
             self.state.compact = tiers.compact
             self.state.wide = tiers.wide
+            self.state.emoji = emoji
             apply_classes(main, tiers, ("narrow", "compact", "wide"))
             panel = query_one_opt(self, "#panel", Vertical)
             if panel is not None:

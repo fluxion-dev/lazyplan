@@ -5,6 +5,7 @@ from __future__ import annotations
 import unittest
 
 try:
+    from rich.cells import cell_len
     from rich.console import Console
 
     from lazyplan.presentation.tui.views.agents import (
@@ -13,6 +14,7 @@ try:
         rank_claims,
     )
 except ImportError:  # pragma: no cover - rich not installed
+    cell_len = len  # type: ignore[assignment]
     claim_line = rank_claims = claims_summary = None  # type: ignore[assignment]
 
 
@@ -42,7 +44,11 @@ class TestClaimLine(unittest.TestCase):
 
     def test_line_names_actor_task_plan_and_age(self) -> None:
         text = plain(claim_line(claim(12, "claude", self.now - 300), self.now))
-        self.assertEqual(text, "@claude T12 Task 12 · P3 Agents from claims · 5m")
+        self.assertEqual(text, "🔨 @claude T12 Task 12 · P3 Agents from claims · 5m")
+
+    def test_fallback_line_uses_the_single_cell_glyph(self) -> None:
+        text = plain(claim_line(claim(12, "claude", self.now - 300), self.now, emoji=False))
+        self.assertEqual(text, "◐ @claude T12 Task 12 · P3 Agents from claims · 5m")
 
     def test_ages_past_an_hour_read_hours_and_minutes(self) -> None:
         text = plain(claim_line(claim(12, "claude", self.now - 3_900), self.now))
@@ -56,7 +62,7 @@ class TestClaimLine(unittest.TestCase):
         row = claim(12, "claude", self.now, task_title="T" * 80, plan_title="P" * 80)
         for width in (40, 60, 90):
             with self.subTest(width=width):
-                self.assertLessEqual(len(plain(claim_line(row, self.now, width))), width)
+                self.assertLessEqual(cell_len(plain(claim_line(row, self.now, width))), width)
 
     def test_markup_in_titles_and_actors_is_escaped(self) -> None:
         row = claim(12, "[bold]x", self.now, task_title="[red]t", plan_title="[dim]p")

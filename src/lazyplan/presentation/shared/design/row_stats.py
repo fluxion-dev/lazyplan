@@ -1,10 +1,10 @@
-"""Fixed-width word slots for tree rows.
+"""Fixed-width slots for tree rows.
 
-The row renderer keeps the title flexible and places counts and state words in
-fixed right-aligned slots. Missing values reserve blanks, so the stats block
-start and right edge do not move when a row changes state. ``stats_layout``
-chooses the visible slots from the row width and kind; it never depends on
-state.
+The row renderer keeps the title flexible and reserves fixed right-aligned
+slots for progress and the status column. The status mark itself now leads the
+row, so the state slot stays blank but keeps the stats block and right edge
+from moving when a row changes state. ``stats_layout`` chooses the visible
+slots from the row width and kind; it never depends on status.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ class StatSlot:
 
 SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 5, 0, "right"),
+    # The leading status mark owns the state; this blank slot keeps alignment.
     "state": StatSlot("state", 7, 1, "right"),
 }
 
@@ -43,10 +44,9 @@ KIND_SLOTS: dict[str, tuple[str, ...]] = {
 
 @dataclass(frozen=True)
 class RowStats:
-    """Word values rendered into the fixed tree row slots."""
+    """Counts rendered into the fixed tree row slots."""
 
     progress: tuple[int, int] | None = None
-    state: str = ""
 
 
 def _layout_width(layout: tuple[str, ...]) -> int:
@@ -72,7 +72,7 @@ def _slot_text(stats: RowStats, key: str) -> str:
     if key == "progress":
         done, total = stats.progress or (0, 0)
         return truncate(progress_text(done, total), SLOTS[key].width)
-    return truncate(stats.state, SLOTS[key].width)
+    return ""
 
 
 def _aligned(text: str, slot: StatSlot) -> str:

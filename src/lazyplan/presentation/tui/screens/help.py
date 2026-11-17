@@ -30,6 +30,12 @@ from ...shared.design import HELP_TEXT
 from ...shared.palette import Command, matching
 from .base import _Form, _row
 
+STATUS_HELP = """
+STATUS
+  📝 todo · 🔨 doing · 🔍 review · 🚧 blocked · ✅ done
+  narrow or ASCII terminals show ○ ◐ ? ! ●
+"""
+
 SETUP_HELP = """
 SETUP
   b / n / l            back / next / finish later
@@ -46,7 +52,7 @@ if _TEXTUAL_OK:
         """Shared help text overlay; same source as `lpui help`."""
 
         HELP = HELP_TEXT
-        EXTRA = SETUP_HELP
+        EXTRA = STATUS_HELP + SETUP_HELP
         dialog_title = "HELP"
 
         def on_mount(self) -> None:

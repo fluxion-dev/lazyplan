@@ -45,7 +45,7 @@ if _TEXTUAL_OK:
             for criterion in self.store.list_criteria(self.parent_kind, self.parent_id):
                 evidence = services.list_evidence(self.store, criterion.id)
                 state = proof_state(evidence)
-                mark = "x" if criterion.done else " "
+                mark = self._mark("done" if criterion.done else "todo")
                 body = (
                     f"C{criterion.id} · {'done' if criterion.done else 'open'}\n"
                     f"{escape_markup(criterion.text)}\n\n"
@@ -54,9 +54,7 @@ if _TEXTUAL_OK:
                 tasks = self.store.criterion_tasks(criterion.id)
                 if tasks:
                     body += "\nproving tasks " + ", ".join(f"T{task.id}" for task in tasks)
-                out.append(
-                    HubEntry(criterion.id, f"[{mark}] C{criterion.id} {criterion.text}", body)
-                )
+                out.append(HubEntry(criterion.id, f"{mark} C{criterion.id} {criterion.text}", body))
             return out
 
         def add(self) -> None:
@@ -235,9 +233,8 @@ if _TEXTUAL_OK:
                 )
                 if question.resolution:
                     body += f"\nresolution: {escape_markup(question.resolution)}"
-                out.append(
-                    HubEntry(question.id, f"Q{question.id} {question.status} {question.text}", body)
-                )
+                mark = self._mark("todo" if question.status == "open" else "done")
+                out.append(HubEntry(question.id, f"{mark} Q{question.id} {question.text}", body))
             return out
 
         def add(self) -> None:

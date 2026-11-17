@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from ...shared import registry
-from ...shared.design import action_bar
+from ...shared.design import action_bar, status_mark
 
 
 @dataclass(frozen=True)
@@ -67,11 +67,17 @@ if _TEXTUAL_OK:
             super().__init__()
             self.store = store
             self.entries: list[HubEntry] = []
+            self._emoji = True
 
         @property
         def source_parent(self) -> tuple[str, int] | None:
             """Row whose source trail this hub can open with `g`."""
             return None
+
+        def _mark(self, state: str) -> str:
+            """One status mark using the shell's live emoji decision."""
+            emoji = getattr(getattr(self.app, "state", None), "emoji", True)
+            return status_mark(state, emoji=bool(emoji))
 
         def compose(self) -> ComposeResult:
             with Vertical(id="hub-page"):
@@ -94,11 +100,18 @@ if _TEXTUAL_OK:
             """Mirror the shell tiers; the compact split stacks the panes."""
             apply_classes(self, classes_for(width), ("compact", "wide"))
 
-        def on_resize(self, event: events.Resize) -> None:
-            """Keep the split and its classes in step with the new width."""
-            self._apply_size(event.size.width)
+        def on_resize(self, event: events.Resize | None = None) -> None:
+            """Keep the split in step with the width and re-render status marks."""
+            self._apply_size(self.size.width if event is None else event.size.width)
+            emoji = bool(getattr(getattr(self.app, "state", None), "emoji", True))
+            if emoji == self._emoji or not self.entries:
+                self._emoji = emoji
+                return
+            self._emoji = emoji
+            self._reload()
 
         def _reload(self) -> None:
+            self._emoji = bool(getattr(getattr(self.app, "state", None), "emoji", True))
             entries = self.load_entries()
             self.entries = entries
             options = self.query_one("#hub-list", OptionList)

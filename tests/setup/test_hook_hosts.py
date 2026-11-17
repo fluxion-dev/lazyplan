@@ -19,30 +19,25 @@ class HostCase(unittest.TestCase):
             self.assertEqual(output["hookEventName"], native)
             self.assertEqual(output["additionalContext"], "hello")
 
-    def test_warning_uses_system_message(self):
+    def test_warning_and_cursor_envelopes(self):
         for host in ("claude", "gemini", "codex"):
             body = json.loads(hook_hosts.render(host, "stop", HookResult("warn")))
             self.assertEqual(body, {"systemMessage": "warn"})
-
-    def test_cursor_uses_agent_message(self):
         body = json.loads(hook_hosts.render("cursor", "stop", HookResult("warn")))
         self.assertEqual(body, {"agentMessage": "warn"})
-
-    def test_cursor_session_start_uses_additional_context(self):
         body = json.loads(hook_hosts.render("cursor", "session-start", HookResult("hi", True)))
         self.assertEqual(body, {"additional_context": "hi"})
-
-    def test_cursor_post_tool_uses_additional_context(self):
         body = json.loads(hook_hosts.render("cursor", "post-tool", HookResult("hi")))
         self.assertEqual(body, {"additional_context": "hi"})
-
-    def test_cursor_prompt_submit_has_no_context_field(self):
         body = json.loads(hook_hosts.render("cursor", "prompt-submit", HookResult("hi", True)))
         self.assertEqual(body, {"continue": True})
         self.assertNotIn("agentMessage", body)
 
     def test_opencode_gets_plain_text(self):
         self.assertEqual(hook_hosts.render("opencode", "stop", HookResult("warn")), "warn")
+        self.assertEqual(
+            hook_hosts.render("opencode", "pre-tool", HookResult(block="no task")), "no task"
+        )
 
     def test_silent_result_is_empty(self):
         for host in ("claude", "gemini", "codex", "cursor", "opencode"):
@@ -77,42 +72,31 @@ class HostCase(unittest.TestCase):
         body = json.loads(hook_hosts.render("codex", "pre-compact", HookResult("hi", True)))
         self.assertEqual(body["hookSpecificOutput"]["hookEventName"], "PreCompact")
 
-    def test_claude_denies_a_tool_before_it_runs(self):
+    def test_host_block_envelopes(self):
         body = json.loads(hook_hosts.render("claude", "pre-tool", HookResult(block="no task")))
         output = body["hookSpecificOutput"]
         self.assertEqual(output["hookEventName"], "PreToolUse")
         self.assertEqual(output["permissionDecision"], "deny")
         self.assertEqual(output["permissionDecisionReason"], "no task")
 
-    def test_claude_blocks_a_stop_once(self):
         body = json.loads(hook_hosts.render("claude", "stop", HookResult(block="link it")))
         self.assertEqual(body, {"decision": "block", "reason": "link it"})
 
-    def test_codex_shapes_match_claude_for_tool_and_stop(self):
         deny = json.loads(hook_hosts.render("codex", "pre-tool", HookResult(block="no task")))
         self.assertEqual(deny["hookSpecificOutput"]["permissionDecision"], "deny")
         stop = json.loads(hook_hosts.render("codex", "stop", HookResult(block="link it")))
         self.assertEqual(stop, {"decision": "block", "reason": "link it"})
 
-    def test_gemini_uses_decision_and_reason(self):
         for event in ("pre-tool", "stop"):
             body = json.loads(hook_hosts.render("gemini", event, HookResult(block="no task")))
             self.assertEqual(body, {"decision": "deny", "reason": "no task"})
 
-    def test_cursor_denies_a_shell_command(self):
         body = json.loads(hook_hosts.render("cursor", "pre-tool", HookResult(block="no task")))
         self.assertEqual(body["permission"], "deny")
         self.assertEqual(body["agent_message"], "no task")
         self.assertTrue(body["continue"])
-
-    def test_cursor_continues_after_a_stop_block(self):
         body = json.loads(hook_hosts.render("cursor", "stop", HookResult(block="link it")))
         self.assertEqual(body, {"followup_message": "link it"})
-
-    def test_opencode_gets_the_block_reason_as_text(self):
-        self.assertEqual(
-            hook_hosts.render("opencode", "pre-tool", HookResult(block="no task")), "no task"
-        )
 
     def test_block_reason_survives_capping(self):
         result = HookResult("", False, "x" * 5000).capped()

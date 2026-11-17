@@ -101,29 +101,13 @@ class RenderCase(unittest.TestCase):
         self.assertEqual(len(self._lines(text)), len(hosts))
 
     def test_model_review_lists_tiers_roles_and_sources(self):
-        catalogs = {
-            "opencode": host_models.HostCatalog(
-                "opencode",
-                "OpenCode",
-                ("provider/tiny", "provider/big"),
-                {"fast": "provider/tiny", "standard": "provider/big", "deep": "provider/big"},
-                "opencode models",
-            ),
-            "claude": host_models.HostCatalog(
-                "claude",
-                "Claude Code",
-                ("haiku", "sonnet", "opus"),
-                {"fast": "haiku", "standard": "sonnet", "deep": "opus"},
-                "Claude Code aliases",
-            ),
-        }
         text = self._text(
             lambda out: setup_ui.render_models(
                 out,
                 ["opencode", "claude"],
                 profiles.defaults(),
                 profiles.default_tiers(),
-                catalogs,
+                self._catalogs(),
                 False,
             )
         )
@@ -134,6 +118,24 @@ class RenderCase(unittest.TestCase):
         self.assertTrue(any("sources:" in line and "opencode models" in line for line in lines))
         self.assertTrue(any("enter accept" in line for line in lines))
         self.assertNotIn("\x1b", text)
+
+        warning = host_models.HostCatalog(
+            "opencode",
+            "OpenCode",
+            warning="OpenCode is not detected",
+        )
+        text = self._text(
+            lambda out: setup_ui.render_models(
+                out,
+                ["opencode"],
+                profiles.defaults(),
+                profiles.default_tiers(),
+                {"opencode": warning},
+                False,
+            )
+        )
+        self.assertIn("OpenCode is not detected", text)
+        self.assertIn("inherit", text)
 
     def _catalogs(self):
         return {
@@ -167,7 +169,7 @@ class RenderCase(unittest.TestCase):
         )
         return out.getvalue(), updated, tiers
 
-    def test_model_review_edits_roles_tiers_and_resets(self):
+    def test_model_review_edits_inherits_and_rejects(self):
         text, updated, tiers = self._edits(
             [
                 "t qa deep",
@@ -181,36 +183,15 @@ class RenderCase(unittest.TestCase):
         self.assertEqual(tiers["deep"]["claude"], "opus")
         self.assertIn("enter to accept", text)
 
-    def test_model_review_inherit_clears_a_target(self):
         _text, updated, tiers = self._edits(["m opencode fast inherit", ""])
         self.assertEqual(tiers["fast"]["opencode"], "")
         self.assertEqual(updated["scout"].tier, "fast")
 
-    def test_model_review_rejects_bad_input_and_help_is_shown(self):
         text, updated, tiers = self._edits(["t wizard fast", "?", ""])
         self.assertIn("unknown role", text)
         self.assertIn("t ROLE TIER", text)
         self.assertEqual(updated["scout"].tier, "fast")
         self.assertEqual(tiers, profiles.default_tiers())
-
-    def test_model_review_marks_a_catalog_warning(self):
-        catalog = host_models.HostCatalog(
-            "opencode",
-            "OpenCode",
-            warning="OpenCode is not detected",
-        )
-        text = self._text(
-            lambda out: setup_ui.render_models(
-                out,
-                ["opencode"],
-                profiles.defaults(),
-                profiles.default_tiers(),
-                {"opencode": catalog},
-                False,
-            )
-        )
-        self.assertIn("OpenCode is not detected", text)
-        self.assertIn("inherit", text)
 
 
 if __name__ == "__main__":

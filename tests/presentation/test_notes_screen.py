@@ -12,10 +12,13 @@ from lazyplan.services import notes
 from tests.support.home import sandbox_home
 
 try:
+    from textual.widgets import Markdown
+
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.launch import launch_notes
     from lazyplan.presentation.tui.screens import ReleaseNotesScreen
 except ImportError:  # pragma: no cover - textual not installed
+    Markdown = None  # type: ignore[assignment,misc]
     create_app = launch_notes = ReleaseNotesScreen = None  # type: ignore[assignment]
 
 SAMPLE = """# Changelog
@@ -75,6 +78,27 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 self.assertNotIsInstance(app.screen, ReleaseNotesScreen)
                 self.assertEqual(len(app.screen_stack), 1)
+
+    async def test_notes_render_as_markdown(self) -> None:
+        text = (
+            "## v0.49.0 — 2026-11-17\n\n### Added\n\n"
+            "- **Bold** and `code` with [a link](https://example.com).\n"
+        )
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            app = create_app(os.path.join(tmp, "notes.db"), startup_notes=text)
+            async with app.run_test(size=(110, 35)) as pilot:
+                for _ in range(40):
+                    await pilot.pause(0.05)
+                    if isinstance(app.screen, ReleaseNotesScreen):
+                        break
+                self.assertIsInstance(app.screen, ReleaseNotesScreen)
+                await pilot.pause()
+                markdown = app.screen.query_one("#notes-body", Markdown)
+                self.assertEqual(markdown.source, text)
+                children = [type(child).__name__ for child in markdown.children]
+                self.assertIn("MarkdownH2", children)
+                self.assertIn("MarkdownH3", children)
+                self.assertIn("MarkdownBulletList", children)
 
     async def test_key_opens_the_installed_notes(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:

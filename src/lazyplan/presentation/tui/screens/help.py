@@ -17,6 +17,7 @@ try:
         Button,
         Input,
         Label,
+        Markdown,
         OptionList,
         Static,
     )
@@ -83,10 +84,25 @@ if _TEXTUAL_OK:
             self.HELP = text  # type: ignore[misc]
 
     class ReleaseNotesScreen(TextScreen):
-        """Read-only, scrollable release notes overlay."""
+        """Read-only release notes overlay rendered as Markdown."""
 
         def __init__(self, text: str) -> None:
             super().__init__("RELEASE NOTES", text)
+
+        def compose(self) -> ComposeResult:
+            with Vertical(id="help"):
+                with VerticalScroll(id="notes-scroll"):
+                    yield Markdown(self.HELP, id="notes-body", open_links=False)
+                with _row():
+                    yield Button("Close", id="cancel")
+
+        def on_mount(self) -> None:
+            super().on_mount()
+            self.call_after_refresh(self._focus_notes)
+
+        def _focus_notes(self) -> None:
+            """Keep arrow keys and page keys scrolling the notes, not the Close row."""
+            self.query_one("#notes-scroll", VerticalScroll).focus()
 
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""

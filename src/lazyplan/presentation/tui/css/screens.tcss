@@ -119,6 +119,11 @@ Screen.short #dlg.form-tall TextArea {
     height: 1fr;
 }
 
+#notes-scroll {
+    height: 1fr;
+    background: transparent;
+}
+
 #source-page {
     height: 1fr;
     border: round $lp-border;

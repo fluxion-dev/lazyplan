@@ -53,17 +53,14 @@ class TestDetect(unittest.TestCase):
         self.assertEqual(info.method, upgrade.SOURCE)
         self.assertFalse(info.upgradeable)
 
-    def test_rpm_probe(self):
-        with mock.patch.object(upgrade, "_probe", side_effect=[True]):
-            info = upgrade.detect(exe="/usr/bin/python3", prefix="/usr", base_prefix="/usr")
-        self.assertEqual(info.method, upgrade.RPM)
-        self.assertFalse(info.upgradeable)
-
-    def test_deb_probe(self):
-        with mock.patch.object(upgrade, "_probe", side_effect=[False, True]):
-            info = upgrade.detect(exe="/usr/bin/python3", prefix="/usr", base_prefix="/usr")
-        self.assertEqual(info.method, upgrade.DEB)
-        self.assertFalse(info.upgradeable)
+    def test_package_manager_probes(self):
+        cases = (("rpm", [True], upgrade.RPM), ("deb", [False, True], upgrade.DEB))
+        for label, probes, method in cases:
+            with self.subTest(case=label):
+                with mock.patch.object(upgrade, "_probe", side_effect=probes):
+                    info = upgrade.detect(exe="/usr/bin/python3", prefix="/usr", base_prefix="/usr")
+                self.assertEqual(info.method, method)
+                self.assertFalse(info.upgradeable)
 
     def test_source_checkout_layout(self):
         import tempfile
@@ -121,31 +118,50 @@ class TestRunners(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         sandbox_home(self, self.tmp.name)
 
-    def test_run_upgrade_rejects_unknown_method(self):
-        with self.assertRaises(upgrade.UpgradeError):
-            upgrade.run_upgrade(upgrade.InstallInfo(upgrade.RPM, False), "0.16.0")
+    def test_run_upgrade_routes_and_guards(self):
+        cases = (
+            ("unknown method", upgrade.InstallInfo(upgrade.RPM, False), "0.16.0", None),
+            ("pipx", PIPX_INFO, "0.16.0", "pipx"),
+            ("venv", VENV_INFO, "0.16.0", "venv"),
+            ("downgrade", PIPX_INFO, "0.15.0", "reject"),
+        )
+        for label, info, version, outcome in cases:
+            with self.subTest(case=label):
+                with (
+                    mock.patch.object(upgrade, "upgrade_pipx") as pipx_run,
+                    mock.patch.object(upgrade, "upgrade_venv") as venv_run,
+                ):
+                    if outcome == "reject":
+                        with self.assertRaises(upgrade.UpgradeError):
+                            upgrade.run_upgrade(info, version, installed="0.16.0")
+                        pipx_run.assert_not_called()
+                        venv_run.assert_not_called()
+                    elif outcome == "pipx":
+                        upgrade.run_upgrade(info, version, installed="0.15.0")
+                        pipx_run.assert_called_once_with(version, installed="0.15.0")
+                        venv_run.assert_not_called()
+                    elif outcome == "venv":
+                        upgrade.run_upgrade(
+                            info, version, "/some/venv/bin/python", installed="0.15.0"
+                        )
+                        venv_run.assert_called_once_with(
+                            version, "/some/venv/bin/python", installed="0.15.0"
+                        )
+                        pipx_run.assert_not_called()
 
-    def test_run_upgrade_routes_pipx(self):
-        with mock.patch.object(upgrade, "upgrade_pipx") as run:
-            with mock.patch.object(upgrade, "upgrade_venv") as venv_run:
-                upgrade.run_upgrade(PIPX_INFO, "0.16.0", installed="0.15.0")
-        run.assert_called_once_with("0.16.0", installed="0.15.0")
-        venv_run.assert_not_called()
-
-    def test_run_upgrade_routes_venv(self):
-        with mock.patch.object(upgrade, "upgrade_venv") as run:
-            upgrade.run_upgrade(VENV_INFO, "0.16.0", "/some/venv/bin/python", installed="0.15.0")
-        run.assert_called_once_with("0.16.0", "/some/venv/bin/python", installed="0.15.0")
-
-    def test_run_upgrade_rejects_a_downgrade_before_dispatch(self):
-        with (
-            mock.patch.object(upgrade, "upgrade_pipx") as pipx_run,
-            mock.patch.object(upgrade, "upgrade_venv") as venv_run,
-        ):
-            with self.assertRaises(upgrade.UpgradeError):
-                upgrade.run_upgrade(PIPX_INFO, "0.15.0", installed="0.16.0")
-        pipx_run.assert_not_called()
-        venv_run.assert_not_called()
+    def test_installed_upgraders_refuse_a_downgrade(self):
+        with mock.patch.object(upgrade.subprocess, "run") as run:
+            for label, action in (
+                ("pipx", lambda: upgrade.upgrade_pipx("0.15.0", installed="0.16.0")),
+                (
+                    "venv",
+                    lambda: upgrade.upgrade_venv("0.15.0", "/venv/bin/python", installed="0.16.0"),
+                ),
+            ):
+                with self.subTest(case=label):
+                    with self.assertRaises(upgrade.UpgradeError):
+                        action()
+        run.assert_not_called()
 
     def test_pipx_rejects_a_downgrade_without_a_subprocess(self):
         with mock.patch.object(upgrade.subprocess, "run") as run:

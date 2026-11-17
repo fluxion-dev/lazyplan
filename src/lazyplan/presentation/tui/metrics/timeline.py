@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from textual import events
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual_plotext import PlotextPlot
@@ -37,13 +38,30 @@ class TimelineCard(MetricCard):
 
     def __init__(self) -> None:
         super().__init__("metric-timeline", "no plans yet")
+        self._timeline: Timeline | None = None
+        self._painted = False
+        self._drawn_width = 0
+
+    @property
+    def drawn_width(self) -> int:
+        """Cells the current chart was laid out for; zero before the first draw."""
+        return self._drawn_width
 
     def compose(self) -> ComposeResult:
         with VerticalScroll(id=f"{self.id}-scroll"):
             yield PlotextPlot(id=f"{self.id}-plot")
 
+    def on_resize(self, event: events.Resize) -> None:
+        """Redraw the legend and lane rows for the new card width."""
+        self.call_after_refresh(self._repaint_last)
+
+    def _repaint_last(self) -> None:
+        if self._painted:
+            self.refresh_timeline(self._timeline)
+
     def refresh_timeline(self, timeline: Timeline | None) -> None:
         """Render the wall-clock lanes, or the empty state when there are none."""
+        self._timeline = timeline
         plot = query_one_opt(self, f"#{self.id}-plot", PlotextPlot)
         scroll = query_one_opt(self, f"#{self.id}-scroll", VerticalScroll)
         if plot is None:
@@ -51,6 +69,8 @@ class TimelineCard(MetricCard):
         lanes = timeline.lanes if timeline is not None else ()
         if timeline is None or not lanes:
             plot.styles.height = max(1, scroll.size.height if scroll is not None else 12)
+            self._drawn_width = plot.size.width
+            self._painted = True
             self._draw_empty(plot, timeline.empty if timeline is not None else "")
             return
         width = max(20, ((scroll.size.width if scroll is not None else plot.size.width) or 80) - 2)
@@ -61,6 +81,8 @@ class TimelineCard(MetricCard):
         legend_data, hidden = legend_layout(lanes, width, max_rows)
         rows = max(available, len(legend_data) + len(lanes))
         plot.styles.height = rows + 3
+        self._drawn_width = width
+        self._painted = True
         self._draw(plot, timeline, rows, width, legend_data, hidden)
 
     def _draw_empty(self, plot: PlotextPlot, reason: str = "") -> None:

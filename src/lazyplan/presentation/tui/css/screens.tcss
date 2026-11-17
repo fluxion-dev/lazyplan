@@ -20,7 +20,8 @@ ModalScreen {
 }
 
 #dlg .form-title {
-    height: 1;
+    width: 1fr;
+    height: auto;
     color: $lp-accent;
     text-style: bold;
     margin-bottom: 1;
@@ -252,6 +253,8 @@ Screen.compact #source-head {
 }
 
 #palette-title {
+    width: 1fr;
+    height: auto;
     color: $lp-accent;
     text-style: bold;
 }
@@ -309,6 +312,24 @@ Screen.compact #source-head {
 #hub-list-wrap:focus-within,
 #hub-preview:focus-within {
     border: round $lp-border-focus;
+}
+
+Screen.compact #hub-main {
+    layout: vertical;
+}
+
+Screen.compact #hub-list-wrap {
+    width: 100%;
+    min-width: 0;
+    height: 2fr;
+    min-height: 5;
+}
+
+Screen.compact #hub-preview {
+    width: 100%;
+    min-width: 0;
+    height: 3fr;
+    min-height: 7;
 }
 
 #hub-list > .option-list--option {
@@ -576,4 +597,62 @@ Screen.short #setup-head {
 
 Screen.short #setup-copy {
     max-height: 1;
+}
+
+#log-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#log-head {
+    height: auto;
+    max-height: 3;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+    text-wrap: wrap;
+}
+
+#log-scroll {
+    height: 1fr;
+    padding: 0 1;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+}
+
+#log-scroll:focus-within {
+    border: round $lp-border-focus;
+}
+
+#log-list {
+    height: auto;
+    background: transparent;
+}
+
+#log-list > .option-list--option {
+    padding: 0 1;
+}
+
+#log-list > .option-list--option-highlighted {
+    background: $lp-cursor;
+    color: $lp-accent;
+    text-style: bold;
+}
+
+#log-list > .option-list--option-disabled {
+    color: $lp-text-faint;
+}
+
+#log-hints {
+    width: 100%;
+    height: auto;
+    max-height: 2;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
+    text-wrap: wrap;
 }

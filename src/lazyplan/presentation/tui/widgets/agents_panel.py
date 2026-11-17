@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from textual import events
 from textual.app import ComposeResult
 from textual.containers import VerticalScroll
 from textual.widgets import Static
@@ -24,15 +25,35 @@ class AgentsPanel(VerticalScroll):
         self.border_title = " agents "
         self.display = False
         self._claims: list[dict[str, Any]] = []
+        self._painted_width = 0
 
     def compose(self) -> ComposeResult:
         yield Static("", id="agents-body")
 
     def _row_width(self) -> int | None:
-        """Content cells available to one row, or None before the first layout."""
+        """Content cells available to one row, or None before the first layout.
+
+        The panel's inner width is current as soon as its Resize lands, while
+        the body Static may still report the previous width mid-refresh. Prefer
+        the panel and subtract the body's one-cell side padding.
+        """
+        panel = self.content_size.width
+        if panel > 2:
+            return panel - 2
         body = query_one_opt(self, "#agents-body", Static)
         width = (body.size.width if body is not None else self.size.width) or self.size.width - 2
         return width if width > 0 else None
+
+    def on_resize(self, event: events.Resize) -> None:
+        """Re-wrap claim rows after the terminal width changes."""
+        self.call_after_refresh(self._rewrap)
+
+    def _rewrap(self) -> None:
+        """Repaint only when the row width actually changed."""
+        width = self._row_width()
+        if width is None or width == self._painted_width:
+            return
+        self._paint_rows()
 
     def show(self, store: CoordinationPort) -> None:
         """Repaint from the store's live claims."""
@@ -48,6 +69,7 @@ class AgentsPanel(VerticalScroll):
         if body is None:
             return
         width = self._row_width()
+        self._painted_width = width or 0
         stamp = time.time()
         emoji = getattr(getattr(self.app, "state", None), "emoji", True)
         body.update(

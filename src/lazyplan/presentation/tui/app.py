@@ -231,12 +231,14 @@ if _TEXTUAL_OK:
             self.health_controller.prompt()
 
         def refresh_taskbar(self) -> None:
-            """Push the current update state into every visible taskbar."""
+            """Push the current update and log state into every visible taskbar."""
             latest = self.update_controller.latest
+            unread = self.notification_log.unread
             for screen in self.screen_stack:
                 try:
                     for bar in screen.query(Taskbar):
                         bar.set_latest(latest)
+                        bar.set_log_count(unread)
                 except Exception:  # noqa: BLE001 - a closing screen may race a poll
                     continue
 

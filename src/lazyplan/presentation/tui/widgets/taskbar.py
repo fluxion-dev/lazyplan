@@ -1,8 +1,9 @@
-"""Bottom taskbar: key hints on the left, health and version on the right.
+"""Bottom taskbar: key hints on the left, log, health, and version on the right.
 
-The badge reflects the running version and, when the update cache knows a
-newer release, adds an arrow to it. Clicking the badge runs the app's update
-action; it never checks the network itself.
+The version badge reflects the running version and, when the update cache knows
+a newer release, adds an arrow to it. Clicking the badge runs the app's update
+action; it never checks the network itself. The log chip names the unread
+warning and error count and opens the notification log when clicked.
 """
 
 from __future__ import annotations
@@ -41,10 +42,17 @@ def badge_markup(text: str) -> str:
     return escape_markup(text) if text else ""
 
 
-def _right_markup(health: str, running: str, latest: str) -> str:
-    """Health first, then the version badge, joined by the shared gap."""
+def log_chip(count: int) -> str:
+    """The unread warning/error chip; information-only logs show nothing."""
+    if count <= 0:
+        return ""
+    return f"[reverse] log [/]{count}"
+
+
+def _right_markup(health: str, running: str, latest: str, log: str = "") -> str:
+    """Log chip, health, then the version badge, joined by the shared gap."""
     return VERSION_GAP.join(
-        part for part in (health, badge_markup(version_text(running, latest))) if part
+        part for part in (log, health, badge_markup(version_text(running, latest))) if part
     )
 
 
@@ -53,13 +61,30 @@ def badge_start(
     health: str = "",
     running: str = "",
     latest: str = "",
+    log: str = "",
     width: int = 80,
 ) -> int:
-    """The column where the clickable badge begins."""
-    right = _right_markup(health, running, latest)
+    """The column where the clickable version badge begins."""
+    right = _right_markup(health, running, latest, log)
     if not right:
         return 0
     return max(0, width - Content.from_markup(right).cell_length)
+
+
+def log_span(
+    *,
+    log: str = "",
+    health: str = "",
+    running: str = "",
+    latest: str = "",
+    width: int = 80,
+) -> tuple[int, int]:
+    """The half-open column span of the clickable log chip."""
+    if not log:
+        return (0, 0)
+    right = _right_markup(health, running, latest, log)
+    start = max(0, width - Content.from_markup(right).cell_length)
+    return (start, start + Content.from_markup(log).cell_length)
 
 
 def taskbar_markup(
@@ -68,10 +93,11 @@ def taskbar_markup(
     health: str = "",
     running: str = "",
     latest: str = "",
+    log: str = "",
     width: int = 80,
 ) -> str:
     """Compose one right-aligned taskbar line within *width* columns."""
-    right = _right_markup(health, running, latest)
+    right = _right_markup(health, running, latest, log)
     if not right:
         return hints
     right_len = Content.from_markup(right).cell_length
@@ -90,6 +116,15 @@ def _truncate_hints(hints: str, width: int) -> str:
     return " · ".join(parts)
 
 
+def _unread_for_app(app: Any) -> int:
+    """The app's unread warning/error count, or zero without a log."""
+    log = getattr(app, "notification_log", None)
+    try:
+        return max(0, int(getattr(log, "unread", 0) or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 class Taskbar(Static):
     """One-line bar that keeps its badge pinned to the right edge."""
 
@@ -98,8 +133,16 @@ class Taskbar(Static):
         self._health = ""
         self._version_running = ""
         self._version_latest = ""
+        self._log_count = 0
         self._badge_start = 0
+        self._log_start = 0
+        self._log_end = 0
         super().__init__(content, markup=True, **kwargs)
+
+    @property
+    def log_count(self) -> int:
+        """The unread warning/error count the chip shows."""
+        return self._log_count
 
     def set_line(
         self,
@@ -108,6 +151,7 @@ class Taskbar(Static):
         health: str = "",
         running: str = "",
         latest: str = "",
+        log_count: int | None = None,
     ) -> None:
         """Remember the line and repaint it at the current widget width."""
         if not running:
@@ -118,16 +162,28 @@ class Taskbar(Static):
         self._health = health
         self._version_running = running
         self._version_latest = latest
+        if log_count is not None:
+            self._log_count = max(0, log_count)
         self._repaint()
 
     def set_for_app(self, hints: str, *, health: str = "") -> None:
-        """Repaint from the app's remembered update state."""
+        """Repaint from the app's remembered update and log state."""
         controller = getattr(self.app, "update_controller", None)
-        self.set_line(hints, health=health, latest=str(getattr(controller, "latest", "") or ""))
+        self.set_line(
+            hints,
+            health=health,
+            latest=str(getattr(controller, "latest", "") or ""),
+            log_count=_unread_for_app(self.app),
+        )
 
     def set_latest(self, latest: str) -> None:
         """Repaint after an update poll names or clears a newer release."""
         self._version_latest = latest
+        self._repaint()
+
+    def set_log_count(self, count: int) -> None:
+        """Repaint after the notification log gains unread warnings or clear."""
+        self._log_count = max(0, count)
         self._repaint()
 
     def on_resize(self) -> None:
@@ -135,17 +191,32 @@ class Taskbar(Static):
         self._repaint()
 
     def on_click(self, event: events.Click) -> None:
-        """Open updates when the click lands on the version badge."""
+        """Open the log on the log chip and updates on the version badge."""
+        if self._log_end > self._log_start and self._log_start <= event.x < self._log_end:
+            event.stop()
+            handler = getattr(self.app, "action_notification_log", None)
+            if callable(handler):
+                handler()
+            return
         if self._badge_start and event.x >= self._badge_start:
             event.stop()
             self.app.action_update_prompt()  # type: ignore[attr-defined]
 
     def _repaint(self) -> None:
         width = max(10, self.size.width or 80)
+        log = log_chip(self._log_count)
+        self._log_start, self._log_end = log_span(
+            log=log,
+            health=self._health,
+            running=self._version_running,
+            latest=self._version_latest,
+            width=width,
+        )
         self._badge_start = badge_start(
             health=self._health,
             running=self._version_running,
             latest=self._version_latest,
+            log=log,
             width=width,
         )
         self.update(
@@ -154,6 +225,7 @@ class Taskbar(Static):
                 health=self._health,
                 running=self._version_running,
                 latest=self._version_latest,
+                log=log,
                 width=width,
             )
         )

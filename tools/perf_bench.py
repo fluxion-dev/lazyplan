@@ -11,9 +11,10 @@ Run it by hand:
     python3 tools/perf_bench.py --quick
     python3 tools/perf_bench.py --no-tui --repeat 3
 
-The benchmark reports wall time, SQL statement count, and connection count.
-`BUDGETS` gates the read paths: query counts are exact and deterministic, so
-an accidental per-row query fails the check immediately.
+The benchmark reports wall time, SQL statement count, and connection count,
+plus cold CLI startup for import, version, and list. `BUDGETS` gates the read
+paths: query counts are exact and deterministic, so an accidental per-row
+query fails the check immediately.
 """
 
 from __future__ import annotations
@@ -35,11 +36,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
 
 import lazyplan.store.base as store_mod  # noqa: E402
-from lazyplan import services
-from lazyplan.presentation.shared import render
+from lazyplan import services  # noqa: E402
+from lazyplan.presentation.shared import render  # noqa: E402
 from lazyplan.services import audit, needs_me, stats  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -135,6 +137,9 @@ BUDGETS: dict[str, Budget] = {
     "tui_first_paint": Budget(48, 8_000, nodes=100),
     "tui_expand": Budget(0, 8_000, nodes=120),
     "tui_reconcile": Budget(48, 1_500, nodes=100),
+    "cli_import": Budget(0, 2_000),
+    "cli_version": Budget(0, 2_000),
+    "cli_list": Budget(0, 2_500),
     "git_status": Budget(0, 3_000),
     "git_show": Budget(0, 3_000),
 }
@@ -143,7 +148,7 @@ BUDGETS: dict[str, Budget] = {
 # Query counts are the hard gate; these ceilings catch sleeps, network waits,
 # and accidental whole-database scans rather than small runner variance.
 WALL_MULTIPLIER = {"linux": 1.0, "darwin": 2.0, "win32": 4.0}
-OPTIONAL_METRICS = {"git_status", "git_show"}
+OPTIONAL_METRICS = {"git_status", "git_show", "cli_import", "cli_version", "cli_list"}
 
 
 def _split(total: int, buckets: int) -> list[int]:
@@ -451,9 +456,7 @@ def _preview_render(store: Store, plan_id: int) -> object:
     full = store.get_full("plan", plan_id)
     if full is None:
         return None
-    return build_preview("plan", plan_id, full), build_control_strip(
-        store, "plan", plan_id, full
-    )
+    return build_preview("plan", plan_id, full), build_control_strip(store, "plan", plan_id, full)
 
 
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
@@ -495,6 +498,49 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
             repeat=repeat,
         ),
     ]
+
+
+def _timed_command(argv: list[str], env: dict[str, str], repeat: int) -> float:
+    """Best-of-`repeat` cold subprocess wall time, in milliseconds."""
+    best = float("inf")
+    for _ in range(max(1, repeat)):
+        start = time.perf_counter()
+        subprocess.run(
+            argv,
+            cwd=ROOT,
+            env=env,
+            check=True,
+            capture_output=True,
+            timeout=120,
+        )
+        best = min(best, (time.perf_counter() - start) * 1_000)
+    return best
+
+
+def _cli_measurements(db: Path, repeat: int) -> list[Measurement]:
+    """Cold interpreter startups: import only, version, and a store read."""
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT / "src")
+    env["LAZYPLAN_NO_SETUP"] = "1"
+    env["LAZYPLAN_NO_UPDATE_CHECK"] = "1"
+    env.pop("LAZYPLAN_DB", None)
+    specs = (
+        ("cli_import", [sys.executable, "-c", "import lazyplan.presentation.cli"]),
+        ("cli_version", [sys.executable, "-m", "lazyplan", "--version"]),
+        (
+            "cli_list",
+            [sys.executable, "-m", "lazyplan", "--db", str(db), "list", "--limit", "5"],
+        ),
+    )
+    out: list[Measurement] = []
+    for name, argv in specs:
+        try:
+            ms = _timed_command(argv, env, repeat)
+        except (OSError, subprocess.SubprocessError) as exc:
+            out.append(Measurement(name, None, None, None, f"skipped: {exc}"))
+            continue
+        out.append(Measurement(name, round(ms, 1), None, None, "cold subprocess"))
+    return out
 
 
 def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
@@ -617,6 +663,7 @@ def run(
     *,
     repeat: int = 1,
     include_tui: bool = True,
+    include_cli: bool = True,
 ) -> dict:
     """Build a throwaway fixture and return fixture counts plus measurements."""
     with tempfile.TemporaryDirectory(prefix="lazyplan-perf-") as tmp:
@@ -625,6 +672,11 @@ def run(
         store = Store(fixture.db)
         metrics = _core_metrics(store, fixture, max(1, repeat))
         metrics.extend(_git_metrics(_make_git_repo(base), max(1, repeat)))
+        if include_cli:
+            metrics.extend(_cli_measurements(fixture.db, max(1, repeat)))
+        else:
+            for name in ("cli_import", "cli_version", "cli_list"):
+                metrics.append(Measurement(name, None, None, None, "disabled by --no-cli"))
         if include_tui:
             metrics.extend(_tui_measurements(fixture.db, max(1, repeat)))
         else:
@@ -692,6 +744,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quick", action="store_true", help="use the small test fixture")
     parser.add_argument("--repeat", type=int, default=1, help="timed runs per metric")
     parser.add_argument("--no-tui", action="store_true", help="skip the headless TUI refresh")
+    parser.add_argument("--no-cli", action="store_true", help="skip the cold CLI startups")
     parser.add_argument("--json", action="store_true", help="print the full JSON report")
     parser.add_argument(
         "--check",
@@ -703,6 +756,7 @@ def main(argv: list[str] | None = None) -> int:
         QUICK_COUNTS if args.quick else DEFAULT_COUNTS,
         repeat=max(1, args.repeat),
         include_tui=not args.no_tui,
+        include_cli=not args.no_cli,
     )
     if args.json:
         print(json.dumps(result, indent=2))

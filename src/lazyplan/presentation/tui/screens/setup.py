@@ -56,6 +56,7 @@ try:
 
     from ..navigation import NAV_BINDINGS
     from ..query import query_one_opt
+    from ..size import apply_classes, classes_for
     from ..theme.themes import THEME_NAMES
     from ..widgets.setup_controls import first_focusable
     from ..widgets.taskbar import Taskbar
@@ -157,9 +158,7 @@ if _TEXTUAL_OK:
 
         def _apply_size(self, width: int, height: int) -> None:
             """Mirror the shell's compact, wide, and short size classes."""
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
-            self.set_class(height < 30, "short")
+            apply_classes(self, classes_for(width, height), ("compact", "wide", "short"))
             hints = query_one_opt(self, "#setup-hints", Taskbar)
             if hints is not None:
                 hints.set_for_app(

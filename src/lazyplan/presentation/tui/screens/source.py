@@ -40,6 +40,7 @@ from ..controllers.source_nav import file_nodes
 from ..controllers.source_state import SourceViewState
 from ..controllers.source_tree import build_trail_tree
 from ..navigation import NAV_BINDINGS, NavigationMixin
+from ..size import apply_classes, classes_for
 from ..views.diff_split import MIN_SPLIT_WIDTH
 from ..views.diff_style import palette_from_theme
 from ..views.source import (
@@ -127,9 +128,7 @@ if _TEXTUAL_OK:
 
         def _apply_width_classes(self, width: int) -> None:
             """Switch between the stacked and side-by-side layouts."""
-            self.set_class(width < 80, "compact")
-            self.set_class(width < 100, "stacked")
-            self.set_class(width >= 120, "wide")
+            apply_classes(self, classes_for(width), ("compact", "stacked", "wide"))
 
         def on_resize(self, event: events.Resize) -> None:
             """Re-render the current preview after a width change.

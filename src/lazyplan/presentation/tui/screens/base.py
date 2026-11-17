@@ -26,6 +26,7 @@ try:
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
     from ..query import query_one_opt
+    from ..size import apply_classes, classes_for
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover
@@ -71,9 +72,7 @@ if _TEXTUAL_OK:
 
         def _apply_size(self, width: int, height: int) -> None:
             """Mirror the shell's compact, wide, and short size classes."""
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
-            self.set_class(height < 30, "short")
+            apply_classes(self, classes_for(width, height), ("compact", "wide", "short"))
 
         def on_resize(self, event: events.Resize) -> None:
             """Keep a modal's size classes in step with the terminal."""

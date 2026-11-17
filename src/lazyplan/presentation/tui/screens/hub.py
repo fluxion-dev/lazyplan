@@ -15,6 +15,7 @@ try:
     from textual.widgets.option_list import Option
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
+    from ..size import apply_classes, classes_for
     from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
@@ -91,8 +92,7 @@ if _TEXTUAL_OK:
 
         def _apply_size(self, width: int) -> None:
             """Mirror the shell tiers; the compact split stacks the panes."""
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            apply_classes(self, classes_for(width), ("compact", "wide"))
 
         def on_resize(self, event: events.Resize) -> None:
             """Keep the split and its classes in step with the new width."""

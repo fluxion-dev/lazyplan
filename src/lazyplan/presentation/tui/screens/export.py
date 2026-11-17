@@ -27,6 +27,7 @@ from ...shared.export import (
 )
 from ...shared.render import render_plan_markdown
 from ..navigation import NAV_BINDINGS, NavigationMixin
+from ..size import apply_classes, classes_for
 from .forms import ConfirmScreen
 
 if TYPE_CHECKING:
@@ -77,8 +78,7 @@ if _TEXTUAL_OK:
 
         def _apply_size(self, width: int) -> None:
             """Mirror the shell's compact and wide tiers."""
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            apply_classes(self, classes_for(width), ("compact", "wide"))
 
         def on_resize(self, event: events.Resize) -> None:
             """Re-apply the dialog tiers after a terminal resize."""

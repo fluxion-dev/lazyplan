@@ -34,14 +34,21 @@ class AgentsPanel(VerticalScroll):
         """Content cells available to one row, or None before the first layout.
 
         The panel's inner width is current as soon as its Resize lands, while
-        the body Static may still report the previous width mid-refresh. Prefer
-        the panel and subtract the body's one-cell side padding.
+        the body Static may still report the previous width mid-refresh. Take
+        the smaller of the panel minus the body padding and the body's own
+        content width, so a vertical scrollbar never widens a row past the
+        body.
         """
+        widths: list[int] = []
         panel = self.content_size.width
         if panel > 2:
-            return panel - 2
+            widths.append(panel - 2)
         body = query_one_opt(self, "#agents-body", Static)
-        width = (body.size.width if body is not None else self.size.width) or self.size.width - 2
+        if body is not None and body.content_size.width > 0:
+            widths.append(body.content_size.width)
+        if widths:
+            return min(widths)
+        width = self.size.width - 2
         return width if width > 0 else None
 
     def on_resize(self, event: events.Resize) -> None:

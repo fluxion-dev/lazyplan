@@ -56,6 +56,7 @@ class TestStatusFallback(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(self.row(app, key).startswith("🔨 "))
 
             app._apply_layout(79)  # type: ignore[attr-defined]
+            await pilot.pause()
             app.refresh_all()  # type: ignore[attr-defined]
             await pilot.pause()
 

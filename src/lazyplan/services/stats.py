@@ -20,8 +20,12 @@ _STATUS = re.compile(r"^task #(\d+) -> (todo|doing|done)$")
 
 
 def _events(store: InsightsPort) -> list[dict]:
-    """All events oldest first."""
-    return list(reversed(store.feed(limit=1_000_000)))
+    """Task add and status events, oldest first.
+
+    Only these two prefixes can match ``_ADDED``/``_STATUS``, so the read skips
+    filler events instead of regex-matching the whole event table.
+    """
+    return list(reversed(store.events_by_prefix(("T#", "task #"), limit=1_000_000)))
 
 
 def _event_maps(
@@ -136,24 +140,27 @@ def attention_reasons(
 ) -> dict[int, list[str]]:
     """Task ids the TUI should surface as needing attention, with reasons."""
     stamp = time.time() if now is None else now
-    task_rows = tasks if tasks is not None else active.all_tasks(store)
-    _added, transitions = _event_maps(_events(store), {task.id for task in task_rows})
-    claims = claims if claims is not None else store.claims_map()
-    forge = forge if forge is not None else store.forge_links_map()
-    open_criteria = open_criteria if open_criteria is not None else store.open_task_criteria_ids()
-    reasons: dict[int, list[str]] = {}
-    for task in task_rows:
-        found = _task_attention(
-            task,
-            claims.get(task.id),
-            transitions.get(task.id, []),
-            open_criteria,
-            forge.get(("task", task.id), []),
-            stamp,
-            stale_after,
+    with store.transaction():
+        task_rows = tasks if tasks is not None else active.all_tasks(store)
+        _added, transitions = _event_maps(_events(store), {task.id for task in task_rows})
+        claims = claims if claims is not None else store.claims_map()
+        forge = forge if forge is not None else store.forge_links_map()
+        open_criteria = (
+            open_criteria if open_criteria is not None else store.open_task_criteria_ids()
         )
-        if found:
-            reasons[task.id] = found
+        reasons: dict[int, list[str]] = {}
+        for task in task_rows:
+            found = _task_attention(
+                task,
+                claims.get(task.id),
+                transitions.get(task.id, []),
+                open_criteria,
+                forge.get(("task", task.id), []),
+                stamp,
+                stale_after,
+            )
+            if found:
+                reasons[task.id] = found
     return reasons
 
 

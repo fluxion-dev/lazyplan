@@ -226,19 +226,21 @@ class ViewsMixin(StoreBase):
     def counts(self) -> dict[str, int]:
         """Plan, milestone, and task totals, plus per-state plan counts."""
         with self._connect() as conn:
-            np = conn.execute("SELECT COUNT(*) c FROM plans").fetchone()["c"]
-            ns = conn.execute("SELECT COUNT(*) c FROM milestones").fetchone()["c"]
-            nt = conn.execute("SELECT COUNT(*) c FROM tasks").fetchone()["c"]
-            nd = conn.execute("SELECT COUNT(*) c FROM tasks WHERE status='done'").fetchone()["c"]
-            npt = conn.execute("SELECT COUNT(*) c FROM plans WHERE status='todo'").fetchone()["c"]
-            npd = conn.execute("SELECT COUNT(*) c FROM plans WHERE status='doing'").fetchone()["c"]
-            npn = conn.execute("SELECT COUNT(*) c FROM plans WHERE status='done'").fetchone()["c"]
+            row = conn.execute(
+                "SELECT (SELECT COUNT(*) FROM plans) AS plans,"
+                " (SELECT COUNT(*) FROM milestones) AS milestones,"
+                " (SELECT COUNT(*) FROM tasks) AS tasks,"
+                " (SELECT COUNT(*) FROM tasks WHERE status='done') AS tasks_done,"
+                " (SELECT COUNT(*) FROM plans WHERE status='todo') AS plans_todo,"
+                " (SELECT COUNT(*) FROM plans WHERE status='doing') AS plans_doing,"
+                " (SELECT COUNT(*) FROM plans WHERE status='done') AS plans_done"
+            ).fetchone()
         return {
-            "plans": np,
-            "milestones": ns,
-            "tasks": nt,
-            "tasks_done": nd,
-            "plans_todo": npt,
-            "plans_doing": npd,
-            "plans_done": npn,
+            "plans": row["plans"],
+            "milestones": row["milestones"],
+            "tasks": row["tasks"],
+            "tasks_done": row["tasks_done"],
+            "plans_todo": row["plans_todo"],
+            "plans_doing": row["plans_doing"],
+            "plans_done": row["plans_done"],
         }

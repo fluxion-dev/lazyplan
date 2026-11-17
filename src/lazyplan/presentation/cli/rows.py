@@ -59,12 +59,28 @@ def _list_payload(
     plan_id: int | None,
 ) -> list[dict]:
     """Full JSON tree; shape stays stable for scripts."""
+    with store.transaction():
+        return _list_entries(store, status, finished, archived, limit, repo, milestone, plan_id)
+
+
+def _list_entries(
+    store: InsightsPort,
+    status: Status | None,
+    finished: str,
+    archived: str,
+    limit: int | None,
+    repo: str | None,
+    milestone: int | None,
+    plan_id: int | None,
+) -> list[dict]:
+    """One JSON tree snapshot; the caller owns the shared read transaction."""
     criteria = store.criteria_map()
     links = store.vcs_links_map()
     repos = store.repos_map()
     worktrees = store.plan_worktrees_map()
     revisions = store.latest_revisions_map()
     drift = store.drift_counts()
+    source = services.activity_source(store, criteria)
     payload = []
     for plan, milestones in services.tree(
         store,
@@ -75,6 +91,7 @@ def _list_payload(
         limit=limit,
         repo=repo,
         milestone_id=milestone,
+        source=source,
     ):
         plan_repos = repos.get(("plan", plan.id), [])
         milestone_rows = []
@@ -82,13 +99,14 @@ def _list_payload(
             milestone_repos = repos.get(("milestone", ms.id), []) or plan_repos
             task_rows = []
             for task in tasks:
+                task_repos = repos.get(("task", task.id), [])
                 task_rows.append(
                     {
                         "task": to_payload(vars(task)),
                         "criteria": [vars(item) for item in criteria.get(("task", task.id), [])],
                         "links": [vars(item) for item in links.get(("task", task.id), [])],
-                        "repos": repos.get(("task", task.id), []),
-                        "effective_repos": repos.get(("task", task.id), []) or milestone_repos,
+                        "repos": task_repos,
+                        "effective_repos": task_repos or milestone_repos,
                     }
                 )
             milestone_rows.append(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from lazyplan.infrastructure.templates import apply_template, template_criteria
@@ -348,6 +349,39 @@ def _is_finished(plan: Plan, events: dict[int, tuple[float, str]], now: float) -
     return _is_archived_policy(plan, events, now)
 
 
+#: Detail prefixes that name a plan or a row under one. The activity sort needs
+#: nothing else, so the read can skip filler events instead of parsing them.
+ACTIVITY_EVENT_PREFIXES = (
+    "P#",
+    "plan #",
+    "M#",
+    "milestone #",
+    "T#",
+    "task #",
+    "criteria #",
+    "criterion #",
+)
+
+
+@dataclass(frozen=True)
+class TreeSource:
+    """The two reads the recent-first sort needs, when a caller already has them."""
+
+    criteria: dict[tuple[str, int], list[Criterion]]
+    events: list[dict]
+
+
+def activity_source(
+    port: PlanningPort,
+    criteria: dict[tuple[str, int], list[Criterion]] | None = None,
+) -> TreeSource:
+    """Load the activity sort's inputs once for several tree reads."""
+    return TreeSource(
+        criteria=port.criteria_map() if criteria is None else criteria,
+        events=port.events_by_prefix(ACTIVITY_EVENT_PREFIXES, limit=100_000),
+    )
+
+
 def _plan_activity(
     milestones: dict[int, list[Milestone]],
     tasks: dict[int, list[Task]],
@@ -534,6 +568,7 @@ def tree(
     repo: str | None = None,
     milestone_id: int | None = None,
     plan_mode: str = "all",
+    source: TreeSource | None = None,
 ) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
     """Nested plans, milestones, and tasks with filters."""
     check_archive_mode(finished)
@@ -542,6 +577,34 @@ def tree(
         finished = "show"
     if plan_mode not in ("all", "active", "finished"):
         raise ValueError("plan_mode must be all|active|finished")
+    with port.transaction():
+        return _tree_rows(
+            port,
+            status,
+            plan_id,
+            finished,
+            archived,
+            limit,
+            repo,
+            milestone_id,
+            plan_mode,
+            source,
+        )
+
+
+def _tree_rows(
+    port: ReposPort,
+    status: Status | None,
+    plan_id: int | None,
+    finished: str,
+    archived: str,
+    limit: int | None,
+    repo: str | None,
+    milestone_id: int | None,
+    plan_mode: str,
+    source: TreeSource | None,
+) -> list[tuple[Plan, list[tuple[Milestone, list[Task]]]]]:
+    """One tree snapshot; the caller owns the shared read transaction."""
     plans = port.list_plans(archived="show")
     milestones = port.milestones_map()
     tasks = port.tasks_map()
@@ -565,12 +628,8 @@ def tree(
         ):
             out.append((plan, items))
     if plan_id is None and milestone_id is None:
-        activity = _plan_activity(
-            milestones,
-            tasks,
-            port.criteria_map(),
-            port.feed(limit=100_000),
-        )
+        shared = source or activity_source(port)
+        activity = _plan_activity(milestones, tasks, shared.criteria, shared.events)
         out.sort(key=lambda entry: (activity.get(entry[0].id, 0.0), entry[0].id), reverse=True)
         if limit is not None:
             out = out[: max(limit, 0)]

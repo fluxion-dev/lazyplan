@@ -256,7 +256,7 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
                 active_tree.root, active_tree, self.desired_plans(active)
             )
             changed |= self.reconcile_children(
-                finished_tree.root, finished_tree, self.desired_plans(finished)
+                finished_tree.root, finished_tree, self.desired_plans(finished, review=True)
             )
             filtering = bool(app.filter_text.strip())
             if filtering:
@@ -303,6 +303,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
 
     def render_row(self, key: tuple[str, int], spec: RowSpec, tree: Tree) -> str:
         """Render and cache one row at the current tree width."""
-        text = spec.markup(self.row_width(tree, spec.depth))
+        text = spec.markup(self.row_width(tree, spec.depth), emoji=self.app.state.emoji)
         self.app._row_labels[key] = text
         return text

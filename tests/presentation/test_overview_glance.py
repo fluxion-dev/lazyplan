@@ -94,8 +94,8 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
                     milestone_body = app.query_one("#preview-body", Markdown).source or ""
                     self.assertIn("## DETAILS", milestone_body)
                     self.assertIn("## TASKS 3", milestone_body)
-                    self.assertIn(f"T{self.doing.id}  Trim the overview · doing", milestone_body)
-                    self.assertIn(f"T{self.blocked.id}  Wait on review · blocked", milestone_body)
+                    self.assertIn(f"T{self.doing.id}  Trim the overview · 🔨", milestone_body)
+                    self.assertIn(f"T{self.blocked.id}  Wait on review · 🚧", milestone_body)
                     for hidden in ("## NOTES", "## SOURCE", "## PROOF"):
                         self.assertNotIn(hidden, milestone_body)
 
@@ -106,19 +106,21 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn("## ACCEPTANCE", task_body)
                     self.assertNotIn("## SOURCE", task_body)
 
-    async def test_tree_rows_and_footer_stay_words_only(self) -> None:
+    async def test_tree_rows_lead_with_one_emoji_and_no_state_word(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
             await self._select(app, pilot, "plan", self.plan.id)
             plan_row = self._tree_row(app, ("plan", self.plan.id))
             self.assertIn("0/3", plan_row)
+            # A blocked task rolls review up to its plan.
+            self.assertTrue(plan_row.startswith("🔍 "))
             doing_row = self._tree_row(app, ("task", self.doing.id))
-            self.assertTrue(doing_row.rstrip().endswith("doing"))
+            self.assertTrue(doing_row.startswith("🔨 "))
             blocked_row = self._tree_row(app, ("task", self.blocked.id))
-            self.assertTrue(blocked_row.rstrip().endswith("blocked"))
+            self.assertTrue(blocked_row.startswith("🚧 "))
             for row in (plan_row, doing_row, blocked_row):
-                for glyph in GLYPHS:
+                for glyph in ("○", "◐", "●", "?", "!"):
                     self.assertNotIn(glyph, row)
             footer = str(app.query_one("#hints").render())
             self.assertLessEqual(footer.count(" · ") + 1, 3)

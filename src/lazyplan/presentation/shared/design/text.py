@@ -5,14 +5,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ....core.entities import Status
-
-STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
-STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
-STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
+from .status import STATUS_ANSI, STATUS_GLYPH, STATUS_RICH, status_key
 
 
 def _status(value: Status | str) -> str:
-    return value.value if isinstance(value, Status) else str(value)
+    return status_key(value)
 
 
 def status_word(status: Status | str, dot: str = "plain") -> str:

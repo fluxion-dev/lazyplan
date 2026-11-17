@@ -25,12 +25,19 @@ class RowSpec:
     depth: int
     status: Status
 
-    def markup(self, width: int) -> str:
+    def markup(self, width: int, *, emoji: bool = True) -> str:
         """Return this row's Rich markup at *width* cells."""
-        return self.render(width=width)
+        return self.render(width=width, emoji=emoji)
 
 
-def plan_spec(plan: Plan, progress: dict, attention: bool = False, worktrees: int = 0) -> RowSpec:
+def plan_spec(
+    plan: Plan,
+    progress: dict,
+    attention: bool = False,
+    worktrees: int = 0,
+    *,
+    review: bool = False,
+) -> RowSpec:
     """Build the width-independent renderer for one plan row."""
     return RowSpec(
         render=partial(
@@ -39,6 +46,7 @@ def plan_spec(plan: Plan, progress: dict, attention: bool = False, worktrees: in
             progress=progress.get(("plan", plan.id)),
             attention=attention,
             worktrees=worktrees,
+            review=review,
         ),
         depth=3,
         status=plan.status,

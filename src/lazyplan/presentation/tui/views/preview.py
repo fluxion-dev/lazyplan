@@ -17,6 +17,8 @@ from ...shared.design import (
     escape_markdown,
     escape_markup,
     evidence_label,
+    status_mark,
+    status_state,
 )
 from .reference_lines import reference_lines
 
@@ -128,11 +130,13 @@ def _title(
     oid: int,
     obj: dict[str, Any],
     full: dict[str, Any],
+    *,
+    emoji: bool = True,
 ) -> tuple[str, str]:
     """The title alone plus one dim line of ids, counts, and state."""
     title = str(obj.get("title", obj.get("name", "")))
     header = f"[bold]{escape_markup(title)}[/]"
-    return header, _meta_line(kind, oid, obj, full)
+    return header, _meta_line(kind, oid, obj, full, emoji=emoji)
 
 
 def _done(rows: list[dict[str, Any]]) -> int:
@@ -144,6 +148,8 @@ def _meta_line(
     oid: int,
     obj: dict[str, Any],
     full: dict[str, Any],
+    *,
+    emoji: bool = True,
 ) -> str:
     """One dim context line: ids, counts, and state for the selected level."""
     if kind == "plan":
@@ -166,12 +172,14 @@ def _meta_line(
             f" · {obj.get('agent_role', DEFAULT_AGENT_ROLE)}",
         ]
     else:
-        parts = [f"T{oid}", f"M{obj.get('milestone_id')}", str(obj.get("status", ""))]
+        state = status_state(
+            str(obj.get("status", "")),
+            blocked=bool(obj.get("blocked")),
+        )
+        parts = [f"T{oid}", f"M{obj.get('milestone_id')}", status_mark(state, emoji=emoji)]
         role = str(obj.get("role", "") or "")
         if role and role != DEFAULT_AGENT_ROLE:
             parts.append(role)
-        if obj.get("blocked"):
-            parts.append("blocked")
         claim = obj.get("claim") or {}
         if claim:
             parts.append(f"@{escape_markup(str(claim.get('actor', '')))}")
@@ -208,20 +216,21 @@ def milestones_block(milestones: list[dict[str, Any]]) -> PreviewBlock | None:
     return PreviewBlock(f"milestones {len(milestones)}", tuple(lines))
 
 
-def _task_state(task: dict[str, Any]) -> str:
-    if task.get("blocked"):
-        return "blocked"
-    if task.get("status") == "doing":
-        return "doing"
-    return ""
+def _task_state(task: dict[str, Any], *, emoji: bool = True) -> str:
+    state = status_state(
+        str(task.get("status", "")),
+        blocked=bool(task.get("blocked")),
+    )
+    return status_mark(state, emoji=emoji)
 
 
-def tasks_block(tasks: list[dict[str, Any]]) -> PreviewBlock | None:
-    """Every task under the selected milestone, as one plain row."""
+def tasks_block(tasks: list[dict[str, Any]], *, emoji: bool = True) -> PreviewBlock | None:
+    """Every task under the selected milestone, as one mark, id, and title."""
     if not tasks:
         return None
     lines = [
-        _child_row("T", task.get("id"), task.get("title", ""), _task_state(task)) for task in tasks
+        _child_row("T", task.get("id"), task.get("title", ""), _task_state(task, emoji=emoji))
+        for task in tasks
     ]
     return PreviewBlock(f"tasks {len(tasks)}", tuple(lines))
 
@@ -347,9 +356,11 @@ def worktrees_block(full: dict[str, Any]) -> PreviewBlock | None:
 def build_plan(
     full: dict[str, Any],
     oid: int,
+    *,
+    emoji: bool = True,
 ) -> PreviewDocument:
     obj = full.get("plan", {})
-    header, meta_line = _title("plan", oid, obj, full)
+    header, meta_line = _title("plan", oid, obj, full, emoji=emoji)
     blocks: list[PreviewBlock] = []
     blocks.append(details_block("why", obj.get("goal")))
     blocks.append(details_block("what", obj.get("description")))
@@ -377,12 +388,14 @@ def build_plan(
 def build_milestone(
     full: dict[str, Any],
     oid: int,
+    *,
+    emoji: bool = True,
 ) -> PreviewDocument:
     obj = full.get("milestone", {})
-    header, meta_line = _title("milestone", oid, obj, full)
+    header, meta_line = _title("milestone", oid, obj, full, emoji=emoji)
     blocks: list[PreviewBlock] = []
     blocks.append(details_block("details", obj.get("description")))
-    tasks = tasks_block(_milestone_tasks(full))
+    tasks = tasks_block(_milestone_tasks(full), emoji=emoji)
     if tasks is not None:
         blocks.append(tasks)
     acceptance = acceptance_block(full.get("criteria", []))
@@ -394,9 +407,11 @@ def build_milestone(
 def build_task(
     full: dict[str, Any],
     oid: int,
+    *,
+    emoji: bool = True,
 ) -> PreviewDocument:
     obj = full.get("task", {})
-    header, meta_line = _title("task", oid, obj, full)
+    header, meta_line = _title("task", oid, obj, full, emoji=emoji)
     blocks: list[PreviewBlock] = []
     blocks.append(details_block("details", obj.get("description")))
     proof = proof_block(full.get("criteria", []))
@@ -409,10 +424,12 @@ def build_preview(
     kind: str,
     oid: int,
     full: dict[str, Any],
+    *,
+    emoji: bool = True,
 ) -> PreviewDocument:
     """Build the document for one selected row."""
     if kind == "plan":
-        return build_plan(full, oid)
+        return build_plan(full, oid, emoji=emoji)
     if kind == "milestone":
-        return build_milestone(full, oid)
-    return build_task(full, oid)
+        return build_milestone(full, oid, emoji=emoji)
+    return build_task(full, oid, emoji=emoji)

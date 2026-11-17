@@ -13,9 +13,11 @@ from lazyplan.presentation.shared import help as help_mod
 from lazyplan.store import Store
 
 try:
+    from rich.cells import cell_len
     from rich.text import Text
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     Text = None  # type: ignore[assignment,misc]
+    cell_len = len  # type: ignore[assignment]
 
 
 class TestDesignSystem(unittest.TestCase):
@@ -60,31 +62,42 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(design.task_label(t, dot="ansi").startswith("\x1b[90m○\x1b[0m T3"))
         self.assertNotIn("\x1b[", design.plan_label(p))
 
-    def test_rich_rows_for_tui(self):
+    def test_rich_rows_lead_with_one_emoji_per_state(self):
         s = Milestone(id=2, plan_id=1, title="S")
-        self.assertTrue(design.milestone_row(s).startswith("[dim]M2[/] "))
+        self.assertTrue(design.milestone_row(s).startswith("📝 [dim]M2[/] "))
         self.assertIn("[bold]S[/]", design.milestone_row(s))
-        self.assertNotIn("○", design.milestone_row(s))
         t = Task(id=3, milestone_id=2, title="T")
-        self.assertTrue(design.task_row(t).startswith("[dim]T3[/] "))
-        self.assertNotIn("⬜", design.task_row(t))
+        self.assertTrue(design.task_row(t).startswith("📝 [dim]T3[/] "))
         p = Plan(id=1, name="N")
-        self.assertTrue(design.plan_row(p).startswith("[dim]P1[/] "))
-        self.assertNotIn("⬜", design.plan_row(p))
+        self.assertTrue(design.plan_row(p).startswith("📝 [dim]P1[/] "))
+        for row in (design.milestone_row(s), design.task_row(t), design.plan_row(p)):
+            for glyph in ("○", "◐", "●", "?", "!", "⬜"):
+                self.assertNotIn(glyph, row)
+
+    def test_rich_rows_fall_back_to_single_cell_glyphs(self):
+        doing = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
+        row = design.task_row(doing, emoji=False)
+        self.assertTrue(row.startswith("◐ [dim]T3[/] "))
+        self.assertNotIn("🔨", row)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_content_and_attention(self):
+    def test_task_row_reads_as_one_mark_id_and_title(self):
         t = Task(id=3, milestone_id=2, title="Compact title")
         plain = Text.from_markup(design.task_row(t, width=80)).plain
-        self.assertEqual(plain.rstrip(), "T3 Compact title")
-        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!", "PR", "1c"):
+
+        self.assertEqual(plain.rstrip(), "📝 T3 Compact title")
+        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!", "doing", "blocked"):
             self.assertNotIn(stat, plain)
 
-        hot = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
-        self.assertTrue(hot.rstrip().endswith("review"))
-        self.assertIn("T3 Compact title", hot)
-        self.assertEqual(hot.count("review"), 1)
-        self.assertNotIn("!", hot)
+    @unittest.skipUnless(Text is not None, "rich not installed")
+    def test_task_row_marks_attention_with_review_emoji(self):
+        t = Task(id=3, milestone_id=2, title="Compact title")
+
+        plain = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
+
+        self.assertTrue(plain.startswith("🔍 T3 Compact title"))
+        self.assertNotIn("review", plain)
+        self.assertNotIn("!", plain)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
     def test_task_row_width_budget(self):
@@ -92,7 +105,7 @@ class TestDesignSystem(unittest.TestCase):
         for width in (12, 20, 33, 80):
             with self.subTest(width=width):
                 plain = Text.from_markup(design.task_row(t, width=width)).plain
-                self.assertEqual(len(plain), width)
+                self.assertEqual(cell_len(plain), width)
                 self.assertIn("T3", plain)
         narrow = Text.from_markup(design.task_row(t, width=20)).plain
         self.assertIn("…", narrow)
@@ -115,15 +128,24 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(label.startswith("○ T"))
         self.assertIn("[blocked]", label)
 
-    def test_rich_rows_show_doing_as_a_word(self):
+    def test_rich_rows_show_doing_as_one_emoji(self):
         p = Plan(id=1, name="N", status=Status.DOING)
         s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)
         t = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
         for row in (design.plan_row(p), design.milestone_row(s), design.task_row(t)):
-            self.assertTrue(row.rstrip().endswith("doing"))
+            self.assertTrue(row.startswith("🔨 "))
+            self.assertNotIn("doing", row)
             self.assertNotIn("◐", row)
 
-    def test_plan_row_progress_and_truncation(self):
+    def test_plan_review_panel_reads_review_and_done_tasks_read_done(self):
+        done_plan = Plan(id=4, name="Finished", status=Status.DONE)
+        done_task = Task(id=5, milestone_id=1, title="Finished task", status=Status.DONE)
+
+        self.assertTrue(design.plan_row(done_plan, review=True).startswith("🔍 "))
+        self.assertTrue(design.task_row(done_task).startswith("✅ "))
+        self.assertTrue(design.task_row(done_task, emoji=False).startswith("● "))
+
+    def test_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")
         row = design.plan_row(p, progress=(3, 7), width=24)
         self.assertIn("…", row)
@@ -144,8 +166,8 @@ class TestDesignSystem(unittest.TestCase):
         second = Text.from_markup(
             design.plan_row(p, progress=(3, 7), attention=True, width=width)
         ).plain
-        self.assertEqual(len(first), width)
-        self.assertEqual(len(second), width)
+        self.assertEqual(cell_len(first), width)
+        self.assertEqual(cell_len(second), width)
         self.assertEqual(first.index("3/7"), second.index("3/7"))
         self.assertIn("review", second)
 
@@ -257,7 +279,8 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="N")
         row = design.plan_row(p, progress=(2, 5), attention=True)
         self.assertIn("2/5", row)
-        self.assertIn("review", row)
+        self.assertIn("🔍", row)
+        self.assertNotIn("review", row)
         self.assertNotIn("!", row)
         self.assertNotIn("1c", row)
         self.assertNotIn("PR", row)
@@ -275,7 +298,8 @@ class TestDesignSystem(unittest.TestCase):
         hot = design.task_row(t, attention=True)
         self.assertNotIn("PR", bare)
         self.assertNotIn("1c", bare)
-        self.assertIn("review", hot)
+        self.assertIn("🔍", hot)
+        self.assertNotIn("review", hot)
         self.assertNotIn("!", hot)
 
     def test_repo_project_name_prefers_remote(self):

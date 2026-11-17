@@ -74,7 +74,8 @@ if _TEXTUAL_OK:
                 )
                 if overlaps:
                     body += "\noverlap  " + ", ".join(f"T{item}" for item in overlaps)
-                label = f"@{row['actor']} T{task_id} {state}"
+                mark = self._mark("blocked" if expired else "doing")
+                label = f"{mark} @{row['actor']} T{task_id}"
                 out.append(HubEntry(task_id, label, body, "claim"))
             if self.task_id is not None:
                 for pattern in touch_map.get(self.task_id, ()):
@@ -216,8 +217,9 @@ if _TEXTUAL_OK:
                     f"author @{escape_markup(comment.actor)}\n"
                     f"{escape_markup(comment.text)}"
                 )
+                mark = self._mark("done" if comment.resolved else "todo")
                 out.append(
-                    HubEntry(comment.id, f"C{comment.id} {state} {comment.text}", body, "comment")
+                    HubEntry(comment.id, f"{mark} C{comment.id} {comment.text}", body, "comment")
                 )
             for note in services.list_notes(self.store, self.parent_kind, self.parent_id):
                 body = f"N{note.id} note\n@{escape_markup(note.actor)}\n{escape_markup(note.text)}"

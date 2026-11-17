@@ -49,4 +49,7 @@ class AgentsPanel(VerticalScroll):
             return
         width = self._row_width()
         stamp = time.time()
-        body.update("\n".join(claim_line(claim, stamp, width) for claim in self._claims))
+        emoji = getattr(getattr(self.app, "state", None), "emoji", True)
+        body.update(
+            "\n".join(claim_line(claim, stamp, width, emoji=emoji) for claim in self._claims)
+        )

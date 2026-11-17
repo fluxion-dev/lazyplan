@@ -3227,7 +3227,7 @@
         "file": "src/lazyplan/presentation/tui/screens/plan_diff.py",
         "key": "U",
         "label": "Update",
-        "line": "31",
+        "line": "32",
         "screen": "plan_diff"
       },
       {
@@ -3235,7 +3235,7 @@
         "file": "src/lazyplan/presentation/tui/screens/plan_diff.py",
         "key": "escape",
         "label": "Back",
-        "line": "29",
+        "line": "30",
         "screen": "plan_diff"
       },
       {
@@ -3243,7 +3243,7 @@
         "file": "src/lazyplan/presentation/tui/screens/plan_diff.py",
         "key": "q",
         "label": "Quit",
-        "line": "30",
+        "line": "31",
         "screen": "plan_diff"
       },
       {
@@ -3423,7 +3423,7 @@
           {
             "action": "update_prompt",
             "file": "src/lazyplan/presentation/tui/screens/plan_diff.py",
-            "line": "31"
+            "line": "32"
           },
           {
             "action": "update_prompt",
@@ -3528,7 +3528,7 @@
           {
             "action": "back",
             "file": "src/lazyplan/presentation/tui/screens/plan_diff.py",
-            "line": "29"
+            "line": "30"
           },
           {
             "action": "cancel",
@@ -3658,7 +3658,7 @@
           {
             "action": "back",
             "file": "src/lazyplan/presentation/tui/screens/plan_diff.py",
-            "line": "30"
+            "line": "31"
           }
         ],
         "key": "q"

@@ -133,17 +133,17 @@ class PlanDocumentTest(unittest.TestCase):
         path.write_text(json.dumps(document()), encoding="utf-8")
         self.assertEqual(load_document(path)["plan"]["key"], "demo-plan")
 
-    def test_load_document_rejects_invalid_json(self):
-        path = Path(self.tmp.name) / "bad.json"
-        path.write_text("{nope", encoding="utf-8")
-        with self.assertRaisesRegex(PlanDocumentError, "invalid JSON"):
-            load_document(path)
-
-    def test_load_document_rejects_non_object(self):
-        path = Path(self.tmp.name) / "list.json"
-        path.write_text("[]", encoding="utf-8")
-        with self.assertRaisesRegex(PlanDocumentError, "expected a JSON object"):
-            load_document(path)
+    def test_load_document_rejects_bad_shapes(self):
+        cases = (
+            ("bad.json", "{nope", "invalid JSON"),
+            ("list.json", "[]", "expected a JSON object"),
+        )
+        for name, text, message in cases:
+            with self.subTest(name=name):
+                path = Path(self.tmp.name) / name
+                path.write_text(text, encoding="utf-8")
+                with self.assertRaisesRegex(PlanDocumentError, message):
+                    load_document(path)
 
     def test_missing_file(self):
         with self.assertRaisesRegex(PlanDocumentError, "cannot read"):

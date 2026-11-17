@@ -93,15 +93,12 @@ class TestClaims(unittest.TestCase):
         self.assertEqual(self.store.list_claims(plan_id=1, now=1001)[0]["task_id"], self.task.id)
         self.assertEqual(self.store.list_claims(plan_id=99, now=1001), [])
 
-    def test_moving_to_todo_releases_the_lease(self):
-        self.store.claim_task(self.task.id, "alice", 60, now=1000)
-        services.set_status(self.store, "task", self.task.id, Status.TODO, actor="alice")
-        self.assertIsNone(self.store.get_claim(self.task.id))
-
-    def test_moving_to_done_releases_the_lease(self):
-        self.store.claim_task(self.task.id, "alice", 60, now=1000)
-        services.set_status(self.store, "task", self.task.id, Status.DONE, actor="alice")
-        self.assertIsNone(self.store.get_claim(self.task.id))
+    def test_moving_off_doing_releases_the_lease(self):
+        for status in (Status.TODO, Status.DONE):
+            with self.subTest(status=status):
+                self.store.claim_task(self.task.id, "alice", 60, now=1000)
+                services.set_status(self.store, "task", self.task.id, status, actor="alice")
+                self.assertIsNone(self.store.get_claim(self.task.id))
 
     def test_moving_to_doing_keeps_an_existing_lease(self):
         self.store.claim_task(self.task.id, "alice", 60, now=1000)
@@ -110,29 +107,32 @@ class TestClaims(unittest.TestCase):
         assert claim is not None
         self.assertEqual(claim.actor, "alice")
 
-    def test_reconcile_releases_a_lease_on_a_todo_task(self):
-        self.store.claim_task(self.task.id, "alice", 3600)
-        report = services.reconcile(self.store, actor="reconciler")
-        self.assertEqual(report["released"], [self.task.id])
-        self.assertIsNone(self.store.get_claim(self.task.id))
+    def test_reconcile_releases_and_expires_leases(self):
+        with self.subTest(case="released"):
+            self.store.claim_task(self.task.id, "alice", 3600)
+            report = services.reconcile(self.store, actor="reconciler")
+            self.assertEqual(report["released"], [self.task.id])
+            self.assertIsNone(self.store.get_claim(self.task.id))
 
-    def test_reconcile_removes_an_expired_lease(self):
-        self.store.claim_task(self.task.id, "alice", 1, now=1000)
-        report = services.reconcile(self.store, actor="reconciler")
-        self.assertEqual(report["expired"], [self.task.id])
-        self.assertIsNone(self.store.get_claim(self.task.id))
+        with self.subTest(case="expired"):
+            self.store.claim_task(self.task.id, "alice", 1, now=1000)
+            report = services.reconcile(self.store, actor="reconciler")
+            self.assertEqual(report["expired"], [self.task.id])
+            self.assertIsNone(self.store.get_claim(self.task.id))
 
-    def test_reconcile_check_reports_leases_without_writing(self):
-        self.store.claim_task(self.task.id, "alice", 3600)
-        report = services.reconcile(self.store, actor="reconciler", check=True)
-        self.assertEqual(report["released"], [self.task.id])
-        self.assertIsNotNone(self.store.get_claim(self.task.id))
+    def test_reconcile_check_reports_without_writing(self):
+        with self.subTest(case="released"):
+            self.store.claim_task(self.task.id, "alice", 3600)
+            report = services.reconcile(self.store, actor="reconciler", check=True)
+            self.assertEqual(report["released"], [self.task.id])
+            self.assertIsNotNone(self.store.get_claim(self.task.id))
+            self.store.release_claim(self.task.id, "alice")
 
-    def test_reconcile_check_reports_expired_without_deleting(self):
-        self.store.claim_task(self.task.id, "alice", 1, now=1000)
-        report = services.reconcile(self.store, actor="reconciler", check=True)
-        self.assertEqual(report["expired"], [self.task.id])
-        self.assertIsNotNone(self.store.get_claim(self.task.id))
+        with self.subTest(case="expired"):
+            self.store.claim_task(self.task.id, "bob", 1, now=1000)
+            report = services.reconcile(self.store, actor="reconciler", check=True)
+            self.assertEqual(report["expired"], [self.task.id])
+            self.assertIsNotNone(self.store.get_claim(self.task.id))
 
     def test_deleting_a_task_removes_its_claim(self):
         self.store.claim_task(self.task.id, "alice", 60, now=1000)

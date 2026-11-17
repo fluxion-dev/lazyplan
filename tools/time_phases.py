@@ -5,6 +5,7 @@ Usage:
   .venv/bin/python tools/time_phases.py             # every phase that can run
   .venv/bin/python tools/time_phases.py --phase gate
   .venv/bin/python tools/time_phases.py --repeat 2
+  .venv/bin/python tools/time_phases.py --check     # fail on a phase budget
 
 A phase that cannot run here (no node/npm, no site/node_modules) is reported
 as skipped instead of failing, so the numbers stay comparable across hosts.
@@ -23,6 +24,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PHASES = ("site", "prerender", "capture", "ux", "gate")
+
+#: Wall ceilings only for phases whose run-to-run spread is under 5% here.
+#: Capture spreads ~1%, UX ~1%, and the gate is the two intentional test runs.
+PHASE_BUDGETS = {"capture": 18.0, "ux": 100.0, "gate": 1_300.0}
 
 
 def _site_ready() -> str | None:
@@ -86,6 +91,11 @@ def main(argv: list[str] | None = None) -> int:
         help="time only this phase (repeatable; default: all)",
     )
     parser.add_argument("--repeat", type=int, default=1, help="runs per phase")
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="exit 1 when a timed phase exceeds its recorded budget",
+    )
     args = parser.parse_args(argv)
     names = args.phase or list(PHASES)
     rows: list[tuple[str, float | None, str]] = []
@@ -103,6 +113,19 @@ def main(argv: list[str] | None = None) -> int:
     for name, seconds, note in rows:
         shown = "-" if seconds is None else f"{seconds:.2f}"
         print(f"{name:<10} {shown:>8}  {note}")
+    if not args.check:
+        return 0
+    failures = [
+        f"{name}: {seconds:.2f}s > {PHASE_BUDGETS[name]:.2f}s"
+        for name, seconds, _note in rows
+        if seconds is not None and name in PHASE_BUDGETS and seconds > PHASE_BUDGETS[name]
+    ]
+    if failures:
+        print("\nphase budget failures:", file=sys.stderr)
+        for failure in failures:
+            print(f"  {failure}", file=sys.stderr)
+        return 1
+    print("\nphase budgets: OK")
     return 0
 
 

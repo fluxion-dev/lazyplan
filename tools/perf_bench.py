@@ -115,33 +115,33 @@ class Budget:
     nodes: int | None = None
 
 
-# Query ceilings sit within 20% of the measured count on the default fixture;
-# query counts are exact and deterministic, so an accidental per-row query
-# breaks the gate immediately. Wall ceilings stay generous because runner
-# variance dwarfs the real cost; see WALL_MULTIPLIER below.
+# Query ceilings are the measured count on the default fixture: a single added
+# statement fails the gate, which is the point. Wall ceilings are roughly ten
+# times the measured Linux time so runner variance never trips them; see
+# WALL_MULTIPLIER below for macOS and Windows.
 BUDGETS: dict[str, Budget] = {
-    "services.tree": Budget(14, 2_000),
-    "services.tree_limit5": Budget(14, 2_000),
-    "attention_ids": Budget(16, 2_000),
-    "store.fingerprint": Budget(20, 500),
-    "needs_me": Budget(15, 3_000),
-    "list_text": Budget(26, 3_000),
-    "list_json": Budget(25, 6_000),
-    "show_plan": Budget(24, 1_000),
-    "store.counts": Budget(8, 500),
-    "tui_preview": Budget(24, 1_500),
-    "share_payload": Budget(24, 1_000),
-    "full_many": Budget(20, 1_500),
-    "export_all": Budget(40, 5_000),
-    "audit_report": Budget(28, 5_000),
-    "tui_first_paint": Budget(48, 8_000, nodes=100),
-    "tui_expand": Budget(0, 8_000, nodes=120),
-    "tui_reconcile": Budget(48, 1_500, nodes=100),
-    "cli_import": Budget(0, 2_000),
-    "cli_version": Budget(0, 2_000),
-    "cli_list": Budget(0, 2_500),
-    "git_status": Budget(0, 3_000),
-    "git_show": Budget(0, 3_000),
+    "services.tree": Budget(7, 500),
+    "services.tree_limit5": Budget(7, 500),
+    "attention_ids": Budget(8, 400),
+    "store.fingerprint": Budget(3, 100),
+    "needs_me": Budget(13, 500),
+    "list_text": Budget(8, 500),
+    "list_json": Budget(12, 800),
+    "show_plan": Budget(20, 400),
+    "store.counts": Budget(2, 100),
+    "tui_preview": Budget(20, 400),
+    "share_payload": Budget(20, 400),
+    "full_many": Budget(19, 400),
+    "export_all": Budget(18, 500),
+    "audit_report": Budget(13, 800),
+    "tui_first_paint": Budget(19, 1_000, nodes=88),
+    "tui_expand": Budget(0, 500, nodes=93),
+    "tui_reconcile": Budget(19, 1_000, nodes=88),
+    "cli_import": Budget(0, 500),
+    "cli_version": Budget(0, 600),
+    "cli_list": Budget(0, 900),
+    "git_status": Budget(0, 500),
+    "git_show": Budget(0, 500),
 }
 
 # Wall time is noisy across hosted runners and Windows spawns are much dearer.

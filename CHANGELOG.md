@@ -3,6 +3,53 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Statuses read as emoji on wide terminals.** The plan tree, plan review
+  panel, agents card, hubs, and overview lead each row with one mark — 📝 not
+  started, 🔨 doing, 🔍 review, 🚧 blocked, ✅ done — from a single status
+  module. A completed plan in the plan review panel reads 🔍 review; a
+  completed task reads ✅ done, and blocked always wins. Terminals narrower
+  than 80 columns, `TERM=dumb`, and non-UTF streams fall back to the existing
+  single-cell glyphs.
+- **Ordinary notifications go to a hidden session log.** Every `notify()`
+  appends timestamp, severity, message, and source to a bounded 500-entry log
+  instead of raising a toast. Warnings and errors raise an unread count on
+  every taskbar; `L` or the palette opens the log from the main shell, hubs,
+  source, plan diff, and setup. The overlay keeps the newest entry visible,
+  scrolls, clears with `x`, and copies the selected line with `y`. Only the
+  startup notice and the once-per-version update notice still toast.
+
+### Changed
+
+- **Every panel reflows on resize.** The shell, plan panels, agents, git,
+  preview, timeline, taskbar, hubs, source trail, plan diff, setup, and every
+  modal are checked at 40×24, 80×24, 120×40, and 160×50. Hubs stack below 80
+  columns, long text wraps or truncates deliberately, and selection, cursor,
+  and page survive a resize when the target still exists. Size tiers live in
+  one helper (`presentation/tui/size.py`).
+- **The hub unrelate key moves to `X`.** `L` now opens the notification log
+  from every screen, and `q` quits the plan diff view like every other screen.
+- **Budgets now measure more of the product.** The performance gate measures
+  CLI startup and dispatch, store and service queries, TUI first paint and
+  reconcile, export and audit, and the capture and build phases. The query
+  budgets are the measured post-change ceilings, so one extra query fails the
+  gate.
+- **The core suite is smaller and has a named contract matrix.**
+  `tools/test_inventory.py --check` holds the keep matrix: store, core policy,
+  service, CLI, MCP, setup, and TUI smoke/status/resize contracts each name a
+  proving test. Duplicate cases collapse into contract rows, and
+  `CONTRIBUTING` says what belongs in the core suite.
+
+### Fixed
+
+- **Resizing no longer clips, overlaps, or keeps stale widths.** Fixed the
+  agents card, preview, git card, metrics timeline, hubs, source pager, plan
+  diff, setup rail, and modal titles; a scrolled agents panel no longer paints
+  claim rows past the body.
+
 ## v0.48.0 — 2026-11-15
 
 ### Added

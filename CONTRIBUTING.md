@@ -102,6 +102,24 @@ and `tests/support`:
 python -m unittest discover -s tests -t .
 ```
 
+## Resize behavior
+
+Every screen ships a resize matrix. `tests/presentation/test_resize_surfaces.py`
+mounts a surface once and walks 40×24, 80×24, 120×40, and 160×50 through
+`tests.support.resize`, asserting that regions stay inside the screen, siblings
+do not overlap, and selection, cursor, and scroll stay valid.
+
+- Read the tiers from `presentation/tui/size.py` (`classes_for`); do not
+  hardcode 80, 100, 120, or 30 in a screen.
+- Panels reflow instead of keeping a fixed width. Long text wraps or truncates
+  on purpose, and no panel paints outside its region.
+- Measure content from the current layout, not from the width a widget had when
+  it was last painted.
+- After a resize, keep the selected row, cursor, and page when the target still
+  exists; clamp to the new maximum when it does not.
+- Add a case for every new surface. A case that fails first may land as
+  `expectedFailure`; remove the decorator with the fix.
+
 ## Flaky tests
 
 A failing gate is never retried to green. A flake is a defect in the test or

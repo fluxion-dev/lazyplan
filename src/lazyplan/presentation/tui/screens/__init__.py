@@ -13,6 +13,7 @@ from .forms import (
 from .health import HealthScreen
 from .help import HelpScreen, PaletteScreen, ReleaseNotesScreen, TextScreen
 from .maintenance import MaintenanceScreen
+from .notification_log import NotificationLogScreen
 from .plan_diff import PlanDiffScreen
 from .setup import SetupWizardScreen, WizardResult
 from .source import SourceScreen
@@ -29,6 +30,7 @@ __all__ = [
     "NewMilestoneScreen",
     "NewPlanScreen",
     "NewTaskScreen",
+    "NotificationLogScreen",
     "PaletteScreen",
     "PlanDiffScreen",
     "RefScreen",

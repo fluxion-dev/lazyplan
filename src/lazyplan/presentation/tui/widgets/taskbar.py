@@ -194,9 +194,7 @@ class Taskbar(Static):
         """Open the log on the log chip and updates on the version badge."""
         if self._log_end > self._log_start and self._log_start <= event.x < self._log_end:
             event.stop()
-            handler = getattr(self.app, "action_notification_log", None)
-            if callable(handler):
-                handler()
+            self.app.action_notification_log()  # type: ignore[attr-defined]
             return
         if self._badge_start and event.x >= self._badge_start:
             event.stop()

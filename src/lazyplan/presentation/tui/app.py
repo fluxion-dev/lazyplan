@@ -55,7 +55,7 @@ from .filters import FilterMixin
 from .launch import Restart, launch_notes, launch_update, relaunch, take_restart_notice
 from .metrics import MetricsSection
 from .preview import PreviewMixin
-from .screens import ReleaseNotesScreen
+from .screens import NotificationLogScreen, ReleaseNotesScreen
 from .state import AppState
 from .theme import register_themes, remembered_theme
 from .tree import TreeMixin
@@ -248,8 +248,20 @@ if _TEXTUAL_OK:
                     continue
 
         def on_notifications_changed(self, _event: NotificationsChanged) -> None:
-            """Repaint every bar when a message joins the log."""
+            """Repaint every bar and an open log when a message arrives."""
             self.refresh_taskbar()
+            try:
+                refresh = getattr(self.screen, "refresh_entries", None)
+            except Exception:  # noqa: BLE001 - a closing screen may race a worker
+                return
+            if callable(refresh):
+                refresh()
+
+        def action_notification_log(self) -> None:
+            """Open the session notification log above the current screen."""
+            if isinstance(self.screen, NotificationLogScreen):
+                return
+            self.push_screen(NotificationLogScreen(self.notification_log))
 
         def action_open_setup(self) -> None:
             """Reopen the setup wizard from the palette or the S key."""

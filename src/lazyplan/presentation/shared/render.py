@@ -54,28 +54,30 @@ def summary_lines(
     repo: str | None = None,
 ) -> list[str]:
     """One scannable line per plan: label + done/total tasks."""
-    entries = service_tree(
-        store,
-        status=status,
-        plan_id=plan_id,
-        finished=finished,
-        archived=archived,
-        limit=limit,
-        repo=repo,
-    )
-    entries.sort(key=lambda entry: entry[0].status.value == "done")
-    if status is None:
-        progress = {}
-        for plan, milestones in entries:
-            tasks = [task for _, items in milestones for task in items]
-            progress[plan.id] = progress_counts(tasks)
-    else:
-        progress = _plan_progress(store)
-    lines = []
-    for plan, _milestones in entries:
-        done, total = progress.get(plan.id, (0, 0))
-        lines.append(f"{plan_label(plan, store, dot)} {done}/{total}")
-    return lines
+    with store.transaction():
+        entries = service_tree(
+            store,
+            status=status,
+            plan_id=plan_id,
+            finished=finished,
+            archived=archived,
+            limit=limit,
+            repo=repo,
+        )
+        entries.sort(key=lambda entry: entry[0].status.value == "done")
+        if status is None:
+            progress = {}
+            for plan, milestones in entries:
+                tasks = [task for _, items in milestones for task in items]
+                progress[plan.id] = progress_counts(tasks)
+        else:
+            progress = _plan_progress(store)
+        repos = store.repos_map()
+        lines = []
+        for plan, _milestones in entries:
+            done, total = progress.get(plan.id, (0, 0))
+            lines.append(f"{plan_label(plan, store, dot, repos)} {done}/{total}")
+        return lines
 
 
 def tree_lines(

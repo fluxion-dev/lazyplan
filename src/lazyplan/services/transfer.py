@@ -106,15 +106,17 @@ def _export_entry(plan: Plan, maps: dict[str, Any]) -> dict:
 
 def export_all(store: TransferPort) -> dict:
     """Full dump: plans (with criteria + links + repos) holding milestones and tasks."""
-    maps = _export_maps(store)
-    return {
-        "lazyplan": 1,
-        "plans": [_export_entry(plan, maps) for plan in store.list_plans(archived="show")],
-        "criterion_links": store.all_criterion_links(),
-        "session_history": [
-            to_payload(vars(row)) for row in store.list_sessions(archived="show", limit=1_000_000)
-        ],
-    }
+    with store.transaction():
+        maps = _export_maps(store)
+        return {
+            "lazyplan": 1,
+            "plans": [_export_entry(plan, maps) for plan in store.list_plans(archived="show")],
+            "criterion_links": store.all_criterion_links(),
+            "session_history": [
+                to_payload(vars(row))
+                for row in store.list_sessions(archived="show", limit=1_000_000)
+            ],
+        }
 
 
 def export_plan(store: TransferPort, plan_id: int) -> dict | None:

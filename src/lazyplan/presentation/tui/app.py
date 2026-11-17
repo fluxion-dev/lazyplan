@@ -39,6 +39,7 @@ from ..shared.design import (
     EMPTY_PLAN_QUEUE_TITLE,
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
+    emoji_enabled,
     empty_state,
 )
 from .actions import ActionMixin
@@ -129,10 +130,12 @@ if _TEXTUAL_OK:
             narrow = available < 100
             compact = available < 80
             wide = available >= 120
-            changed = self._narrow is not narrow
+            emoji = emoji_enabled(available)
+            changed = self._narrow is not narrow or self.state.emoji != emoji
             self._narrow = narrow
             self.state.compact = compact
             self.state.wide = wide
+            self.state.emoji = emoji
             main.set_class(narrow, "narrow")
             main.set_class(compact, "compact")
             main.set_class(wide, "wide")

@@ -66,6 +66,7 @@ if _TEXTUAL_OK:
             super().__init__()
             self.store = store
             self.entries: list[HubEntry] = []
+            self._emoji = True
 
         @property
         def source_parent(self) -> tuple[str, int] | None:
@@ -96,7 +97,17 @@ if _TEXTUAL_OK:
             self._reload()
             self.query_one("#hub-list", OptionList).focus()
 
+        def on_resize(self) -> None:
+            """Re-render status marks when the emoji decision changes."""
+            emoji = bool(getattr(getattr(self.app, "state", None), "emoji", True))
+            if emoji == self._emoji or not self.entries:
+                self._emoji = emoji
+                return
+            self._emoji = emoji
+            self._reload()
+
         def _reload(self) -> None:
+            self._emoji = bool(getattr(getattr(self.app, "state", None), "emoji", True))
             entries = self.load_entries()
             self.entries = entries
             options = self.query_one("#hub-list", OptionList)

@@ -133,6 +133,19 @@ def mark_width(emoji: bool) -> int:
     return 2 if emoji else 1
 
 
+def cell_width(text: str) -> int:
+    """Display cells for status-aware row math.
+
+    Rich owns the width table; the fallback keeps this module usable on a
+    stdlib-only interpreter where only the CLI's plain labels render.
+    """
+    try:
+        from rich.cells import cell_len
+    except ImportError:  # pragma: no cover - stdlib-only interpreter
+        return len(text)
+    return cell_len(text)
+
+
 __all__ = [
     "EMOJI_MIN_WIDTH",
     "STATUS_ANSI",
@@ -144,6 +157,7 @@ __all__ = [
     "STATUS_RICH",
     "StatusMark",
     "ascii_safe_environment",
+    "cell_width",
     "emoji_enabled",
     "mark_width",
     "status_key",

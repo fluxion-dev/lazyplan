@@ -42,17 +42,14 @@ class TestCombinedSurfaces(RefreshCase):
         body = app.query_one("#agents-body", Static)  # type: ignore[attr-defined]
         return Text.from_markup(str(body.content)).plain
 
-    def assert_task_row(self, app: object, task: object, state: str = "") -> None:
-        """A task row is its id, its title, and at most one state word."""
+    def assert_task_row(self, app: object, task: object, mark: str = "📝") -> None:
+        """A task row is one status mark, its id, and its title."""
         text = self.plain_row(app, ("task", task.id)).strip()  # type: ignore[attr-defined]
         tokens = text.split()
-        self.assertEqual(tokens[0], f"T{task.id}")
-        words = tokens[1:]
-        if state:
-            self.assertEqual(words[-1], state)
-            words = words[:-1]
-        self.assertEqual(" ".join(words), task.title)
-        for banned in ("○", "◐", "●", "@", "◉", "⚑", "!", "0/"):
+        self.assertEqual(tokens[0], mark)
+        self.assertEqual(tokens[1], f"T{task.id}")
+        self.assertEqual(" ".join(tokens[2:]), task.title)
+        for banned in ("○", "◐", "●", "@", "◉", "⚑", "!", "0/", "doing", "blocked", "review"):
             self.assertNotIn(banned, text)
 
     async def test_writes_keep_the_tree_task_rows_and_agents_in_step(self) -> None:
@@ -95,13 +92,13 @@ class TestCombinedSurfaces(RefreshCase):
             self.assertTrue(app.tree_controller.is_visible(app._row_nodes[("task", added.id)]))
 
             # Every visible task row keeps the milestone shape.
-            for task, state in (
-                (self.task, ""),
-                (second, "doing"),
-                (blocked, "blocked"),
-                (added, ""),
+            for task, mark in (
+                (self.task, "📝"),
+                (second, "🔨"),
+                (blocked, "🚧"),
+                (added, "📝"),
             ):
-                self.assert_task_row(app, self.store.get_task(task.id), state=state)
+                self.assert_task_row(app, self.store.get_task(task.id), mark=mark)
             self.assertTrue(app._row_nodes[plan_key].is_expanded)
 
             # The agents card names each claim holder and its task.

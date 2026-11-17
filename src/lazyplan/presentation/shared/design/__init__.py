@@ -65,6 +65,7 @@ from .status import STATUS_LABEL as STATUS_LABEL
 from .status import STATUS_MARKS as STATUS_MARKS
 from .status import StatusMark as StatusMark
 from .status import ascii_safe_environment as ascii_safe_environment
+from .status import cell_width as cell_width
 from .status import emoji_enabled as emoji_enabled
 from .status import mark_width as mark_width
 from .status import status_key as status_key
@@ -134,6 +135,7 @@ __all__ = [
     "StatusMark",
     "TASK",
     "ascii_safe_environment",
+    "cell_width",
     "emoji_enabled",
     "escape_markdown",
     "escape_markup",

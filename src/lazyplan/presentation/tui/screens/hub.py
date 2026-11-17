@@ -55,7 +55,7 @@ if _TEXTUAL_OK:
             Binding("D", "force", "Force"),
             Binding("n", "note", "Note"),
             Binding("l", "relate", "Relate"),
-            Binding("L", "unrelate", "Unrelate"),
+            Binding("X", "unrelate", "Unrelate"),
             Binding("o", "open_value", "Open"),
             Binding("g", "source_hub", "Source"),
             Binding("r", "refresh", "Refresh"),

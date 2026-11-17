@@ -101,7 +101,7 @@ class NotificationMatrixTest(unittest.IsolatedAsyncioTestCase):
                 await pilot.pause()
                 app.notify("drift")
                 await pilot.pause()
-                self.assertEqual(app.notification_log.snapshot()[-1].source, "plandiff")
+                self.assertEqual(app.notification_log.snapshot()[-1].source, "plan-diff")
 
     async def test_clearing_the_log_drops_the_badge(self) -> None:
         with NO_UPDATE:

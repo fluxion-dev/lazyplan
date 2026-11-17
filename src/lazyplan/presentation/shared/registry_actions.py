@@ -412,6 +412,15 @@ CORE_ACTIONS: tuple[Action, ...] = (
         cli_paths=("notes",),
     ),
     _action(
+        "app.log",
+        "Notification log",
+        "L",
+        "global",
+        ("tui",),
+        ("tree", "log"),
+        ("notification-log",),
+    ),
+    _action(
         "app.health",
         "Health check",
         surfaces=("tui", "cli"),

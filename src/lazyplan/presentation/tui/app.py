@@ -107,6 +107,7 @@ if _TEXTUAL_OK:
             Binding("m", "open_maintenance", "Maintain"),
             Binding("U", "update_prompt", "Update"),
             Binding("W", "release_notes", "Notes"),
+            Binding("L", "notification_log", "Log"),
         ]
         rev = reactive(0, init=False)
 
@@ -321,7 +322,12 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help", "update_prompt"):
+            if len(self.screen_stack) > 1 and action not in (
+                "quit",
+                "help",
+                "update_prompt",
+                "notification_log",
+            ):
                 return False
             return True
 

@@ -9,6 +9,7 @@ try:
     from textual.screen import Screen  # noqa: F401
     from textual.widgets import Label, Static  # noqa: F401
 
+    from ..navigation import NAV_BINDINGS, NavigationMixin
     from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
@@ -22,12 +23,14 @@ from ..views.diff_style import palette_from_theme
 
 if _TEXTUAL_OK:
 
-    class PlanDiffScreen(Screen):
+    class PlanDiffScreen(NavigationMixin, Screen):
         """Grouped scope drift with a scrollable, read-only body."""
 
+        navigation_name = "plan-diff"
+
         BINDINGS = [
+            *NAV_BINDINGS,
             Binding("escape", "back", "Back", priority=True),
-            Binding("q", "back", "Quit", priority=True),
             Binding("U", "update_prompt", "Update", show=False),
         ]
 

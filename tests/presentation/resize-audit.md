@@ -54,9 +54,9 @@ group below walks 40×24, 80×24, 120×40, and 160×50 from one mount.
 | setup wizard (rail hidden below 80 columns) | pass | pass | pass | pass |
 | plan, milestone, task, criterion, confirm, filter, help, palette, update, health, notes, export | pass | pass | pass | pass |
 
-Repeat runs: `python tools/repeat-tests.py --times 3 --seed 0` and
-`python tools/repeat-tests.py --times 2 --seed 7 --no-tui` are clean on this
-branch.
+Repeat runs: `python tools/repeat-tests.py --times 3 --seed 0` was clean
+before the size-class refactor, and `python tools/repeat-tests.py --times 2
+--seed 7` is clean on the final tip.
 
 ## Notes
 

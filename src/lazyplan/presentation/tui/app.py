@@ -15,9 +15,10 @@ from typing import Any
 
 try:
     from textual import events
-    from textual.app import ComposeResult
+    from textual.app import ComposeResult, SeverityLevel
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical
+    from textual.message import Message
     from textual.reactive import reactive
     from textual.widgets import Static, Tree
     from textual.widgets.tree import TreeNode
@@ -46,6 +47,7 @@ from .base import AppBase
 from .controllers.git_state import GitStateController
 from .controllers.health import HealthCheck, HealthController
 from .controllers.metrics import MetricsController
+from .controllers.notifications import NotificationLog
 from .controllers.setup import SetupController, WizardCheck
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
@@ -66,6 +68,9 @@ CSS_DIR = Path(__file__).parent / "css"
 
 
 if _TEXTUAL_OK:
+
+    class NotificationsChanged(Message):
+        """A notification joined the log; every visible bar may need a repaint."""
 
     class LazyplanApp(
         TreeMixin,
@@ -170,6 +175,52 @@ if _TEXTUAL_OK:
                 self._last_event_id = int(events[0]["id"])
             self._startup_notice: str = ""
             self._startup_notes: str = ""
+            self.notification_log = NotificationLog()
+
+        def notify(
+            self,
+            message: str,
+            *,
+            title: str = "",
+            severity: SeverityLevel = "information",
+            timeout: float | None = None,
+            markup: bool = True,
+            source: str = "",
+        ) -> None:
+            """Log every message; ordinary notices never raise a toast."""
+            self.notification_log.append(
+                message,
+                severity=severity,
+                source=source or self._notification_source(),
+            )
+            self.post_message(NotificationsChanged())
+
+        def notify_toast(
+            self,
+            message: str,
+            *,
+            title: str = "",
+            severity: SeverityLevel = "information",
+            timeout: float | None = None,
+            markup: bool = True,
+            source: str = "",
+        ) -> None:
+            """Log the message and toast it; startup and update notices only."""
+            self.notify(message, severity=severity, source=source)
+            super().notify(
+                message,
+                title=title,
+                severity=severity,
+                timeout=timeout,
+                markup=markup,
+            )
+
+        def _notification_source(self) -> str:
+            """The active screen's name, so every entry says where it came from."""
+            try:
+                return self._screen_name()
+            except Exception:  # noqa: BLE001 - a closing screen may race a worker
+                return "tree"
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
@@ -188,6 +239,10 @@ if _TEXTUAL_OK:
                         bar.set_latest(latest)
                 except Exception:  # noqa: BLE001 - a closing screen may race a poll
                     continue
+
+        def on_notifications_changed(self, _event: NotificationsChanged) -> None:
+            """Repaint every bar when a message joins the log."""
+            self.refresh_taskbar()
 
         def action_open_setup(self) -> None:
             """Reopen the setup wizard from the palette or the S key."""
@@ -264,7 +319,7 @@ if _TEXTUAL_OK:
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
-                self.notify(self._startup_notice, timeout=10)
+                self.notify_toast(self._startup_notice, timeout=10, source="startup")
             if self._startup_notes:
                 notes = self._startup_notes
                 self.call_after_refresh(lambda: self.push_screen(ReleaseNotesScreen(notes)))

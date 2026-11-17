@@ -1,10 +1,14 @@
-"""The notification log keeps the last 500 entries and counts unread warnings."""
+"""Notifications route into one bounded log; only startup and update notices toast."""
 
 from __future__ import annotations
 
+import os
 import re
+import tempfile
 import threading
 import unittest
+from pathlib import Path
+from unittest import mock
 
 from lazyplan.presentation.tui.controllers.notifications import (
     BADGE_SEVERITIES,
@@ -12,6 +16,15 @@ from lazyplan.presentation.tui.controllers.notifications import (
     NotificationEntry,
     NotificationLog,
 )
+
+try:
+    from textual.app import App
+
+    from lazyplan.presentation.tui import create_app
+
+    _TEXTUAL_OK = True
+except ImportError:  # pragma: no cover - textual not installed
+    _TEXTUAL_OK = False
 
 CLOCK = re.compile(r"^\d{2}:\d{2}:\d{2}$")
 
@@ -93,6 +106,99 @@ class NotificationLogTest(unittest.TestCase):
             worker.join()
         self.assertEqual(len(log), 4)
         self.assertEqual({entry.message for entry in log.snapshot()}, {f"w{i}" for i in range(4)})
+
+
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
+class NotificationRoutingTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.db = str(Path(self.tmp.name) / "plans.db")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def app(self):
+        return create_app(self.db)
+
+    def test_ordinary_notify_logs_without_reaching_textual(self) -> None:
+        app = self.app()
+        with mock.patch.object(App, "notify") as toast:
+            app.notify("saved P1")
+        toast.assert_not_called()
+        entry = app.notification_log.snapshot()[-1]
+        self.assertEqual(entry.message, "saved P1")
+        self.assertEqual(entry.severity, "information")
+        self.assertEqual(entry.source, "tree")
+
+    def test_every_severity_is_logged_with_its_source(self) -> None:
+        app = self.app()
+        app.notify("note", source="hub")
+        app.notify("careful", severity="warning", source="source")
+        app.notify("broke", severity="error", source="setup")
+        self.assertEqual(
+            [(entry.severity, entry.source) for entry in app.notification_log.snapshot()],
+            [("information", "hub"), ("warning", "source"), ("error", "setup")],
+        )
+
+    def test_notify_toast_logs_and_toasts_exactly_once(self) -> None:
+        app = self.app()
+        with mock.patch.object(App, "notify") as toast:
+            app.notify_toast("update available", source="update")
+        toast.assert_called_once()
+        entry = app.notification_log.snapshot()[-1]
+        self.assertEqual((entry.message, entry.source), ("update available", "update"))
+
+    def test_the_default_source_is_the_tree_before_mount(self) -> None:
+        app = self.app()
+        app.notify("early")
+        self.assertEqual(app.notification_log.snapshot()[-1].source, "tree")
+
+
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
+class NotificationToastPilotTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.db = str(Path(self.tmp.name) / "plans.db")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    async def test_an_ordinary_notify_raises_no_toast(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.clear_notifications()
+                app.notify("saved")
+                await pilot.pause()
+                self.assertEqual(len(app._notifications), 0)
+                self.assertEqual(app.notification_log.snapshot()[-1].message, "saved")
+
+    async def test_a_startup_notice_toasts_and_joins_the_log(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db, startup_notice="update v9 installed")
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                self.assertEqual(len(app._notifications), 1)
+                entry = app.notification_log.snapshot()[-1]
+                self.assertEqual((entry.message, entry.source), ("update v9 installed", "startup"))
+
+    async def test_an_update_notice_toasts_and_joins_the_log(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                for _ in range(40):
+                    if not app.update_controller.checking:
+                        break
+                    await pilot.pause(0.05)
+                app.update_controller.stop()
+                app.clear_notifications()
+                app.update_controller.announce("update available: v99.0.0", "99.0.0")
+                await pilot.pause()
+                self.assertEqual(len(app._notifications), 1)
+                entry = app.notification_log.snapshot()[-1]
+                self.assertEqual(entry.source, "update")
 
 
 if __name__ == "__main__":

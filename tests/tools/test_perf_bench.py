@@ -97,6 +97,8 @@ class PerfBenchCase(unittest.TestCase):
             "list_text",
             "list_json",
             "show_plan",
+            "store.counts",
+            "tui_preview",
             "store.fingerprint",
             "export_all",
             "audit_report",

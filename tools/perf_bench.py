@@ -126,6 +126,8 @@ BUDGETS: dict[str, Budget] = {
     "list_text": Budget(26, 3_000),
     "list_json": Budget(25, 6_000),
     "show_plan": Budget(24, 1_000),
+    "store.counts": Budget(8, 500),
+    "tui_preview": Budget(24, 1_500),
     "share_payload": Budget(24, 1_000),
     "full_many": Budget(20, 1_500),
     "export_all": Budget(40, 5_000),
@@ -441,6 +443,19 @@ def measure(
     return Measurement(name, round(best, 1), queries, connections)
 
 
+def _preview_render(store: Store, plan_id: int) -> object:
+    """The preview bytes the TUI builds for one selected plan."""
+    from lazyplan.presentation.tui.views.control import build_control_strip
+    from lazyplan.presentation.tui.views.preview import build_preview
+
+    full = store.get_full("plan", plan_id)
+    if full is None:
+        return None
+    return build_preview("plan", plan_id, full), build_control_strip(
+        store, "plan", plan_id, full
+    )
+
+
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
     from lazyplan.presentation.cli.rows import _list_payload
     from lazyplan.services import share
@@ -462,6 +477,12 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
             repeat=repeat,
         ),
         measure("show_plan", lambda: store.get_full("plan", fixture.first_plan_id), repeat=repeat),
+        measure("store.counts", store.counts, repeat=repeat),
+        measure(
+            "tui_preview",
+            lambda: _preview_render(store, fixture.first_plan_id),
+            repeat=repeat,
+        ),
         measure("store.fingerprint", store.fingerprint, repeat=repeat),
         measure("full_many", lambda: store.get_full_many("plan", plan_ids), repeat=repeat),
         measure(

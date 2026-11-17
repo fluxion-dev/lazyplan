@@ -377,6 +377,13 @@ KEEP_MATRIX: tuple[tuple[str, tuple[str, ...]], ...] = (
         ),
     ),
     (
+        "TUI status chip",
+        (
+            "tests.presentation.test_health_screen.HealthScreenTest."
+            "test_the_chip_counts_every_finding_including_hidden_ones",
+        ),
+    ),
+    (
         "TUI wide and narrow layout",
         (
             "tests.presentation.test_shell_layout.TestShellLayout.test_narrow_shell_stacks_the_same_cards_and_hides_the_side",

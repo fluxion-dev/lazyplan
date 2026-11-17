@@ -268,8 +268,118 @@ def check(inventory: Inventory) -> list[str]:
     return keep_matrix_errors(inventory.method_ids)
 
 
-# Filled by the keep-matrix task.
-KEEP_MATRIX: tuple[tuple[str, tuple[str, ...]], ...] = ()
+# The contracts the cleaned suite must keep proving directly. Every entry names
+# the test that owns the contract; `--check` fails when that test is gone.
+KEEP_MATRIX: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "store rows and hierarchy",
+        ("tests.store.test_store.TestStore.test_hierarchy",),
+    ),
+    (
+        "store transactions",
+        ("tests.store.test_store.TestStore.test_transaction_rolls_back_nested_writes",),
+    ),
+    (
+        "store status rollup",
+        ("tests.store.test_store.TestStore.test_status_rollup_cascade",),
+    ),
+    (
+        "store criteria attach and cascade",
+        ("tests.store.test_store.TestStore.test_criteria_cascade_on_delete",),
+    ),
+    (
+        "store evidence",
+        ("tests.store.test_evidence.TestEvidenceStore.test_add_and_list_evidence",),
+    ),
+    (
+        "core status policy",
+        ("tests.core.test_planning_policies.TestRollup.test_all_done_is_done",),
+    ),
+    (
+        "core evidence policy",
+        ("tests.core.test_evidence_policy.TestEvidenceRules.test_latest_pass_or_fail_decides",),
+    ),
+    (
+        "service plan document",
+        (
+            "tests.services.test_plan_document.PlanDocumentTest.test_valid_document_resolves_and_counts",
+        ),
+    ),
+    (
+        "service completion gates",
+        ("tests.services.test_gates.TestCompletionGates.test_missing_pr_fails",),
+    ),
+    (
+        "service claim conflict",
+        (
+            "tests.services.test_claims.TestClaims."
+            "test_second_actor_conflicts_until_expiry_or_force",
+        ),
+    ),
+    (
+        "service claim release on done",
+        ("tests.services.test_claims.TestClaims.test_moving_to_done_releases_the_lease",),
+    ),
+    (
+        "CLI porcelain rows",
+        ("tests.cli.test_porcelain.TestRows.test_row_uses_the_documented_six_columns",),
+    ),
+    (
+        "CLI lifecycle rows",
+        ("tests.cli.test_porcelain.TestWriteRows.test_plan_milestone_and_task_lifecycle",),
+    ),
+    (
+        "CLI JSON precedence",
+        ("tests.cli.test_porcelain.TestWriteRows.test_json_wins_over_porcelain",),
+    ),
+    (
+        "MCP schema",
+        ("tests.mcp.test_mcp_contract.TestMcpSchemaBaseline.test_discovery_schema_is_pinned",),
+    ),
+    (
+        "MCP discovery",
+        ("tests.mcp.test_mcp.TestMcpTransport.test_tools_and_resources_are_discoverable",),
+    ),
+    (
+        "MCP write attribution",
+        ("tests.mcp.test_mcp.TestMcpReadTools.test_write_tools_are_listed_and_attributed",),
+    ),
+    (
+        "setup acceptance parity",
+        (
+            "tests.setup.test_contract.ContractCase.test_every_host_gets_the_same_task_and_next_step",
+        ),
+    ),
+    (
+        "setup first run",
+        (
+            "tests.setup.test_setup_first_run.FirstRunCase."
+            "test_first_run_installs_hooks_and_reports_them",
+        ),
+    ),
+    (
+        "setup home placement",
+        ("tests.setup.test_contract.ContractCase.test_home_placement_writes_no_repo_plan_dir",),
+    ),
+    (
+        "setup terminal wizard",
+        (
+            "tests.setup.test_setup_pty.TestSetupWizard.test_wizard_creates_home_database_and_skill_with_color",
+        ),
+    ),
+    (
+        "TUI write smoke",
+        (
+            "tests.presentation.test_integration.TestCombinedSurfaces.test_writes_keep_the_tree_task_rows_and_agents_in_step",
+        ),
+    ),
+    (
+        "TUI wide and narrow layout",
+        (
+            "tests.presentation.test_shell_layout.TestShellLayout.test_narrow_shell_stacks_the_same_cards_and_hides_the_side",
+        ),
+    ),
+)
 # Filled by the duplicate-map task.
 DUPLICATE_MAP: dict[str, tuple[str, ...]] = {}
 

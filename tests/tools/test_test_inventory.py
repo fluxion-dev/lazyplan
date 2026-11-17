@@ -61,6 +61,10 @@ class InventoryTest(unittest.TestCase):
             setups, markers, helpers = self.tool.scan_module(path)
         self.assertEqual((setups, markers, helpers), (1, 1, []))
 
+    def test_every_keep_matrix_test_exists(self) -> None:
+        inventory = self.tool.build_inventory()
+        self.assertEqual(self.tool.keep_matrix_errors(inventory.method_ids), [])
+
     def test_render_is_deterministic(self) -> None:
         inventory = self.tool.build_inventory()
         self.assertEqual(self.tool.render(inventory), self.tool.render(inventory))

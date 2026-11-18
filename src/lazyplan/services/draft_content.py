@@ -68,6 +68,28 @@ class AnchorMatch:
 
 
 @dataclass(frozen=True)
+class DraftAnchor:
+    """One reviewer selection: a block and an optional exact quote."""
+
+    block_key: str
+    quote: str = ""
+    start_offset: int = 0
+    end_offset: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.block_key.strip():
+            raise DraftContentError("anchor block_key must not be empty")
+        if not isinstance(self.quote, str):
+            raise DraftContentError("anchor quote must be a string")
+        if self.start_offset < 0 or self.end_offset < 0:
+            raise DraftContentError("anchor offsets must not be negative")
+        if self.quote and self.end_offset <= self.start_offset:
+            raise DraftContentError("anchor end_offset must follow start_offset")
+        if not self.quote and (self.start_offset or self.end_offset):
+            raise DraftContentError("a block-level anchor has no offsets")
+
+
+@dataclass(frozen=True)
 class AnchorUpdate:
     """How one stored annotation tracked its quote after a revision."""
 

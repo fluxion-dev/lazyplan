@@ -11,17 +11,27 @@ from lazyplan.services import drafts
 from lazyplan.store import Store
 
 try:
+    from textual.geometry import Offset
+    from textual.selection import Selection
+
+    _TEXTUAL_OK = True
+except ImportError:  # pragma: no cover - textual not installed
+    Offset = None  # type: ignore[assignment]
+    Selection = None  # type: ignore[assignment]
+    _TEXTUAL_OK = False
+
+try:
     from lazyplan.presentation.tui import create_app
 except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
 
 
-def document() -> dict:
+def document(why: str = "Why this matters.") -> dict:
     return {
         "plan": {
             "key": "demo-plan",
             "title": "Demo plan",
-            "why": "Why this matters.",
+            "why": why,
             "what": "## Scope\n\n- One thing.",
             "criteria": ["Works."],
         },
@@ -118,6 +128,102 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(app.selected, ("draft", draft.id))
 
+    async def test_document_renders_one_body_per_block(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            expected = drafts.detail(self.store, draft.id)
+            bodies = list(app.screen.query(".draft-block-body"))
+            self.assertEqual(len(bodies), len(expected.blocks))
+            labels = [str(row.render()) for row in app.screen.query(".draft-block-label")]
+            self.assertIn("Plan title [title]", labels)
+            self.assertIn("Plan why [text]", labels)
+
+    async def test_current_anchor_uses_the_focused_block(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            bodies = list(app.screen.query(".draft-block-body"))
+            bodies[1].focus()
+            await pilot.pause()
+            anchor = app.screen.current_anchor()
+            self.assertIsNotNone(anchor)
+            assert anchor is not None
+            self.assertEqual(anchor.block_key, "plan:why")
+            self.assertEqual(anchor.quote, "")
+
+    async def test_current_anchor_uses_selected_text(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            body = next(iter(app.screen.query(".draft-block-body")))
+            body.focus()
+            await pilot.pause()
+            selection = Selection.from_offsets(Offset(0, 0), Offset(4, 0))
+            app.screen.selections = {body: selection}
+            anchor = app.screen.current_anchor()
+            self.assertIsNotNone(anchor)
+            assert anchor is not None
+            self.assertEqual(anchor.block_key, "plan:title")
+            self.assertEqual(anchor.quote, "Demo")
+            self.assertEqual((anchor.start_offset, anchor.end_offset), (0, 4))
+
+    async def test_current_anchor_spans_lines(self) -> None:
+        draft = drafts.create(self.store, document(why="line one\nline two"))
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            body = list(app.screen.query(".draft-block-body"))[1]
+            body.focus()
+            await pilot.pause()
+            selection = Selection.from_offsets(Offset(5, 0), Offset(4, 1))
+            app.screen.selections = {body: selection}
+            anchor = app.screen.current_anchor()
+            self.assertIsNotNone(anchor)
+            assert anchor is not None
+            self.assertEqual(anchor.quote, "one\nline")
+            self.assertEqual((anchor.start_offset, anchor.end_offset), (5, 13))
+
+    async def test_j_and_k_move_block_focus(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            bodies = list(app.screen.query(".draft-block-body"))
+            bodies[0].focus()
+            await pilot.pause()
+            app.screen.action_next_block()
+            await pilot.pause()
+            self.assertIs(app.screen.focused, bodies[1])
+            app.screen.action_prev_block()
+            await pilot.pause()
+            self.assertIs(app.screen.focused, bodies[0])
+
+    async def test_a_selection_across_blocks_is_refused(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            bodies = list(app.screen.query(".draft-block-body"))
+            selection = Selection.from_offsets(Offset(0, 0), Offset(1, 0))
+            app.screen.selections = {bodies[0]: selection, bodies[1]: selection}
+            self.assertIsNone(app.screen.current_anchor())
+
     async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
@@ -135,9 +241,12 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), 2)
             self.assertEqual(type(app.screen).__name__, "DraftScreen")
-            body = str(app.screen.query_one("#draft-body").render())
-            self.assertIn("Demo plan", body)
-            self.assertIn("annotations:", body)
+            head = str(app.screen.query_one("#draft-head").render())
+            self.assertIn("Demo plan", head)
+            self.assertIn("0/0 open", head)
+            bodies = list(app.screen.query(".draft-block-body"))
+            self.assertTrue(bodies)
+            self.assertIn("Demo plan", str(bodies[0].render()))
             await pilot.press("escape")
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), 1)

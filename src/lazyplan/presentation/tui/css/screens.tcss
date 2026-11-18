@@ -155,6 +155,34 @@ Screen.short #dlg.form-tall TextArea {
     padding: 0 1;
 }
 
+.draft-block {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.draft-block.level-1 {
+    margin-left: 2;
+}
+
+.draft-block.level-2 {
+    margin-left: 4;
+}
+
+.draft-block-label {
+    height: 1;
+    color: $lp-text-muted;
+    text-style: bold;
+}
+
+.draft-block-body {
+    height: auto;
+    padding: 0 1;
+}
+
+.draft-block-body:focus {
+    background: $lp-surface-raised;
+}
+
 #source-head {
     height: auto;
     min-height: 2;

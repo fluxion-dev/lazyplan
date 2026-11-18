@@ -11,47 +11,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from ...core.errors import MaintenanceBackupError, MaintenanceBusy
-from ...infrastructure.environment import (
-    cached_latest,
-    detect,
-    notice_text,
-    update_check_enabled,
-)
-from ...infrastructure.environment import (
-    latest_version as latest_version,
-)
-from ...store import Store
-from ..shared import (
-    porcelain,
-)
-from ..shared import (
-    registry as ia_registry,
-)
-from ..shared.design import (
-    msg_error,
-    remembered_icons,
-    select_icons,
-)
-from .commands import (
-    _COMMANDS,
-    _GROUP_CMDS,
-    _cmd_audit,
-    _cmd_brief,
-    _cmd_completion,
-    _cmd_context,
-    _cmd_doctor,
-    _cmd_hook,
-    _cmd_mcp,
-    _cmd_notes,
-    _cmd_plan_ready,
-    _cmd_plan_recipe,
-    _cmd_question_list,
-    _cmd_ref_list,
-    _cmd_review,
-    _cmd_setup,
-    _cmd_ship,
-    _cmd_upgrade,
-)
+from ..shared import porcelain
+from ..shared import registry as ia_registry
+from ..shared.design import msg_error, remembered_icons, select_icons
 from .parser import build_parser, package_version
 
 if TYPE_CHECKING:

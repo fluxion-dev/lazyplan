@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from ..core.kinds import ANCHOR_MOVED, ANCHOR_OK, ANCHOR_ORPHANED, DRAFT_ANCHOR_STATES
 from .plan_document import MilestoneDocument, PlanDocument, TaskDocument
 
 BLOCK_TITLE = "title"
@@ -64,6 +65,23 @@ class AnchorMatch:
             raise DraftContentError(f"anchor state must be {'|'.join(ANCHOR_STATES)}")
         if self.start < 0 or self.end < self.start:
             raise DraftContentError("anchor offsets must be a valid range")
+
+
+@dataclass(frozen=True)
+class AnchorUpdate:
+    """How one stored annotation tracked its quote after a revision."""
+
+    state: str
+    start_offset: int
+    end_offset: int
+
+    def __post_init__(self) -> None:
+        if self.state not in DRAFT_ANCHOR_STATES:
+            raise DraftContentError(
+                f"annotation anchor state must be {'|'.join(DRAFT_ANCHOR_STATES)}"
+            )
+        if self.start_offset < 0 or self.end_offset < self.start_offset:
+            raise DraftContentError("annotation offsets must be a valid range")
 
 
 def _milestone_blocks(milestone: MilestoneDocument) -> list[DraftBlock]:
@@ -204,3 +222,20 @@ def resolve_anchor(blocks: Iterable[DraftBlock], block_key: str, quote: str) -> 
     if block is None:
         return AnchorMatch(ANCHOR_MISSING)
     return resolve_quote(block.text, quote)
+
+
+def reanchor_quote(
+    text: str,
+    quote: str,
+    start_offset: int,
+    end_offset: int,
+) -> AnchorUpdate:
+    """Track one annotation's quote into a block's current text."""
+    if not quote:
+        return AnchorUpdate(ANCHOR_OK, 0, 0)
+    match = resolve_quote(text, quote)
+    if match.state != ANCHOR_UNIQUE:
+        return AnchorUpdate(ANCHOR_ORPHANED, start_offset, end_offset)
+    if (match.start, match.end) == (start_offset, end_offset):
+        return AnchorUpdate(ANCHOR_OK, start_offset, end_offset)
+    return AnchorUpdate(ANCHOR_MOVED, match.start, match.end)

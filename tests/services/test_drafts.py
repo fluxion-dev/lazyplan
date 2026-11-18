@@ -15,13 +15,14 @@ def document(
     key: str = "demo-plan",
     title: str = "Demo plan",
     why: str = "Why this matters.",
+    what: str = "## Scope\n\n- One thing.",
 ) -> dict:
     return {
         "plan": {
             "key": key,
             "title": title,
             "why": why,
-            "what": "## Scope\n\n- One thing.",
+            "what": what,
             "criteria": ["Works."],
         },
         "milestones": [
@@ -40,6 +41,17 @@ def document(
                 ],
             }
         ],
+    }
+
+
+def minimal_document(why: str = "Why this matters.") -> dict:
+    return {
+        "plan": {
+            "key": "demo-plan",
+            "title": "Demo plan",
+            "why": why,
+            "what": "## Scope\n\n- One thing.",
+        }
     }
 
 
@@ -157,6 +169,114 @@ class DraftsServiceTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             drafts.revise(self.store, 999_999, document(), base_revision=1)
         self.assertEqual(annotation.draft_id, draft.id)
+
+    def test_revise_reanchors_exact_moved_and_lost_quotes(self) -> None:
+        draft = drafts.create(self.store, document())
+        exact = drafts.annotate(self.store, draft.id, "plan:title", "comment", "Keep", quote="Demo")
+        moved = drafts.annotate(self.store, draft.id, "plan:why", "change", "Move", quote="matters")
+        lost = drafts.annotate(
+            self.store, draft.id, "plan:what", "change", "Gone", quote="One thing"
+        )
+        drafts.submit(self.store, draft.id)
+        drafts.revise(
+            self.store,
+            draft.id,
+            document(
+                why="A new why this matters.",
+                what="## Scope\n\n- Only this.",
+            ),
+            base_revision=1,
+            actor="agent",
+        )
+        rows = {row.id: row for row in drafts.list_annotations(self.store, draft.id)}
+        self.assertEqual(rows[exact.id].anchor_state, "ok")
+        self.assertEqual((rows[exact.id].start_offset, rows[exact.id].end_offset), (0, 4))
+        self.assertEqual(rows[moved.id].anchor_state, "moved")
+        self.assertEqual((rows[moved.id].start_offset, rows[moved.id].end_offset), (15, 22))
+        self.assertEqual(rows[lost.id].anchor_state, "orphaned")
+        self.assertEqual((rows[lost.id].start_offset, rows[lost.id].end_offset), (12, 21))
+        self.assertEqual({row.status for row in rows.values()}, {"open"})
+
+    def test_revise_reanchors_duplicates_and_recovers(self) -> None:
+        draft = drafts.create(self.store, document(why="same same"))
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "plan:why",
+            "comment",
+            "Second copy",
+            quote="same",
+            start_offset=5,
+            end_offset=9,
+        )
+        self.assertEqual(annotation.anchor_state, "ok")
+        drafts.submit(self.store, draft.id)
+        drafts.revise(
+            self.store,
+            draft.id,
+            document(why="same same"),
+            base_revision=1,
+            actor="agent",
+        )
+        orphaned = drafts.list_annotations(self.store, draft.id)[0]
+        self.assertEqual(orphaned.anchor_state, "orphaned")
+        self.assertEqual((orphaned.start_offset, orphaned.end_offset), (5, 9))
+        drafts.revise(
+            self.store,
+            draft.id,
+            document(why="same only"),
+            base_revision=2,
+            actor="agent",
+        )
+        moved = drafts.list_annotations(self.store, draft.id)[0]
+        self.assertEqual(moved.anchor_state, "moved")
+        self.assertEqual((moved.start_offset, moved.end_offset), (0, 4))
+
+    def test_revise_orphans_annotations_on_removed_blocks(self) -> None:
+        draft = drafts.create(self.store, document())
+        task_annotation = drafts.annotate(
+            self.store, draft.id, "task:impl", "comment", "Keep the task"
+        )
+        why_annotation = drafts.annotate(
+            self.store, draft.id, "plan:why", "comment", "Keep the why", quote="Why"
+        )
+        drafts.submit(self.store, draft.id)
+        drafts.revise(
+            self.store,
+            draft.id,
+            minimal_document(),
+            base_revision=1,
+            actor="agent",
+        )
+        rows = {row.id: row for row in drafts.list_annotations(self.store, draft.id)}
+        self.assertEqual(rows[task_annotation.id].anchor_state, "orphaned")
+        self.assertEqual(rows[why_annotation.id].anchor_state, "ok")
+        self.assertEqual(
+            (rows[why_annotation.id].start_offset, rows[why_annotation.id].end_offset),
+            (0, 3),
+        )
+
+    def test_dismissed_annotations_are_not_reanchored(self) -> None:
+        draft = drafts.create(self.store, document())
+        dismissed = drafts.annotate(
+            self.store, draft.id, "plan:why", "comment", "Old", quote="matters"
+        )
+        drafts.dismiss(self.store, dismissed.id, "no longer relevant")
+        drafts.annotate(self.store, draft.id, "plan:what", "comment", "Keep")
+        drafts.submit(self.store, draft.id)
+        drafts.revise(
+            self.store,
+            draft.id,
+            document(why="Because."),
+            base_revision=1,
+            actor="agent",
+        )
+        row = self.store.get_draft_annotation(dismissed.id)
+        self.assertIsNotNone(row)
+        assert row is not None
+        self.assertEqual(row.status, "dismissed")
+        self.assertEqual(row.anchor_state, "ok")
+        self.assertEqual((row.start_offset, row.end_offset), (9, 16))
 
     def test_submit_ready_and_resolve(self) -> None:
         draft = drafts.create(self.store, document())

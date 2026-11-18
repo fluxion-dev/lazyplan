@@ -8,14 +8,17 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..core.entities import DraftAnnotation, Plan, PlanDraft
+from ..core.kinds import ANCHOR_ORPHANED
 from ..core.ports.drafts import DraftsPort
 from . import plan_apply
 from .draft_content import (
     ANCHOR_DUPLICATE,
     ANCHOR_MISSING,
+    AnchorUpdate,
     DraftBlock,
     blocks_by_key,
     build_blocks,
+    reanchor_quote,
     resolve_quote,
 )
 from .plan_document import PlanDocument, load_normalized, to_json, validate_document
@@ -122,6 +125,40 @@ def list_annotations(port: DraftsPort, draft_id: int, status: str = "all") -> li
     return port.list_draft_annotations(draft_id, status)
 
 
+def _reanchor(port: DraftsPort, draft: PlanDraft, document: PlanDocument, actor: str) -> None:
+    """Track every live annotation into a revised document."""
+    blocks = blocks_by_key(build_blocks(document))
+    for annotation in port.list_draft_annotations(draft.id):
+        if annotation.status == "dismissed":
+            continue
+        block = blocks.get(annotation.block_key)
+        if block is None:
+            update = AnchorUpdate(ANCHOR_ORPHANED, annotation.start_offset, annotation.end_offset)
+        else:
+            update = reanchor_quote(
+                block.text,
+                annotation.quote,
+                annotation.start_offset,
+                annotation.end_offset,
+            )
+        current = (
+            annotation.anchor_state,
+            annotation.start_offset,
+            annotation.end_offset,
+        )
+        if current == (update.state, update.start_offset, update.end_offset):
+            continue
+        changed = port.update_draft_annotation(
+            annotation.id,
+            actor=actor,
+            anchor_state=update.state,
+            start_offset=update.start_offset,
+            end_offset=update.end_offset,
+        )
+        if changed is None:
+            raise KeyError(f"annotation #{annotation.id} not found")
+
+
 def revise(
     port: DraftsPort,
     draft_id: int,
@@ -148,6 +185,7 @@ def revise(
             title=document.title,
             expected_revision=base_revision,
         )
+        _reanchor(port, updated, document, actor)
         if updated.status != "review":
             updated = port.set_draft_status(draft.id, "review", actor=actor) or updated
     return updated

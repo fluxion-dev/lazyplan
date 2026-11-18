@@ -6,15 +6,18 @@ import os
 import tempfile
 import unittest
 
+from lazyplan.core.kinds import ANCHOR_MOVED, ANCHOR_OK, ANCHOR_ORPHANED
 from lazyplan.services.draft_content import (
     ANCHOR_DUPLICATE,
     ANCHOR_MISSING,
     ANCHOR_UNIQUE,
     AnchorMatch,
+    AnchorUpdate,
     DraftBlock,
     DraftContentError,
     blocks_by_key,
     build_blocks,
+    reanchor_quote,
     resolve_anchor,
     resolve_quote,
 )
@@ -127,3 +130,31 @@ class DraftContentTest(unittest.TestCase):
         )
         self.assertEqual(resolve_anchor(blocks, "plan:why", "missing").state, ANCHOR_MISSING)
         self.assertEqual(resolve_anchor(blocks, "missing:block", "text").state, ANCHOR_MISSING)
+
+    def test_reanchor_quote(self) -> None:
+        self.assertEqual(
+            reanchor_quote("alpha beta", "beta", 6, 10),
+            AnchorUpdate(ANCHOR_OK, 6, 10),
+        )
+        self.assertEqual(
+            reanchor_quote("x alpha beta", "beta", 6, 10),
+            AnchorUpdate(ANCHOR_MOVED, 8, 12),
+        )
+        self.assertEqual(
+            reanchor_quote("alpha", "beta", 6, 10),
+            AnchorUpdate(ANCHOR_ORPHANED, 6, 10),
+        )
+        self.assertEqual(
+            reanchor_quote("beta beta", "beta", 5, 9),
+            AnchorUpdate(ANCHOR_ORPHANED, 5, 9),
+        )
+        self.assertEqual(
+            reanchor_quote("alpha", "", 0, 0),
+            AnchorUpdate(ANCHOR_OK, 0, 0),
+        )
+
+    def test_anchor_update_validates(self) -> None:
+        with self.assertRaises(DraftContentError):
+            AnchorUpdate("bogus", 0, 0)
+        with self.assertRaises(DraftContentError):
+            AnchorUpdate(ANCHOR_OK, 5, 4)

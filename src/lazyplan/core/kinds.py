@@ -30,7 +30,10 @@ DRAFT_ANNOTATION_KINDS: tuple[str, str, str] = ("comment", "question", "change")
 DRAFT_ANNOTATION_STATUSES: tuple[str, str, str] = ("open", "addressed", "dismissed")
 
 #: How a stored annotation tracked its block across revisions.
-DRAFT_ANCHOR_STATES: tuple[str, str, str] = ("ok", "moved", "orphaned")
+ANCHOR_OK = "ok"
+ANCHOR_MOVED = "moved"
+ANCHOR_ORPHANED = "orphaned"
+DRAFT_ANCHOR_STATES: tuple[str, str, str] = (ANCHOR_OK, ANCHOR_MOVED, ANCHOR_ORPHANED)
 
 #: Row label letters, matching the design row grammar.
 LABEL_LETTERS: dict[str, str] = {PLAN: "P", MILESTONE: "M", TASK: "T"}

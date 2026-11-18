@@ -10,10 +10,10 @@ from typing import TYPE_CHECKING
 from rich.text import Text
 
 from ....core.entities import Status
-from ...shared.design import milestone_row, plan_row, task_row
+from ...shared.design import draft_row, milestone_row, plan_row, task_row
 
 if TYPE_CHECKING:
-    from ....core.entities import Milestone, Plan, Task
+    from ....core.entities import Milestone, Plan, PlanDraft, Task
     from ....store import Store
 
 
@@ -23,7 +23,7 @@ class RowSpec:
 
     render: Callable[..., str]
     depth: int
-    status: Status
+    status: Status | None
 
     def markup(self, width: int, *, emoji: bool = True) -> str:
         """Return this row's Rich markup at *width* cells."""
@@ -76,6 +76,15 @@ def task_spec(task: Task, attention: bool = False) -> RowSpec:
         render=partial(task_row, task, attention=attention),
         depth=11,
         status=task.status,
+    )
+
+
+def draft_spec(draft: PlanDraft, open_count: int, total_count: int) -> RowSpec:
+    """Build the width-independent renderer for one draft row."""
+    return RowSpec(
+        render=partial(draft_row, draft, open_count, total_count),
+        depth=0,
+        status=None,
     )
 
 

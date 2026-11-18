@@ -26,6 +26,7 @@ from .coordination import (
     add_trace,
     add_who,
 )
+from .drafts import add_draft_group
 from .maintenance import add_maintenance_group
 from .proof import (
     add_commits,
@@ -118,6 +119,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_hook(sub, common)
     add_list(sub, common)
     add_noun_groups(sub, common)
+    add_draft_group(sub, common)
     add_question_group(sub, common)
     add_ref_group(sub, common)
     add_touch_group(sub, common)

@@ -10,11 +10,13 @@ the target model and the rules that later refactor milestones implement.
 Every record belongs to exactly one owner. The tree is
 `plan → milestone → task`; criteria, evidence, questions, references, claims,
 sessions, notes, comments, commits, files, and pull requests hang off those
-owners through the links below.
+owners through the links below. A draft sits beside the root: it holds one
+complete prospective plan tree and is promoted into the rows above.
 
 | Entity | Owner | Hub? | Cross-links |
 | --- | --- | --- | --- |
 | `plan` | root | Yes | milestones, criteria, questions, references, sessions, notes, comments, repos, commits, PRs, events |
+| `draft` | root | Yes | annotated blocks, revisions, promoted plan |
 | `milestone` | plan | Yes | tasks, criteria, notes, comments, commits, PRs |
 | `task` | milestone | Yes | criteria, claims, touch-points, notes, comments, commits, files, PRs |
 | `criterion` | plan, milestone, or task | Yes | evidence, proving tasks |

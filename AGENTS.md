@@ -18,3 +18,9 @@ Derive internals from the code. If a sentence does not help a human install,
 run, or contribute to lazyplan, do not write it, and delete it when you find
 it. `tools/check-docs.py` enforces this allowlist and the relative links in
 the retained files.
+
+## Plan drafts
+
+When the work needs review before it becomes the plan of record, use the draft
+loop in the packaged agent skill: `lpui draft add`, annotate, submit, revise
+with `--base-revision`, and promote only when no annotation is open.

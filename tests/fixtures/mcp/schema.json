@@ -14,6 +14,16 @@
       "mimeType": "application/json",
       "name": "Plan document",
       "uri": "lazyplan://plan/1"
+    },
+    {
+      "mimeType": "application/json",
+      "name": "Draft queue",
+      "uri": "lazyplan://drafts"
+    },
+    {
+      "mimeType": "application/json",
+      "name": "Draft document",
+      "uri": "lazyplan://draft/1"
     }
   ],
   "tools": [
@@ -248,6 +258,73 @@
         "type": "object"
       },
       "name": "plan_ready"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Plan drafts with status and annotation counts.",
+      "inputSchema": {
+        "properties": {
+          "status": {
+            "enum": [
+              "review",
+              "revising",
+              "promoted",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "name": "draft_list"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "One draft document with its blocks and annotations.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_show"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Annotations on one draft by state.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "addressed",
+              "dismissed",
+              "all"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_annotations"
     },
     {
       "annotations": {
@@ -1161,6 +1238,233 @@
         "type": "object"
       },
       "name": "question_reopen"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Store a validated plan document as a draft.",
+      "inputSchema": {
+        "properties": {
+          "document": {
+            "type": "object"
+          }
+        },
+        "required": [
+          "document"
+        ],
+        "type": "object"
+      },
+      "name": "draft_add"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Replace a draft document with a revision of the base.",
+      "inputSchema": {
+        "properties": {
+          "base_revision": {
+            "type": "integer"
+          },
+          "document": {
+            "type": "object"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document",
+          "base_revision"
+        ],
+        "type": "object"
+      },
+      "name": "draft_revise"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Submit open annotations for revision.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_submit"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Return a clean revision to review.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_ready"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Annotate a draft block or selected quote.",
+      "inputSchema": {
+        "properties": {
+          "block": {
+            "type": "string"
+          },
+          "end": {
+            "type": "integer"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "comment",
+              "question",
+              "change"
+            ],
+            "type": "string"
+          },
+          "quote": {
+            "type": "string"
+          },
+          "start": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "block",
+          "kind",
+          "text"
+        ],
+        "type": "object"
+      },
+      "name": "draft_annotate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Answer one annotation and mark it addressed.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "response": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "response"
+        ],
+        "type": "object"
+      },
+      "name": "draft_respond"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Mark one annotation addressed, with an optional response.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "response": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_resolve"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Dismiss one annotation with a reason.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_dismiss"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Create the plan tree from a clean draft.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_promote"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Delete a draft.",
+      "inputSchema": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "draft_delete"
     },
     {
       "annotations": {

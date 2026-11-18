@@ -33,12 +33,15 @@ SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 5, 0, "right"),
     # The right rail holds one mark: two cells for emoji, one for the fallback.
     "state": StatSlot("state", RAIL_WIDTH, 1, "right"),
+    # Draft rows spell out their one word state ("revising") in the same rail.
+    "draft_state": StatSlot("draft_state", 8, 1, "right"),
 }
 
 #: Slot priority per kind: the first slot that fits survives the narrowest row.
 KIND_SLOTS: dict[str, tuple[str, ...]] = {
     "plan": ("state", "progress"),
     "milestone": ("state", "progress"),
+    "draft": ("draft_state", "progress"),
     "task": ("state",),
 }
 
@@ -74,7 +77,7 @@ def _slot_text(stats: RowStats, key: str) -> str:
     if key == "progress":
         done, total = stats.progress or (0, 0)
         return truncate(progress_text(done, total), SLOTS[key].width)
-    if key == "state":
+    if key in ("state", "draft_state"):
         return stats.state
     return ""
 

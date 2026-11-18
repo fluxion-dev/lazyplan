@@ -19,6 +19,11 @@ _._highlight, _._later, _._never, _._on_click, _._on_expanded
 _._on_filter_changed, _._on_filter_submitted, _._on_highlight, _._on_row_action
 _._on_selection_changed, _._open_link, _._path_submitted, _._pick
 _._run_first, _._save, _._select, _._submit
+# Draft review screen: @on callbacks and key actions.
+_._highlight_annotation, _._open_annotation
+_.action_annotate, _.action_delete_annotation, _.action_dismiss_annotation
+_.action_next_block, _.action_prev_block, _.action_promote, _.action_submit_feedback
+_.action_view_annotation
 # Setup wizard panels and controls, dispatched by widget id.
 _._back, _._checkbox_changed, _._hooks_changed, _._icons_changed, _._model_submitted
 _._next, _._placement_selected, _._rail_selected, _._recheck
@@ -45,10 +50,11 @@ _.rev, _.show_root
 # Dataclass fields consumed through serialization.
 _.auto_closed, _.daily_rate, _.deprecated_in, _.elapsed_seconds
 _.from_cache, _.handoff, _.host_session, _.new_count, _.old_count, _.rebuilds
-_.rev, _.tui_only
+_.rev, _.tui_only, _.promoted_at
 # sqlite3/shlex API noise and docs metadata read by tools/gen-man.py.
 _.ENVIRONMENT, _.FILES, _.row_factory, _.whitespace
 _.whitespace_split
 # Kept-live seams, each with a caller or contract outside src discovery.
 _._status_keep_ids, _.attention_ids, _.criteria_progress, _.is_available
 _.drawn_width, _.plan_uid, _.poll_now, _.task_criteria
+_.get_draft_revision, _.list_draft_revisions, _.resolve_anchor

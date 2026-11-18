@@ -19,6 +19,7 @@ try:
         Input,
         Label,
         OptionList,
+        Select,
         Static,
         TextArea,
     )
@@ -86,6 +87,8 @@ if _TEXTUAL_OK:
                 values.append(area.text)
             for box in self.query(Checkbox):
                 values.append(str(box.value))
+            for select in self.query(Select):
+                values.append(str(select.value))
             return tuple(values)
 
         def action_cancel(self) -> None:

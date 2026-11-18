@@ -21,7 +21,9 @@ MCP_DIR = PRESENTATION / "mcp"
 SHARED_DIR = PRESENTATION / "shared"
 
 #: Registry modules that hold the canonical ``Action`` rows.
-ACTION_ROW_MODULES = frozenset({"registry_actions.py", "registry_actions_provenance.py"})
+ACTION_ROW_MODULES = frozenset(
+    {"registry_actions.py", "registry_actions_provenance.py", "registry_actions_drafts.py"}
+)
 
 #: Keyword arguments that shape how a flag parses; help text and metavar names
 #: are presentation, not wiring.

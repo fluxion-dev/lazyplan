@@ -604,6 +604,30 @@
         "tree",
         "activity"
       ]
+    },
+    {
+      "depth": 1,
+      "id": "draft.open",
+      "route": [
+        "tree",
+        "draft"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "draft.submit",
+      "route": [
+        "draft",
+        "submit"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "draft.promote",
+      "route": [
+        "draft",
+        "promote"
+      ]
     }
   ],
   "entities": {
@@ -611,6 +635,7 @@
     "comment": 1,
     "commit": 1,
     "criterion": 0,
+    "draft": 1,
     "event": 1,
     "evidence": 1,
     "file": 1,

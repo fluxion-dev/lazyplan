@@ -11,6 +11,23 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   `orbit`, `blocks`, `marks`, or `ascii` for status, kind, section, checkout,
   and wizard glyphs. Press `i` in the TUI to cycle them, and the setup wizard's
   appearance step previews and remembers the choice.
+- **Plan drafts get a review phase before the queue.** `lpui draft add` stores
+  the same validated document as `plan apply` outside the plans table. The
+  human selects text or a block in the draft screen, leaves anchored comments,
+  questions, or changes, and submits them. The agent revises with a
+  base-revision guard, answers each annotation, and `draft promote` creates the
+  whole tree atomically only when no annotation is open.
+- **Drafts have CLI, MCP, and screen surfaces.** `lpui draft` covers list,
+  show, annotations, add, revise, submit, ready, annotate, respond, resolve,
+  dismiss, promote, and delete; MCP adds the matching tools and
+  `lazyplan://draft/{id}`; the screen adds a draft panel, a selectable
+  document, an annotation sidebar, and submit and promote actions.
+
+### Changed
+
+- The main screen moves plan drafts, plan queue, and plan review into the left
+  column and the overview, agents, and git cards into the right. Narrow
+  terminals keep the three plan panels and hide the right column.
 
 ### Fixed
 

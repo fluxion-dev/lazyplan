@@ -32,7 +32,8 @@ moves it doing. A task is doing exactly while you hold its claim: moving a task
 to doing claims it for your `--actor`, and moving it off doing releases it.
 Hooks keep your checkout's claims alive; release when you stop, and note
 handoffs with `lpui note add`. MCP resources
-include `lazyplan://brief`, `lazyplan://context`, and `lazyplan://plan/{id}`.
+include `lazyplan://brief`, `lazyplan://context`, `lazyplan://plan/{id}`, and
+`lazyplan://draft/{id}`.
 
 ## DB scoping and setup
 
@@ -250,6 +251,38 @@ under milestones. Every plan, milestone, and task carries a stable `key`.
 Retrying the same document is a no-op, and a failed apply rolls the whole tree
 back. Recipes are skeletons with QA, refactoring, and documentation tasks; fill
 the words, add criteria, then apply.
+
+## Plan drafts
+
+A draft is a plan document under review; it stays out of the queue until the
+human promotes it. Use the draft loop when the definition needs review before
+it becomes the plan of record:
+
+```bash
+lpui --actor NAME --porcelain draft add --file plan.json
+lpui --porcelain draft list [--status review|revising|promoted|all]
+lpui --porcelain draft show --id D
+lpui --porcelain draft annotations --id D [--status open|addressed|dismissed|all]
+lpui --actor NAME --porcelain draft annotate --id D --block KEY --kind comment|question|change --text TEXT [--quote Q]
+lpui --actor NAME --porcelain draft submit --id D
+lpui --actor NAME --porcelain draft respond --id A --response TEXT
+lpui --actor NAME --porcelain draft resolve --id A [--response TEXT]
+lpui --actor NAME --porcelain draft revise --id D --file plan.json --base-revision N --note TEXT
+lpui --actor NAME --porcelain draft ready --id D
+lpui --actor NAME --porcelain draft promote --id D
+```
+
+- The draft uses the same JSON document as `plan apply`; review and promotion
+  see normalized values.
+- Annotations anchor to one block and an optional exact quote. A revision that
+  cannot find a quote marks the annotation `moved` or `orphaned`; answer or ask,
+  never delete feedback silently.
+- `revise` must name the current base revision. `ready` returns to review only
+  when no open annotations remain. `promote` refuses open annotations, invalid
+  documents, and a taken plan key; it creates the tree atomically.
+- MCP tools: `draft_list`, `draft_show`, `draft_add`, `draft_revise`,
+  `draft_annotate`, `draft_respond`, `draft_resolve`, `draft_promote`; the
+  resource is `lazyplan://draft/{id}`.
 
 ## Trust and coordination
 

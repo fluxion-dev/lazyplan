@@ -20,6 +20,7 @@ from ...services import insights
 from .base import McpBase
 from .collaboration_tools import CollaborationToolsMixin
 from .dispatch_tools import DispatchToolsMixin
+from .draft_tools import DraftToolsMixin
 from .evidence_tools import EvidenceToolsMixin
 from .maintenance_tools import MaintenanceToolsMixin
 from .provenance_tools import ProvenanceToolsMixin
@@ -38,6 +39,7 @@ PROTOCOL_VERSION = "2024-11-05"
 class ToolsMixin(
     CollaborationToolsMixin,
     DispatchToolsMixin,
+    DraftToolsMixin,
     EvidenceToolsMixin,
     MaintenanceToolsMixin,
     ProvenanceToolsMixin,
@@ -210,6 +212,7 @@ class ToolsMixin(
         ]
         tools.extend(self._evidence_write_registry())
         tools.extend(self._question_write_registry())
+        tools.extend(self._draft_write_registry())
         tools.extend(self._collaboration_write_registry())
         tools.extend(self._maintenance_write_registry())
         tools.extend(self._provenance_write_registry())
@@ -347,6 +350,7 @@ class ToolsMixin(
         ]
         tools.extend(self._evidence_read_registry())
         tools.extend(self._question_read_registry())
+        tools.extend(self._draft_read_registry())
         tools.extend(self._review_read_registry())
         tools.extend(self._collaboration_read_registry())
         tools.extend(self._maintenance_read_registry())

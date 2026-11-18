@@ -8,11 +8,11 @@ from textual.widgets import Static, Tree
 from textual.widgets.tree import TreeNode
 
 from .... import services
-from ....core.entities import Milestone, Plan, Task
+from ....core.entities import Milestone, Plan, PlanDraft, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
 from ..size import classes_for
-from ..views.rows import RowSpec
+from ..views.rows import RowSpec, draft_spec
 from .expansion import ExpansionMixin
 from .filtering import TreeFilter
 from .lazy_branches import LazyBranchMixin
@@ -63,6 +63,10 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             self.app.query_one("#tree", Tree),
             self.app.query_one("#tree-finished", Tree),
         )
+
+    def drafts_tree(self) -> Tree:
+        """The plan-drafts tree widget."""
+        return self.app.query_one("#tree-drafts", Tree)
 
     def track(self, node: TreeNode) -> None:
         data = getattr(node, "data", None)
@@ -150,12 +154,45 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         app = self.app
         trees = self.trees()
         tree = trees[0]
+        drafts = self.drafts_tree()
         if not app._row_specs:
             return
         for key, spec in app._row_specs.items():
-            self.render_row(key, spec, tree)
+            target = drafts if key[0] == "draft" else tree
+            self.render_row(key, spec, target)
         for widget in trees:
             cast("FoldTree", widget).reflow()
+        cast("FoldTree", drafts).reflow()
+
+    def refresh_drafts(self) -> None:
+        """Reconcile the draft panel with the database."""
+        app = self.app
+        drafts = [
+            draft for draft in services.drafts.list_drafts(app.store) if draft.status != "promoted"
+        ]
+        counts = services.drafts.annotation_counts_map(app.store)
+        tree = self.drafts_tree()
+        self.reconcile_children(tree.root, tree, self.desired_drafts(drafts, counts))
+        if not tree.root.is_expanded:
+            tree.root.expand()
+        visible = bool(drafts)
+        tree.display = visible
+        app.query_one("#plans-drafts").display = visible
+
+    def desired_drafts(
+        self,
+        drafts: list[PlanDraft],
+        counts: dict[int, tuple[int, int]],
+    ) -> list[tuple[tuple[str, int], RowSpec, bool]]:
+        """Row specs for the draft panel, in creation order."""
+        return [
+            (
+                ("draft", draft.id),
+                draft_spec(draft, *counts.get(draft.id, (0, 0))),
+                False,
+            )
+            for draft in drafts
+        ]
 
     def show_empty(self, active_empty: bool, finished_empty: bool) -> None:
         """Hide a panel with no rows; keep the plan queue's empty state."""
@@ -166,7 +203,12 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         app.query_one("#tree-empty", Static).display = active_empty
         app.query_one("#plans-finished").display = not finished_empty
         flipped = active_tree.display or finished_tree.display
-        if not flipped or len(app.screen_stack) > 1:
+        if not flipped:
+            drafts = self.drafts_tree()
+            if drafts.display and not drafts.has_focus:
+                drafts.focus()
+            return
+        if len(app.screen_stack) > 1:
             return
         if not any(tree.has_focus for tree in (active_tree, finished_tree)):
             target = finished_tree if active_empty else active_tree
@@ -261,6 +303,7 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
             changed |= self.reconcile_children(
                 finished_tree.root, finished_tree, self.desired_plans(finished, review=True)
             )
+            self.refresh_drafts()
             filtering = bool(app.filter_text.strip())
             if filtering:
                 self.build_all_children()

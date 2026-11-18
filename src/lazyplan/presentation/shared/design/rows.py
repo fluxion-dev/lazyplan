@@ -11,7 +11,7 @@ from .status import cell_width, status_mark, status_state
 from .text import _escape_markup, repo_project_name, status_word, truncate
 
 if TYPE_CHECKING:
-    from ....core.entities import Milestone, Plan, Task
+    from ....core.entities import Milestone, Plan, PlanDraft, Task
     from ....core.ports.insights import InsightsPort
 
     RepoMap = dict[tuple[str, int], list[dict]]
@@ -167,3 +167,35 @@ def task_row(
     """TUI task row (Rich markup): one status mark, id, and title."""
     stats = RowStats()
     return _render_row("task", t, stats, width, attention=attention, emoji=emoji)
+
+
+def draft_label(draft: PlanDraft, open_count: int, total_count: int) -> str:
+    """Canonical row label for a plan draft."""
+    state = " revising" if draft.status == "revising" else ""
+    target = f" -> P{draft.plan_id}" if draft.plan_id else ""
+    return f"D{draft.id} {draft.title} {open_count}/{total_count}{state}{target}"
+
+
+def draft_row(
+    draft: PlanDraft,
+    open_count: int,
+    total_count: int,
+    width: int | None = None,
+    *,
+    emoji: bool = True,
+) -> str:
+    """TUI draft row (Rich markup): id + title + open/total and revising."""
+    prefix_rich = f"[dim]D{draft.id}[/] "
+    prefix_plain = f"D{draft.id} "
+    row_width = DEFAULT_ROW_WIDTH if width is None else width
+    stats = RowStats(
+        progress=(open_count, total_count),
+        state="revising" if draft.status == "revising" else "",
+    )
+    layout = stats_layout("draft", row_width, len(prefix_plain))
+    stats_rich, stats_plain = render_stats(stats, layout)
+    available = row_width - len(prefix_plain) - len(stats_plain)
+    title = truncate(draft.title, available)
+    pad = " " * max(0, row_width - len(prefix_plain) - len(title) - len(stats_plain))
+    style = "dim" if draft.status == "promoted" else "bold"
+    return f"{prefix_rich}[{style}]{_escape_markup(title)}[/]{pad}{stats_rich}"

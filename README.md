@@ -9,7 +9,8 @@ Plan work with your coding agent, in the terminal.
 lazyplan is one shared plan for you and your agent. You get a fast keyboard
 screen; the agent gets a plain command line. Plans, milestones, and tasks live
 in one local database instead of disappearing into chat, and read-only git and
-pull-request provenance shows where each one landed.
+pull-request provenance shows where each one landed. A plan can start as a
+draft, take anchored review notes, and only then join the queue.
 
 **[Screenshots and quickstart →](https://fluxion-dev.github.io/lazyplan/)**
 
@@ -57,9 +58,13 @@ data with `lpui seed`.
 
 - **One source of truth.** The plan you see is the plan your agent reads. No
   copy-pasting context between chats.
+- **Reviewed, not rubber-stamped.** A draft plan takes anchored comments,
+  questions, and change requests; the agent revises against them, and promotion
+  is refused while feedback is open.
 - **Made for focus.** Plans stay as one-line summaries until you open them,
   branches stay open or closed exactly as you left them, large branches load on
-  demand, and the timeline waits for `T`.
+  demand, and the timeline waits for `T`. Three themes and five icon palettes
+  keep the screen yours.
 - **Proof where you need it.** Criteria, evidence, questions, references,
   claims, agents, comments, commits, and pull requests are selectable hubs,
   not a wall of text.
@@ -77,7 +82,9 @@ lpui feed                         # recent activity
 ```
 
 The bottom bar pins the running version, with an arrow beside it when a newer
-release is cached; click the badge or press `U` to update.
+release is cached; click the badge or press `U` to update. Ordinary notices
+collect in a session log (`L`) instead of stacking as toasts; only the startup
+and update notices interrupt.
 
 ## For your agent
 
@@ -90,7 +97,12 @@ lpui --actor helper --porcelain next
 lpui --actor helper --porcelain context --max-chars 4000
 lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
+lpui --actor helper --porcelain draft add --file plan.json
 ```
+
+`draft add` stores the same document outside the queue; the human annotates it
+in the review screen, and promoting it creates the plan tree atomically once
+every annotation is answered.
 
 Parallel plans are lanes: a milestone gets a wave, a role, and its own
 registered worktree, and roles name a capability tier and an effort level.

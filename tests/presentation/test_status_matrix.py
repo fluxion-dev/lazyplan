@@ -199,6 +199,38 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(row.endswith(expected[task.id]))
             self.assert_no_state_words(row)
 
+    async def test_every_tree_row_ends_in_the_same_right_rail(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(140, 40)) as pilot:
+            await pilot.pause()
+            await self.open_tree(app, pilot)
+            tree = app.query_one("#tree", Tree)
+            rows = (
+                (("plan", self.plan.id), 3, "🔍", True),
+                (("milestone", self.milestone.id), 7, "🔍", True),
+                (("task", self.todo.id), 11, "📝", False),
+                (("task", self.doing.id), 11, "🔨", False),
+            )
+            for key, depth, mark, has_progress in rows:
+                with self.subTest(key=key):
+                    row = self.row(app, key)
+                    width = app.tree_controller.row_width(tree, depth)  # type: ignore[attr-defined]
+                    self.assertEqual(cell_len(row), width)
+                    self.assertTrue(row.endswith(mark))
+                    self.assertFalse(row.startswith(mark))
+                    self.assertEqual(cell_len(row) - cell_len(mark), width - 2)
+                    if has_progress:
+                        self.assertEqual(row.index("/"), width - 5)
+
+            app._apply_layout(design.EMOJI_MIN_WIDTH - 1)  # type: ignore[attr-defined]
+            app.refresh_all()  # type: ignore[attr-defined]
+            await pilot.pause()
+            fallback = self.row(app, ("task", self.todo.id))
+            fallback_width = app.tree_controller.row_width(tree, 11)  # type: ignore[attr-defined]
+            self.assertEqual(cell_len(fallback), fallback_width)
+            self.assertEqual(fallback[-2:], " ○")
+            self.assertFalse(fallback.startswith("○"))
+
     async def test_no_row_clips_cells_at_any_width(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(140, 40)) as pilot:

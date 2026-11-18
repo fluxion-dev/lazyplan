@@ -125,6 +125,17 @@ def list_annotations(port: DraftsPort, draft_id: int, status: str = "all") -> li
     return port.list_draft_annotations(draft_id, status)
 
 
+def annotation_counts(port: DraftsPort, draft_id: int) -> tuple[int, int]:
+    """Open and total annotation counts for one draft."""
+    _require_draft(port, draft_id)
+    return port.draft_annotation_counts(draft_id)
+
+
+def annotation_counts_map(port: DraftsPort) -> dict[int, tuple[int, int]]:
+    """Open and total annotation counts per draft."""
+    return port.draft_annotation_counts_map()
+
+
 def _reanchor(port: DraftsPort, draft: PlanDraft, document: PlanDocument, actor: str) -> None:
     """Track every live annotation into a revised document."""
     blocks = blocks_by_key(build_blocks(document))

@@ -413,6 +413,59 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(availability["promote-draft"])
         self.assertIsNotNone(availability["open-draft"])
 
+    async def test_sidebar_shows_a_moved_anchor_after_revision(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen", quote="Why")
+        drafts.submit(self.store, draft.id)
+        drafts.revise(
+            self.store,
+            draft.id,
+            document(why="A sharper Why."),
+            base_revision=1,
+            actor="agent",
+        )
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            detail = str(app.screen.query_one("#draft-annotation-detail").render())
+            self.assertIn("anchor moved", detail)
+            head = str(app.screen.query_one("#draft-head").render())
+            self.assertIn("review", head)
+            self.assertIn("r2", head)
+
+    async def test_sidebar_shows_an_agent_response(self) -> None:
+        draft = drafts.create(self.store, document())
+        annotation = drafts.annotate(self.store, draft.id, "plan:why", "question", "Why?")
+        drafts.respond(self.store, annotation.id, "Because", actor="agent")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            detail = str(app.screen.query_one("#draft-annotation-detail").render())
+            self.assertIn("addressed", detail)
+            self.assertIn("response: Because", detail)
+
+    async def test_block_level_annotation_from_focus(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.action_annotate()
+            await pilot.pause()
+            form = app.screen
+            form.query_one("#f-body", TextArea).text = "Whole block note"
+            form.query_one("#ok", Button).press()
+            await pilot.pause()
+            annotations = drafts.list_annotations(self.store, draft.id)
+            self.assertEqual(len(annotations), 1)
+            self.assertEqual(annotations[0].quote, "")
+            self.assertEqual((annotations[0].start_offset, annotations[0].end_offset), (0, 0))
+
     async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:

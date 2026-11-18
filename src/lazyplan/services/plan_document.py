@@ -145,7 +145,11 @@ def _dedupe(items: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(out)
 
 
-def _filled(port: PlanningPort, kind: str, fields: dict[str, str], path: str) -> dict[str, str]:
+def _filled(
+    port: PlanningPort | None, kind: str, fields: dict[str, str], path: str
+) -> dict[str, str]:
+    if port is None:
+        return fields
     try:
         return apply_template(kind, fields, port.db_path)
     except ValueError as exc:
@@ -153,8 +157,10 @@ def _filled(port: PlanningPort, kind: str, fields: dict[str, str], path: str) ->
 
 
 def _with_template(
-    port: PlanningPort, kind: str, explicit: tuple[str, ...], path: str
+    port: PlanningPort | None, kind: str, explicit: tuple[str, ...], path: str
 ) -> tuple[str, ...]:
+    if port is None:
+        return explicit
     try:
         defaults = template_criteria(kind, port.db_path)
     except (OSError, ValueError) as exc:
@@ -163,7 +169,7 @@ def _with_template(
 
 
 def _milestone(
-    port: PlanningPort,
+    port: PlanningPort | None,
     raw: Any,
     path: str,
     seen_milestones: set[str],
@@ -212,7 +218,7 @@ def _milestone(
     )
 
 
-def _task(port: PlanningPort, raw: Any, path: str, seen_tasks: set[str]) -> TaskDocument:
+def _task(port: PlanningPort | None, raw: Any, path: str, seen_tasks: set[str]) -> TaskDocument:
     item = _object(raw, path, _TASK_FIELDS)
     key = _key(item.get("key"), f"{path}.key")
     if key in seen_tasks:
@@ -230,6 +236,16 @@ def _task(port: PlanningPort, raw: Any, path: str, seen_tasks: set[str]) -> Task
 
 def validate_document(port: PlanningPort, raw: Any) -> PlanDocument:
     """Validate one JSON object and return the resolved document."""
+    return _validate(port, raw)
+
+
+def load_normalized(raw: Any) -> PlanDocument:
+    """Rebuild a stored document without applying templates again."""
+    return _validate(None, raw)
+
+
+def _validate(port: PlanningPort | None, raw: Any) -> PlanDocument:
+    """Validate one object, optionally filling template defaults."""
     document = _object(raw, "document", _TOP_FIELDS)
     if "plan" not in document:
         _fail("document", "plan is required")

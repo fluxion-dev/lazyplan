@@ -140,6 +140,33 @@ class DraftsServiceTest(unittest.TestCase):
         with self.assertRaises(KeyError):
             drafts.annotate(self.store, 999_999, "plan:why", "comment", "Body")
 
+    def test_create_keeps_the_plan_queue_empty(self) -> None:
+        drafts.create(self.store, document())
+        self.assertEqual(self.store.counts()["plans"], 0)
+        self.assertEqual(self.store.list_plans(), [])
+
+    def test_invalid_revision_does_not_write_a_snapshot(self) -> None:
+        draft = drafts.create(self.store, document())
+        with self.assertRaises(ValueError):
+            drafts.revise(
+                self.store,
+                draft.id,
+                {"plan": {"key": "demo-plan"}},
+                base_revision=1,
+            )
+        current = self.store.get_draft(draft.id)
+        self.assertIsNotNone(current)
+        assert current is not None
+        self.assertEqual(current.revision, 1)
+        self.assertEqual(len(self.store.list_draft_revisions(draft.id)), 1)
+
+    def test_failed_promotion_creates_no_plan(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
+        with self.assertRaisesRegex(ValueError, "open annotation"):
+            drafts.promote(self.store, draft.id)
+        self.assertEqual(self.store.counts()["plans"], 0)
+
     def test_revise_requires_the_base_and_returns_to_review(self) -> None:
         draft = drafts.create(self.store, document())
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen this")

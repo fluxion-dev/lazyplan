@@ -30,6 +30,10 @@ from ....core.entities import Status
 #: Emoji are only safe when the terminal has room for a two-cell mark.
 EMOJI_MIN_WIDTH = 80
 
+#: The tree row rail always reserves the emoji width, fallback included, so the
+#: progress column never shifts when a terminal loses emoji.
+RAIL_WIDTH = 2
+
 
 @dataclass(frozen=True)
 class StatusMark:
@@ -146,6 +150,7 @@ def cell_width(text: str) -> int:
 
 __all__ = [
     "EMOJI_MIN_WIDTH",
+    "RAIL_WIDTH",
     "STATUS_ANSI",
     "STATUS_EMOJI",
     "STATUS_FALLBACK",

@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
-from .status import cell_width
+from .status import RAIL_WIDTH, cell_width
 from .text import progress_text, truncate
 
 TITLE_MIN = 8
@@ -32,7 +32,7 @@ class StatSlot:
 SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 5, 0, "right"),
     # The right rail holds one mark: two cells for emoji, one for the fallback.
-    "state": StatSlot("state", 2, 1, "right"),
+    "state": StatSlot("state", RAIL_WIDTH, 1, "right"),
 }
 
 #: Slot priority per kind: the first slot that fits survives the narrowest row.

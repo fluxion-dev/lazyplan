@@ -173,6 +173,14 @@ paths, edge cases and non-goals, and assumptions stated so the human can correct
 them. Vague scope is rejected, not recorded. No row is written from unscouted
 ground, in any case, no exceptions.
 
+When a question is visual (a layout, an icon, an empty state), do not describe
+the alternatives only in words. Write a choices manifest with 2–12 image
+options, run `lpui choose --manifest choices.json` in the background, give the
+human the printed loopback URL, and read `selection.json` after the pick.
+Author the images yourself; the command only displays them. Fold the chosen
+option into `--why`, `--what`, or the task description — the selection file is
+input to the definition, not a plan row.
+
 ## Readability and scouting
 
 Write every plan why/what, milestone desc, and task desc for scanning: short

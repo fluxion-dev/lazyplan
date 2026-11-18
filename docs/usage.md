@@ -764,6 +764,34 @@ validates the document and prints the intended tree without writing.
 `feature`, `bugfix`, and `refactor` recipes are packaged skeletons with QA,
 refactoring, and documentation tasks. Edit the words, then apply the document.
 
+### Visual choices
+
+When an interview turns on a visual choice, put the alternatives in a manifest
+and serve the board on loopback:
+
+```bash
+lpui choose --manifest choices.json --open
+```
+
+```json
+{
+  "title": "Empty state",
+  "prompt": "Which one should ship?",
+  "options": [
+    {"id": "a", "label": "Compact", "image": "images/a.png"},
+    {"id": "b", "label": "Wide", "image": "images/b.png", "description": "More room"}
+  ]
+}
+```
+
+The command prints a `127.0.0.1` URL with a per-run token and the selection
+path. The page shows each image; one pick writes `selection.json` beside the
+manifest (`--out` changes it) with the option, label, notes, and time. It
+refuses to replace an existing selection unless `--force`, and `--port 0` picks
+a free port. Images resolve under the manifest directory. Run it in the
+background, give the human the URL, then read the selection file; the agent
+folds that choice into the plan.
+
 ### Context and claims
 
 ```bash

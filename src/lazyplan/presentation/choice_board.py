@@ -44,6 +44,7 @@ class ChoiceBoard:
         self._done = threading.Event()
         self._server = _BoardServer(("127.0.0.1", port), _Handler)
         self._server.board = self
+        self._started = False
         self._closed = False
 
     @property
@@ -57,6 +58,9 @@ class ChoiceBoard:
 
     def start(self) -> None:
         """Serve in a background thread; tests and the CLI both use this."""
+        if self._started:
+            return
+        self._started = True
         threading.Thread(
             target=self._server.serve_forever, name="choice-board", daemon=True
         ).start()
@@ -70,7 +74,8 @@ class ChoiceBoard:
         if self._closed:
             return
         self._closed = True
-        self._server.shutdown()
+        if self._started:
+            self._server.shutdown()
         self._server.server_close()
 
     def record(self, selection: choices.Selection) -> None:

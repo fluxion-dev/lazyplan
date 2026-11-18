@@ -111,6 +111,12 @@ class BoardPageTest(BoardCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, PNG)
 
+    def test_stopping_a_board_that_never_started_is_safe(self) -> None:
+        board = ChoiceBoard(self.manifest, self.selection, port=0)
+
+        board.stop()
+        board.stop()
+
     def test_page_is_self_contained_and_keyboard_ready(self) -> None:
         board = self.board()
 

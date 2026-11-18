@@ -51,6 +51,7 @@ where = ["src"]
 lazyplan = [
     "data/*.md",
     "data/*.json",
+    "data/*.html",
     "data/agents/*/*.md",
     "data/orchestrate/*.md",
     "data/recipes/*.json",

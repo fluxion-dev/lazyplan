@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 
+from lazyplan.presentation.shared import registry
 from lazyplan.services import drafts
 from lazyplan.store import Store
 
@@ -98,7 +99,6 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             app.select_row("draft", draft.id)
             await pilot.pause()
             app.action_toggle_status()
-            app.action_edit_selection()
             app.action_delete()
             app.action_add_criterion()
             await pilot.pause()
@@ -110,6 +110,44 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
             self.assertFalse(app.query_one("#plans-drafts").display)
+
+    async def test_e_opens_the_draft_screen(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.select_row("draft", draft.id)
+            await pilot.pause()
+            app.action_edit_selection()
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 2)
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+            body = str(app.screen.query_one("#draft-body").render())
+            self.assertIn("Demo plan", body)
+            self.assertIn("annotations:", body)
+            await pilot.press("escape")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+
+    async def test_enter_opens_the_draft_screen(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.select_row("draft", draft.id)
+            tree = app.query_one("#tree-drafts")
+            tree.focus()
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 2)
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+
+    async def test_palette_offers_open_draft_only_for_drafts(self) -> None:
+        draft_context = registry.Context(screen="tree", selected_kind="draft")
+        self.assertIsNone(registry.palette_context(draft_context)["open-draft"])
+        plan_context = registry.Context(screen="tree", selected_kind="plan", has_plan=True)
+        self.assertIsNotNone(registry.palette_context(plan_context)["open-draft"])
 
 
 if __name__ == "__main__":

@@ -126,6 +126,35 @@ Screen.short #dlg.form-tall TextArea {
     padding: 0 1;
 }
 
+#draft-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#draft-head {
+    height: auto;
+    min-height: 2;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#draft-scroll {
+    height: 1fr;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#draft-body {
+    height: auto;
+    padding: 0 1;
+}
+
 #source-head {
     height: auto;
     min-height: 2;

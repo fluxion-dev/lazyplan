@@ -74,6 +74,16 @@ CORE_ACTIONS: tuple[Action, ...] = (
         mcp_tool="plan_diff",
     ),
     _action(
+        "draft.open",
+        "Open plan draft",
+        context="selection",
+        surfaces=("tui", "cli", "mcp"),
+        route=("tree", "draft"),
+        palette_ids=("open-draft",),
+        cli_paths=("draft show",),
+        mcp_tool="draft_show",
+    ),
+    _action(
         "plan.dispatch",
         "Dispatch plan lanes",
         surfaces=("cli", "mcp"),

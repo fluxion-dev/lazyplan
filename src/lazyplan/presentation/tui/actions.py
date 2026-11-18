@@ -21,6 +21,7 @@ from .reference_actions import ReferenceMixin
 from .screens import (
     ConfirmScreen,
     CriterionScreen,
+    DraftScreen,
     ExportScreen,
     FilterPromptScreen,
     HelpScreen,
@@ -159,7 +160,7 @@ if _TEXTUAL_OK:
 
         def action_new_context(self) -> None:
             if self.selected is not None and self.selected[0] == "draft":
-                self.notify("open the draft to review or promote it", timeout=4)
+                self.action_open_draft()
                 return
             if self._cursor_is_root():
                 self.action_new_plan()
@@ -173,6 +174,17 @@ if _TEXTUAL_OK:
                 self.action_new_milestone()
                 return
             self.action_new_plan()
+
+        def action_open_draft(self) -> None:
+            """Open the selected plan draft in the review screen."""
+            if self.selected is None or self.selected[0] != "draft":
+                self.notify("select a plan draft first", timeout=4)
+                return
+            self.open_draft(self.selected[1])
+
+        def open_draft(self, draft_id: int) -> None:
+            """Push the draft review screen for one draft."""
+            self.push_screen(DraftScreen(self.store, draft_id))
 
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
@@ -310,7 +322,7 @@ if _TEXTUAL_OK:
                 return
             kind, oid = self.selected
             if kind == "draft":
-                self.notify("open the draft to review or promote it", timeout=4)
+                self.action_open_draft()
                 return
             full = self.store.get_full(kind, oid)
             if full is None:

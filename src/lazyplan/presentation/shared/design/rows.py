@@ -7,11 +7,14 @@ from typing import TYPE_CHECKING
 from ....core.entities import Status
 from ....core.kinds import LABEL_LETTERS, MILESTONE, PLAN, TASK
 from .row_stats import RowStats, render_stats, stats_layout
+from .status import cell_width, status_mark, status_state
 from .text import _escape_markup, repo_project_name, status_word, truncate
 
 if TYPE_CHECKING:
     from ....core.entities import Milestone, Plan, Task
     from ....core.ports.insights import InsightsPort
+
+    RepoMap = dict[tuple[str, int], list[dict]]
 
 DEFAULT_ROW_WIDTH = 80
 
@@ -34,15 +37,14 @@ def _label(kind: str, obj: Plan | Milestone | Task, store: InsightsPort | None, 
     return f"{status_word(obj.status, dot)} {_core(kind, obj, store)}"
 
 
-def _state_word(obj: Plan | Milestone | Task, attention: bool) -> str:
-    """One trailing word for a row that needs one; todo and done stay blank."""
-    if getattr(obj, "blocked", False):
-        return "blocked"
-    if attention:
-        return "review"
-    if obj.status == Status.DOING:
-        return "doing"
-    return ""
+def _row_state(obj: Plan | Milestone | Task, attention: bool, review: bool = False) -> str:
+    """One presentation state per row, never a trailing status word."""
+    return status_state(
+        obj.status,
+        blocked=bool(getattr(obj, "blocked", False)),
+        review=review,
+        attention=attention,
+    )
 
 
 def _render_row(
@@ -51,31 +53,52 @@ def _render_row(
     stats: RowStats,
     width: int | None,
     badge: str = "",
+    *,
+    attention: bool = False,
+    review: bool = False,
+    emoji: bool = True,
 ) -> str:
-    """Render one TUI row from the fixed word slots."""
+    """Render one TUI row: id, title, progress, and the right-rail mark."""
     _letter, title_attr = _CORE_SPEC[kind]
     id_part = f"{_letter}{obj.id}"
     title = getattr(obj, title_attr)
     if badge:
         title = f"{title} {badge}"
+    mark = status_mark(_row_state(obj, attention, review), emoji=emoji)
     prefix_rich = f"[dim]{id_part}[/] "
     prefix_plain = f"{id_part} "
     row_width = DEFAULT_ROW_WIDTH if width is None else width
-    layout = stats_layout(kind, row_width, len(prefix_plain))
+    layout = stats_layout(kind, row_width, cell_width(prefix_plain))
+    stats = RowStats(progress=stats.progress, state=mark)
     stats_rich, stats_plain = render_stats(stats, layout)
-    available = row_width - len(prefix_plain) - len(stats_plain)
-    title = truncate(title, available)
-    pad = " " * max(0, row_width - len(prefix_plain) - len(title) - len(stats_plain))
+    gap = 1 if layout else 0
+    available = row_width - cell_width(prefix_plain) - cell_width(stats_plain) - gap
+    title = truncate(title, max(0, available))
+    pad = " " * max(
+        gap,
+        row_width - cell_width(prefix_plain) - cell_width(title) - cell_width(stats_plain),
+    )
     style = "dim" if obj.status == Status.DONE else "bold"
     return f"{prefix_rich}[{style}]{_escape_markup(title)}[/]{pad}{stats_rich}"
 
 
-def plan_label(p: Plan, store: InsightsPort | None = None, dot: str = "plain") -> str:
-    """Canonical row label for a plan (plain text: CLI, tests)."""
+def plan_label(
+    p: Plan,
+    store: InsightsPort | None = None,
+    dot: str = "plain",
+    repos: RepoMap | None = None,
+) -> str:
+    """Canonical row label for a plan (plain text: CLI, tests).
+
+    Pass `repos` when labeling a list so one repo read serves every row.
+    """
     base = _label("plan", p, store, dot)
     if store is None:
         return base
-    names = [n for n in (repo_project_name(r) for r in store.effective_repos("plan", p.id)) if n]
+    linked = (
+        repos.get(("plan", p.id), []) if repos is not None else store.effective_repos("plan", p.id)
+    )
+    names = [n for n in (repo_project_name(r) for r in linked) if n]
     return f"{base} [{', '.join(names)}]" if names else base
 
 
@@ -86,10 +109,22 @@ def plan_row(
     width: int | None = None,
     attention: bool = False,
     worktrees: int = 0,
+    *,
+    review: bool = False,
+    emoji: bool = True,
 ) -> str:
-    """TUI plan row (Rich markup): id + title + count and state words."""
-    stats = RowStats(progress=progress, state=_state_word(p, attention))
-    return _render_row("plan", p, stats, width, badge="wt" if worktrees else "")
+    """TUI plan row (Rich markup): one status mark, id, title, and count."""
+    stats = RowStats(progress=progress)
+    return _render_row(
+        "plan",
+        p,
+        stats,
+        width,
+        badge="wt" if worktrees else "",
+        attention=attention,
+        review=review,
+        emoji=emoji,
+    )
 
 
 def milestone_label(s: Milestone, store: InsightsPort | None = None, dot: str = "plain") -> str:
@@ -103,10 +138,12 @@ def milestone_row(
     progress: tuple[int, int] | None = None,
     width: int | None = None,
     attention: bool = False,
+    *,
+    emoji: bool = True,
 ) -> str:
-    """TUI milestone row (Rich markup): id + title + count and state words."""
-    stats = RowStats(progress=progress, state=_state_word(s, attention))
-    return _render_row("milestone", s, stats, width)
+    """TUI milestone row (Rich markup): one status mark, id, title, and count."""
+    stats = RowStats(progress=progress)
+    return _render_row("milestone", s, stats, width, attention=attention, emoji=emoji)
 
 
 def task_label(t: Task, store: InsightsPort | None = None, dot: str = "plain") -> str:
@@ -124,7 +161,9 @@ def task_row(
     t: Task,
     width: int | None = None,
     attention: bool = False,
+    *,
+    emoji: bool = True,
 ) -> str:
-    """TUI task row (Rich markup): id + title + one state word."""
-    stats = RowStats(state=_state_word(t, attention))
-    return _render_row("task", t, stats, width)
+    """TUI task row (Rich markup): one status mark, id, and title."""
+    stats = RowStats()
+    return _render_row("task", t, stats, width, attention=attention, emoji=emoji)

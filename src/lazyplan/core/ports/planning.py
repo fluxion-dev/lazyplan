@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol
 
 from ..entities import Criterion, Milestone, Plan, PlanQuestion, PlanWorktree, Status, Task
@@ -230,6 +231,8 @@ class PlanningPort(
     ) -> None: ...
 
     def feed(self, limit: int = 20) -> list[dict]: ...
+
+    def events_by_prefix(self, prefixes: Sequence[str], limit: int = 100_000) -> list[dict]: ...
 
     def counts(self) -> dict[str, int]: ...
 

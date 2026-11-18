@@ -81,28 +81,22 @@ class FirstRunCase(unittest.TestCase):
             setup.ensure("list", args, self.repo, self.home, "1.0", interactive=False)
         findings.assert_not_called()
 
-    def test_json_first_run_never_prompts(self):
-        args = make_args(agents="claude", json=True)
-        with (
-            mock.patch.object(setup.setup_ui, "stdin_tty", return_value=True),
-            mock.patch.object(setup.sys.stderr, "isatty", return_value=True),
-            mock.patch.object(setup, "run_wizard") as wizard,
-            redirect_stderr(io.StringIO()),
+    def test_json_and_yes_first_runs_never_prompt(self):
+        for label, args in (
+            ("json", make_args(agents="claude", json=True)),
+            ("yes", make_args(agents="claude", yes=True)),
         ):
-            setup.ensure("ui", args, self.repo, self.home, "1.0")
-        wizard.assert_not_called()
-        self.assertTrue((self.home / ".claude/settings.json").is_file())
-
-    def test_yes_first_run_never_prompts(self):
-        args = make_args(agents="claude", yes=True)
-        with (
-            mock.patch.object(setup.setup_ui, "stdin_tty", return_value=True),
-            mock.patch.object(setup.sys.stderr, "isatty", return_value=True),
-            mock.patch.object(setup, "run_wizard") as wizard,
-            redirect_stderr(io.StringIO()),
-        ):
-            setup.ensure("ui", args, self.repo, self.home, "1.0")
-        wizard.assert_not_called()
+            with self.subTest(case=label):
+                with (
+                    mock.patch.object(setup.setup_ui, "stdin_tty", return_value=True),
+                    mock.patch.object(setup.sys.stderr, "isatty", return_value=True),
+                    mock.patch.object(setup, "run_wizard") as wizard,
+                    redirect_stderr(io.StringIO()),
+                ):
+                    setup.ensure("ui", args, self.repo, self.home, "1.0")
+                wizard.assert_not_called()
+                if label == "json":
+                    self.assertTrue((self.home / ".claude/settings.json").is_file())
 
     def test_pointer_rerun_is_idempotent(self):
         db = self.home / ".lazyplan/lazyplan.db"

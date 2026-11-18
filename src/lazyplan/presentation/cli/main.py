@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import argparse
 import io
+import os
 import sqlite3
 import sys
 from pathlib import Path
-
-from lazyplan.presentation import (
-    setup,
-)
+from typing import TYPE_CHECKING
 
 from ...core.errors import MaintenanceBackupError, MaintenanceBusy
 from ...infrastructure.environment import (
@@ -56,6 +54,9 @@ from .commands import (
 )
 from .parser import build_parser, package_version
 
+if TYPE_CHECKING:
+    from ...store import Store
+
 
 def _maybe_notice_update(args: argparse.Namespace) -> None:
     """One stderr notice from the shared cache; never touches the network.
@@ -67,6 +68,13 @@ def _maybe_notice_update(args: argparse.Namespace) -> None:
         return
     if getattr(args, "json", False) or getattr(args, "version", False) or porcelain.enabled(args):
         return
+    from ...infrastructure.environment import (
+        cached_latest,
+        detect,
+        notice_text,
+        update_check_enabled,
+    )
+
     if not update_check_enabled():
         return
     try:
@@ -80,6 +88,25 @@ def _maybe_notice_update(args: argparse.Namespace) -> None:
 
 def _dispatch_storeless(args: argparse.Namespace, actor: str) -> int | None:
     """Commands that must run before a database is opened; None means keep going."""
+    from .commands import (
+        _cmd_audit,
+        _cmd_brief,
+        _cmd_completion,
+        _cmd_context,
+        _cmd_doctor,
+        _cmd_hook,
+        _cmd_mcp,
+        _cmd_notes,
+        _cmd_plan_ready,
+        _cmd_plan_recipe,
+        _cmd_question_list,
+        _cmd_ref_list,
+        _cmd_review,
+        _cmd_setup,
+        _cmd_ship,
+        _cmd_upgrade,
+    )
+
     handlers = {
         "upgrade": _cmd_upgrade,
         "setup": _cmd_setup,
@@ -117,6 +144,8 @@ def _resolve_noun_group(args: argparse.Namespace) -> int | None:
     noun_group = getattr(args, "noun_group", None)
     if not noun_group:
         return None
+    from .commands import _GROUP_CMDS
+
     action = getattr(args, "action", None)
     canonical = _GROUP_CMDS.get((noun_group, action or ""))
     if canonical is None:
@@ -158,17 +187,22 @@ def _prepare_command(args: argparse.Namespace, actor: str, used_noun_form: bool)
     if args.cmd is None:
         # Bare `lpui` (or global flags only) opens the standard TUI.
         args.cmd = "ui"
-    try:
-        setup.ensure(
-            args.cmd,
-            args,
-            Path.cwd(),
-            version=package_version(),
-            interactive=_setup_interactive(args),
-        )
-    except (OSError, RuntimeError, ValueError) as exc:
-        # Setup must never break an agent call; the database still opens.
-        print(f"warning: setup skipped: {exc}", file=sys.stderr)
+    if not os.environ.get("LAZYPLAN_NO_SETUP"):
+        # Importing the setup package costs more than a read-only command; the
+        # documented skip switch is checked before that import.
+        from lazyplan.presentation import setup
+
+        try:
+            setup.ensure(
+                args.cmd,
+                args,
+                Path.cwd(),
+                version=package_version(),
+                interactive=_setup_interactive(args),
+            )
+        except (OSError, RuntimeError, ValueError) as exc:
+            # Setup must never break an agent call; the database still opens.
+            print(f"warning: setup skipped: {exc}", file=sys.stderr)
     early = _dispatch_storeless(args, actor)
     if early is not None:
         return early
@@ -183,6 +217,8 @@ def _prepare_command(args: argparse.Namespace, actor: str, used_noun_form: bool)
 
 def _run_command(store: Store, args: argparse.Namespace, actor: str) -> int:
     """Run the resolved handler with one error boundary."""
+    from .commands import _COMMANDS
+
     try:
         handler = _COMMANDS.get(args.cmd)
         if handler is None:
@@ -216,6 +252,8 @@ def main(argv: list[str] | None = None) -> int:
     code = _prepare_command(args, actor, used_noun_form)
     if code is not None:
         return code
+    from ...store import Store
+
     try:
         store = Store(args.db)
     except RuntimeError as exc:

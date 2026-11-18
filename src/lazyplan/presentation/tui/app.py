@@ -39,6 +39,7 @@ from ..shared.design import (
     EMPTY_PLAN_QUEUE_TITLE,
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
+    emoji_enabled,
     empty_state,
     remembered_icons,
     select_icons,
@@ -48,14 +49,17 @@ from .base import AppBase
 from .controllers.git_state import GitStateController
 from .controllers.health import HealthCheck, HealthController
 from .controllers.metrics import MetricsController
+from .controllers.notifications import NotificationLog
 from .controllers.setup import SetupController, WizardCheck
 from .controllers.tree import TreeController
 from .controllers.updates import UpdateController
 from .filters import FilterMixin
 from .launch import Restart, launch_notes, launch_update, relaunch, take_restart_notice
 from .metrics import MetricsSection
+from .notifications import NotificationMixin
 from .preview import PreviewMixin
-from .screens import ReleaseNotesScreen
+from .screens import NotificationLogScreen, ReleaseNotesScreen
+from .size import apply_classes, classes_for
 from .state import AppState
 from .theme import register_themes, remembered_theme
 from .tree import TreeMixin
@@ -74,6 +78,7 @@ if _TEXTUAL_OK:
         PreviewMixin,
         FilterMixin,
         ActionMixin,
+        NotificationMixin,
         AppBase,
     ):
         """Single-panel TUI: the plan tree."""
@@ -105,6 +110,7 @@ if _TEXTUAL_OK:
             Binding("m", "open_maintenance", "Maintain"),
             Binding("U", "update_prompt", "Update"),
             Binding("W", "release_notes", "Notes"),
+            Binding("L", "notification_log", "Log"),
         ]
         rev = reactive(0, init=False)
 
@@ -129,25 +135,22 @@ if _TEXTUAL_OK:
             if main is None:
                 return False
             available = self.size.width if width is None else width
-            narrow = available < 100
-            compact = available < 80
-            wide = available >= 120
-            changed = self._narrow is not narrow
-            self._narrow = narrow
-            self.state.compact = compact
-            self.state.wide = wide
-            main.set_class(narrow, "narrow")
-            main.set_class(compact, "compact")
-            main.set_class(wide, "wide")
+            tiers = classes_for(available)
+            emoji = emoji_enabled(available)
+            changed = self._narrow is not tiers.narrow or self.state.emoji != emoji
+            self._narrow = tiers.narrow
+            self.state.compact = tiers.compact
+            self.state.wide = tiers.wide
+            self.state.emoji = emoji
+            apply_classes(main, tiers, ("narrow", "compact", "wide"))
             panel = query_one_opt(self, "#panel", Vertical)
             if panel is not None:
-                panel.set_class(compact, "compact")
+                apply_classes(panel, tiers, ("compact",))
             metrics = query_one_opt(self, "#metrics", MetricsSection)
             if metrics is not None:
-                metrics.display = self.state.timeline_shown(narrow)
+                metrics.display = self.state.timeline_shown(tiers.narrow)
             screen = self.screen
-            screen.set_class(compact, "compact")
-            screen.set_class(wide, "wide")
+            apply_classes(screen, tiers, ("compact", "wide"))
             return changed
 
         def __init__(self, store: Store) -> None:
@@ -174,6 +177,7 @@ if _TEXTUAL_OK:
                 self._last_event_id = int(events[0]["id"])
             self._startup_notice: str = ""
             self._startup_notes: str = ""
+            self.notification_log = NotificationLog()
 
         def action_update_prompt(self) -> None:
             """Open the update screen for a known or cached newer release."""
@@ -184,14 +188,22 @@ if _TEXTUAL_OK:
             self.health_controller.prompt()
 
         def refresh_taskbar(self) -> None:
-            """Push the current update state into every visible taskbar."""
+            """Push the current update and log state into every visible taskbar."""
             latest = self.update_controller.latest
+            unread = self.notification_log.unread
             for screen in self.screen_stack:
                 try:
                     for bar in screen.query(Taskbar):
                         bar.set_latest(latest)
+                        bar.set_log_count(unread)
                 except Exception:  # noqa: BLE001 - a closing screen may race a poll
                     continue
+
+        def action_notification_log(self) -> None:
+            """Open the session notification log above the current screen."""
+            if isinstance(self.screen, NotificationLogScreen):
+                return
+            self.push_screen(NotificationLogScreen(self.notification_log))
 
         def action_open_setup(self) -> None:
             """Reopen the setup wizard from the palette or the S key."""
@@ -235,7 +247,10 @@ if _TEXTUAL_OK:
             """Textual stops Resize at the App; re-apply the shell after it."""
             await super()._on_resize(event)
             changed = self._apply_layout(event.size.width)
-            if self._mounted and changed:
+            if not self._mounted:
+                return
+            self.metrics_controller.refresh()
+            if changed:
                 self.call_after_refresh(self.refresh_all)
 
         def on_unmount(self) -> None:
@@ -251,7 +266,12 @@ if _TEXTUAL_OK:
             this guard, `d` or `s` pressed there would mutate the hidden main
             selection.
             """
-            if len(self.screen_stack) > 1 and action not in ("quit", "help", "update_prompt"):
+            if len(self.screen_stack) > 1 and action not in (
+                "quit",
+                "help",
+                "update_prompt",
+                "notification_log",
+            ):
                 return False
             return True
 
@@ -268,7 +288,7 @@ if _TEXTUAL_OK:
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
             if self._startup_notice:
-                self.notify(self._startup_notice, timeout=10)
+                self.notify_toast(self._startup_notice, timeout=10, source="startup")
             if self._startup_notes:
                 notes = self._startup_notes
                 self.call_after_refresh(lambda: self.push_screen(ReleaseNotesScreen(notes)))

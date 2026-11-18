@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 try:
-    from textual import on
+    from textual import events, on
     from textual.app import ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -27,6 +27,7 @@ from ...shared.export import (
 )
 from ...shared.render import render_plan_markdown
 from ..navigation import NAV_BINDINGS, NavigationMixin
+from ..size import apply_classes, classes_for
 from .forms import ConfirmScreen
 
 if TYPE_CHECKING:
@@ -72,10 +73,16 @@ if _TEXTUAL_OK:
 
         def on_mount(self) -> None:
             self.query_one("#dlg").border_title = "EXPORT"
-            width = self.app.size.width
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            self._apply_size(self.app.size.width)
             self.query_one("#export-path", Input).focus()
+
+        def _apply_size(self, width: int) -> None:
+            """Mirror the shell's compact and wide tiers."""
+            apply_classes(self, classes_for(width), ("compact", "wide"))
+
+        def on_resize(self, event: events.Resize) -> None:
+            """Re-apply the dialog tiers after a terminal resize."""
+            self._apply_size(event.size.width)
 
         def _title(self) -> str:
             base = f"Export P{self.plan_id}"

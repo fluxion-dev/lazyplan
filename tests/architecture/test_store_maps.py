@@ -79,7 +79,7 @@ def _bodies(root: Path = STORE) -> list[tuple[str, str, bool]]:
 
 
 #: Helpers that own the read; a one-line call to one of them is not a duplicate.
-SHARED_READERS = frozenset({"_grouped", "_indexed", "_text_map"})
+SHARED_READERS = frozenset({"_grouped", "_indexed", "_text_map", "_parent_counts"})
 
 
 def _delegates(body: list[ast.stmt]) -> bool:

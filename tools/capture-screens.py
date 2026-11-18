@@ -27,6 +27,7 @@ import subprocess
 import sys
 import tempfile
 from collections.abc import Awaitable, Callable, Iterable
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -1083,8 +1084,22 @@ def write_webp(png: Path) -> None:
 def convert(svg: Path, png: Path) -> None:
     if shutil.which("magick") is None:
         raise SystemExit("error: ImageMagick 7 (magick) is required")
-    subprocess.run(["magick", str(svg), "-strip", str(png)], check=True)
-    write_webp(png)
+    # One process writes both outputs: the PNG is the stripped render and the
+    # WebP is encoded from the same in-memory image, so the bytes match the
+    # previous two-command pipeline while saving a spawn and a decode.
+    subprocess.run(
+        [
+            "magick",
+            str(svg),
+            "-strip",
+            "-write",
+            str(png),
+            "-quality",
+            "82",
+            str(png.with_suffix(".webp")),
+        ],
+        check=True,
+    )
 
 
 def dimensions(png: Path) -> str:
@@ -1284,21 +1299,28 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
     ):
         shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
         FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)
-        for name in names:
-            scene = SCENES[name]
-            scene_dir = FIXTURE_ROOT / name
-            scene_dir.mkdir(parents=True, exist_ok=True)
-            store = scene.build(scene_dir)
-            svg = scene_dir / f"{name}.svg"
-            asyncio.run(scene.capture(store, svg))
-            patch_svg(svg)
-            png = out_dir / f"{name}.png"
-            out_dir.mkdir(parents=True, exist_ok=True)
-            convert(svg, png)
-            if keep_svg is not None:
-                shutil.copyfile(svg, keep_svg)
-            print(f"wrote {shown(png)} ({dimensions(png)})")
-            print(f"wrote {shown(png.with_suffix('.webp'))}")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        pending: list[tuple[Path, Future[None]]] = []
+        workers = min(4, os.cpu_count() or 1)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for name in names:
+                scene = SCENES[name]
+                scene_dir = FIXTURE_ROOT / name
+                scene_dir.mkdir(parents=True, exist_ok=True)
+                store = scene.build(scene_dir)
+                svg = scene_dir / f"{name}.svg"
+                asyncio.run(scene.capture(store, svg))
+                patch_svg(svg)
+                png = out_dir / f"{name}.png"
+                # Conversion is a separate process; overlap it with the next
+                # capture. The bytes are identical to converting inline.
+                pending.append((png, pool.submit(convert, svg, png)))
+                if keep_svg is not None:
+                    shutil.copyfile(svg, keep_svg)
+            for png, future in pending:
+                future.result()
+                print(f"wrote {shown(png)} ({dimensions(png)})")
+                print(f"wrote {shown(png.with_suffix('.webp'))}")
         hero_sources = {
             "lpui-control-room",
             "lpui-dispatch",

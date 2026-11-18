@@ -77,19 +77,17 @@ class PreviewDocumentTest(unittest.TestCase):
             "header\nmeta line\n## WHY\nbecause\n\nfooter",
         )
 
-    def test_section_headings_become_markdown_h2(self) -> None:
+    def test_heading_grammar_and_spacing(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
+
         body = build_preview("plan", self.plan.id, full).render_markdown()
         headings = [line for line in body.splitlines() if line.startswith("## ")]
         self.assertGreaterEqual(len(headings), 2)
         for heading in headings:
             self.assertEqual(heading, heading.upper())
 
-    def test_section_spacing_keeps_one_blank_between_sections(self) -> None:
-        full = self.store.get_full("plan", self.plan.id)
-        assert full is not None
-        lines = build_preview("plan", self.plan.id, full).render_markdown().splitlines()
+        lines = body.splitlines()
         self.assertNotEqual(lines[0], "")
         self.assertNotEqual(lines[-1], "")
         self.assertFalse(
@@ -105,9 +103,6 @@ class PreviewDocumentTest(unittest.TestCase):
                 self.assertEqual(lines[index - 1], "")
             self.assertNotEqual(lines[index + 1], "")
 
-    def test_plain_render_keeps_the_markdown_heading_grammar(self) -> None:
-        full = self.store.get_full("plan", self.plan.id)
-        assert full is not None
         text = build_preview("plan", self.plan.id, full).render()
         self.assertIn("## MILESTONES 1", text)
         self.assertNotIn("[on $lp-surface-raised]", text)
@@ -366,25 +361,34 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertNotIn(f"C{criteria[0].id}", acceptance)
         self.assertEqual(acceptance.count("- milestone criterion"), 3)
 
-    def test_child_rows_use_words_not_glyphs(self) -> None:
+    def test_child_rows_use_one_state_mark_not_a_word(self) -> None:
         full = self.store.get_full("plan", self.plan.id)
         assert full is not None
         text = build_preview("plan", self.plan.id, full).render_markdown()
         for icon in ("○", "◐", "●", "◈", "◇", "▹", "✓", "✗", "—", "▰", "▱"):
             self.assertNotIn(icon, text)
 
-    def test_task_rows_carry_one_state_word(self) -> None:
+    def test_task_rows_carry_one_state_mark(self) -> None:
         self.store.set_status_raw("task", self.task.id, Status.DOING)
         full = self.store.get_full("milestone", self.milestone.id)
         assert full is not None
         text = build_preview("milestone", self.milestone.id, full).render_markdown()
-        self.assertIn(f"- T{self.task.id}  Task title · doing", text)
+        self.assertIn(f"- T{self.task.id}  Task title · 🔨", text)
+        self.assertNotIn("· doing", text)
 
         self.store.set_blocked(self.task.id, True, "waiting", actor="t")
         full = self.store.get_full("milestone", self.milestone.id)
         assert full is not None
         text = build_preview("milestone", self.milestone.id, full).render_markdown()
-        self.assertIn(f"- T{self.task.id}  Task title · blocked", text)
+        self.assertIn(f"- T{self.task.id}  Task title · 🚧", text)
+        self.assertNotIn("· blocked", text)
+
+    def test_narrow_preview_uses_single_cell_fallbacks(self) -> None:
+        self.store.set_status_raw("task", self.task.id, Status.DOING)
+        full = self.store.get_full("milestone", self.milestone.id)
+        assert full is not None
+        text = build_preview("milestone", self.milestone.id, full, emoji=False).render_markdown()
+        self.assertIn(f"- T{self.task.id}  Task title · ◐", text)
 
     def test_acceptance_rows_keep_plain_prose(self) -> None:
         criterion = self.store.add_criteria("task", self.task.id, "Run `pytest` in the repo")
@@ -406,8 +410,8 @@ class PreviewDocumentTest(unittest.TestCase):
         heading = next(index for index, line in enumerate(lines) if line.startswith("## TASKS"))
         rows = [line for line in lines[heading + 1 :] if line.startswith("- ")]
         self.assertEqual(len(rows), 2)
-        self.assertEqual(rows[0], f"- T{self.task.id}  Task title")
-        self.assertEqual(rows[1], f"- T{second.id}  Second task")
+        self.assertEqual(rows[0], f"- T{self.task.id}  Task title · 📝")
+        self.assertEqual(rows[1], f"- T{second.id}  Second task · 📝")
         text = "\n".join(rows)
         self.assertNotIn("Task details", text)
         self.assertNotIn("Second details", text)
@@ -468,7 +472,7 @@ class PreviewDocumentTest(unittest.TestCase):
         self.assertEqual(len(head), 2)
         self.assertIn(f"M{task['milestone_id']}", text)
         self.assertIn(f"T{self.task.id}", text)
-        self.assertEqual(head[1], f"[dim]T{self.task.id} · M{task['milestone_id']} · todo[/]")
+        self.assertEqual(head[1], f"[dim]T{self.task.id} · M{task['milestone_id']} · 📝[/]")
         self.assertNotIn("▹", text)
         self.assertNotIn("◈", text)
         self.assertIn("## DETAILS", text)
@@ -664,21 +668,17 @@ class PreviewMarkdownTest(unittest.IsolatedAsyncioTestCase):
                 panel = app.query_one("#preview", PreviewPanel)
                 body = app.query_one("#preview-body", Markdown)
                 for href in ("https://example.com/doc", "http://example.com/doc"):
-                    with (
-                        mock.patch.object(app, "open_url") as opener,
-                        mock.patch.object(app, "notify") as notify,
-                    ):
+                    before = len(app.notification_log)
+                    with mock.patch.object(app, "open_url") as opener:
                         panel._open_link(Markdown.LinkClicked(body, href))
                         opener.assert_called_once_with(href)
-                        notify.assert_called_once()
+                    self.assertEqual(len(app.notification_log), before + 1)
                 for href in ("file:///etc/passwd", "javascript:alert(1)"):
-                    with (
-                        mock.patch.object(app, "open_url") as opener,
-                        mock.patch.object(app, "notify") as notify,
-                    ):
+                    before = len(app.notification_log)
+                    with mock.patch.object(app, "open_url") as opener:
                         panel._open_link(Markdown.LinkClicked(body, href))
                         opener.assert_not_called()
-                        notify.assert_called_once()
+                    self.assertEqual(len(app.notification_log), before + 1)
 
 
 if __name__ == "__main__":

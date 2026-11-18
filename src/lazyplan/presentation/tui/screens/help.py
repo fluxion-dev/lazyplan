@@ -17,6 +17,7 @@ try:
         Button,
         Input,
         Label,
+        Markdown,
         OptionList,
         Static,
     )
@@ -29,6 +30,12 @@ except ImportError:  # pragma: no cover
 from ...shared.design import HELP_TEXT
 from ...shared.palette import Command, matching
 from .base import _Form, _row
+
+STATUS_HELP = """
+STATUS
+  📝 todo · 🔨 doing · 🔍 review · 🚧 blocked · ✅ done
+  narrow or ASCII terminals show ○ ◐ ? ! ●
+"""
 
 SETUP_HELP = """
 SETUP
@@ -46,7 +53,7 @@ if _TEXTUAL_OK:
         """Shared help text overlay; same source as `lpui help`."""
 
         HELP = HELP_TEXT
-        EXTRA = SETUP_HELP
+        EXTRA = STATUS_HELP + SETUP_HELP
         dialog_title = "HELP"
 
         def on_mount(self) -> None:
@@ -55,12 +62,16 @@ if _TEXTUAL_OK:
             help_panel.border_title = self.dialog_title
 
         def compose(self) -> ComposeResult:
-            body = f"{self.HELP.rstrip()}\n{self.EXTRA}" if self.EXTRA else self.HELP
             with Vertical(id="help"):
-                with VerticalScroll(id="help-scroll"):
-                    yield Static(body, markup=False)
+                yield from self._content()
                 with _row():
                     yield Button("Close", id="cancel")
+
+        def _content(self) -> ComposeResult:
+            """The scrollable body; read-only overlays swap this in place."""
+            body = f"{self.HELP.rstrip()}\n{self.EXTRA}" if self.EXTRA else self.HELP
+            with VerticalScroll(id="help-scroll"):
+                yield Static(body, markup=False)
 
         @on(Button.Pressed, "#cancel")
         def _close(self) -> None:
@@ -77,10 +88,34 @@ if _TEXTUAL_OK:
             self.HELP = text  # type: ignore[misc]
 
     class ReleaseNotesScreen(TextScreen):
-        """Read-only, scrollable release notes overlay."""
+        """Read-only release notes overlay rendered as Markdown."""
 
         def __init__(self, text: str) -> None:
             super().__init__("RELEASE NOTES", text)
+
+        def _content(self) -> ComposeResult:
+            with VerticalScroll(id="notes-scroll"):
+                yield Markdown(self.HELP, id="notes-body", open_links=False)
+
+        def on_mount(self) -> None:
+            super().on_mount()
+            self.call_after_refresh(self._focus_notes)
+
+        def _focus_notes(self) -> None:
+            """Keep arrow keys and page keys scrolling the notes, not the Close row."""
+            self.query_one("#notes-scroll", VerticalScroll).focus()
+
+        def on_markdown_link_clicked(self, event: Markdown.LinkClicked) -> None:
+            """Open a note link in the browser without breaking the overlay."""
+            event.stop()
+            try:
+                self.app.open_url(event.href)
+            except Exception as exc:  # noqa: BLE001 - a missing browser cannot crash the screen
+                self.app.notify(
+                    f"could not open {event.href}: {exc}",
+                    severity="warning",
+                    source="notes",
+                )
 
     class PaletteScreen(_Form):
         """Modal command palette: grouped sections, live filter, context rules."""

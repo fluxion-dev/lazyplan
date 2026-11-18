@@ -20,6 +20,8 @@ try:
     from lazyplan.presentation.tui.widgets.taskbar import (
         Taskbar,
         badge_start,
+        log_chip,
+        log_span,
         taskbar_markup,
         version_text,
     )
@@ -49,21 +51,20 @@ def plain(markup: str) -> str:
 
 
 class VersionTextTest(unittest.TestCase):
-    def test_running_version_is_prefixed_once(self) -> None:
-        self.assertEqual(version_text("0.47.0"), "v0.47.0")
-        self.assertEqual(version_text("v0.47.0"), "v0.47.0")
-
-    def test_a_newer_release_adds_an_arrow(self) -> None:
-        self.assertEqual(version_text("0.47.0", "0.48.0"), "v0.47.0 → v0.48.0")
-
-    def test_equal_or_older_cache_keeps_the_running_version(self) -> None:
-        self.assertEqual(version_text("0.47.0", "0.47.0"), "v0.47.0")
-        self.assertEqual(version_text("0.47.0", "0.46.0"), "v0.47.0")
-        self.assertEqual(version_text("0.47.0", "not-a-version"), "v0.47.0")
-
-    def test_an_empty_running_version_renders_nothing(self) -> None:
-        self.assertEqual(version_text(""), "")
-        self.assertEqual(version_text("  "), "")
+    def test_version_text_matrix(self) -> None:
+        cases = (
+            (("0.47.0",), "v0.47.0"),
+            (("v0.47.0",), "v0.47.0"),
+            (("0.47.0", "0.48.0"), "v0.47.0 → v0.48.0"),
+            (("0.47.0", "0.47.0"), "v0.47.0"),
+            (("0.47.0", "0.46.0"), "v0.47.0"),
+            (("0.47.0", "not-a-version"), "v0.47.0"),
+            (("",), ""),
+            (("  ",), ""),
+        )
+        for args, expected in cases:
+            with self.subTest(args=args):
+                self.assertEqual(version_text(*args), expected)
 
     def test_the_badge_starts_at_the_right_edge(self) -> None:
         line = taskbar_markup(" ? help", running="0.47.0", width=40)
@@ -72,7 +73,7 @@ class VersionTextTest(unittest.TestCase):
 
 
 class TaskbarMarkupTest(unittest.TestCase):
-    def test_the_line_fills_the_width_and_ends_with_the_badge(self) -> None:
+    def test_markup_matrix(self) -> None:
         line = taskbar_markup(
             " ? help · c commands",
             running="0.47.0",
@@ -84,8 +85,7 @@ class TaskbarMarkupTest(unittest.TestCase):
         self.assertTrue(text.endswith("v0.47.0 → v0.48.0"))
         self.assertIn("help", text)
 
-    def test_health_sits_left_of_the_version(self) -> None:
-        text = plain(
+        health = plain(
             taskbar_markup(
                 " ? help",
                 health=" · health 2 issues",
@@ -93,23 +93,75 @@ class TaskbarMarkupTest(unittest.TestCase):
                 width=60,
             )
         )
-        self.assertLess(text.index("health"), text.index("v0.47.0"))
+        self.assertLess(health.index("health"), health.index("v0.47.0"))
 
-    def test_a_narrow_bar_keeps_the_version_and_drops_hints(self) -> None:
-        text = plain(
+        narrow = plain(
             taskbar_markup(
                 " ? help · c commands · / filter",
                 running="0.47.0",
                 width=24,
             )
         )
-        self.assertTrue(text.endswith("v0.47.0"))
-        self.assertNotIn("filter", text)
-        self.assertLessEqual(len(text), 24)
+        self.assertTrue(narrow.endswith("v0.47.0"))
+        self.assertNotIn("filter", narrow)
+        self.assertLessEqual(len(narrow), 24)
 
     def test_no_version_keeps_the_hints_untouched(self) -> None:
         line = taskbar_markup(" ? help", running="", width=40)
         self.assertEqual(plain(line), " ? help")
+
+
+class LogChipTest(unittest.TestCase):
+    def test_an_information_only_log_shows_no_chip(self) -> None:
+        self.assertEqual(log_chip(0), "")
+        self.assertEqual(log_chip(-1), "")
+
+    def test_an_unread_count_names_the_log(self) -> None:
+        self.assertEqual(plain(log_chip(2)), " log 2")
+
+    def test_the_chip_sits_left_of_health_and_the_version(self) -> None:
+        text = plain(
+            taskbar_markup(
+                " ? help",
+                health=" · health 1 issue",
+                running="0.47.0",
+                log=log_chip(2),
+                width=60,
+            )
+        )
+        self.assertLess(text.index("log 2"), text.index("health"))
+        self.assertLess(text.index("health"), text.index("v0.47.0"))
+
+    def test_the_log_span_covers_the_chip_columns(self) -> None:
+        log = log_chip(3)
+        text = plain(
+            taskbar_markup(
+                " ? help",
+                health=" · health 1 issue",
+                running="0.47.0",
+                log=log,
+                width=60,
+            )
+        )
+        start, end = log_span(
+            log=log,
+            health=" · health 1 issue",
+            running="0.47.0",
+            width=60,
+        )
+        self.assertEqual(text[start:end], " log 3")
+        self.assertEqual(
+            badge_start(
+                health=" · health 1 issue",
+                running="0.47.0",
+                log=log,
+                width=60,
+            ),
+            start,
+        )
+
+    def test_no_chip_has_an_empty_span(self) -> None:
+        self.assertEqual(log_span(running="0.47.0", width=60), (0, 0))
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -258,3 +310,61 @@ class TaskbarPilotTest(unittest.IsolatedAsyncioTestCase):
             text = str(app.query_one("#hints", Taskbar).render())
             self.assertNotIn("→", text)
             self.assertTrue(text.endswith(f"v{package_version()}"))
+
+    async def test_a_warning_chips_the_bar_and_information_does_not(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                bar = app.query_one("#hints", Taskbar)
+                app.notify("saved")
+                await pilot.pause()
+                self.assertNotIn("log ", str(bar.render()))
+                self.assertEqual(bar.log_count, 0)
+                app.notify("careful", severity="warning")
+                await pilot.pause()
+                self.assertIn("log 1", str(bar.render()))
+                self.assertEqual(bar.log_count, 1)
+
+    async def test_reading_the_log_clears_the_chip(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.notify("broke", severity="error")
+                await pilot.pause()
+                self.assertEqual(app.query_one("#hints", Taskbar).log_count, 1)
+                app.notification_log.mark_read()
+                app.refresh_taskbar()
+                await pilot.pause()
+                self.assertEqual(app.query_one("#hints", Taskbar).log_count, 0)
+                self.assertNotIn("log ", str(app.query_one("#hints", Taskbar).render()))
+
+    async def test_a_warning_chips_every_visible_bar(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.push_screen(PlanDiffScreen(EMPTY_DIFF))
+                await pilot.pause()
+                app.notify("careful", severity="warning")
+                await pilot.pause()
+                main = app.screen_stack[0].query_one("#hints", Taskbar)
+                diff = app.screen.query_one("#plan-diff-hints", Taskbar)
+                self.assertEqual(main.log_count, 1)
+                self.assertEqual(diff.log_count, 1)
+                self.assertIn("log 1", str(diff.render()))
+
+    async def test_clicking_the_log_chip_does_not_open_updates(self) -> None:
+        with mock.patch.dict(os.environ, {"LAZYPLAN_NO_UPDATE_CHECK": "1"}):
+            app = create_app(self.db)
+            async with app.run_test(size=(120, 40)) as pilot:
+                await pilot.pause()
+                app.notify("broke", severity="error")
+                await pilot.pause()
+                bar = app.query_one("#hints", Taskbar)
+                column = bar._log_start + 1
+                with mock.patch.object(app, "action_update_prompt") as updates:
+                    await pilot.click(bar, offset=(column, 0))
+                    await pilot.pause()
+                    updates.assert_not_called()

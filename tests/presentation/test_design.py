@@ -13,9 +13,11 @@ from lazyplan.presentation.shared import help as help_mod
 from lazyplan.store import Store
 
 try:
+    from rich.cells import cell_len
     from rich.text import Text
 except ImportError:  # pragma: no cover - stdlib-only interpreter
     Text = None  # type: ignore[assignment,misc]
+    cell_len = len  # type: ignore[assignment]
 
 
 class TestDesignSystem(unittest.TestCase):
@@ -60,70 +62,67 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(design.task_label(t, dot="ansi").startswith("\x1b[90m○\x1b[0m T3"))
         self.assertNotIn("\x1b[", design.plan_label(p))
 
-    def test_rich_rows_for_tui(self):
+    def test_rich_rows_end_with_one_emoji_per_state(self):
         s = Milestone(id=2, plan_id=1, title="S")
+        self.assertTrue(design.milestone_row(s).endswith("📝"))
         self.assertTrue(design.milestone_row(s).startswith("[dim]M2[/] "))
         self.assertIn("[bold]S[/]", design.milestone_row(s))
-        self.assertNotIn("○", design.milestone_row(s))
         t = Task(id=3, milestone_id=2, title="T")
+        self.assertTrue(design.task_row(t).endswith("📝"))
         self.assertTrue(design.task_row(t).startswith("[dim]T3[/] "))
-        self.assertNotIn("⬜", design.task_row(t))
         p = Plan(id=1, name="N")
+        self.assertTrue(design.plan_row(p).endswith("📝"))
         self.assertTrue(design.plan_row(p).startswith("[dim]P1[/] "))
-        self.assertNotIn("⬜", design.plan_row(p))
+        for row in (design.milestone_row(s), design.task_row(t), design.plan_row(p)):
+            self.assertNotIn("📝 [dim]", row)
+            for glyph in ("○", "◐", "●", "?", "!", "⬜"):
+                self.assertNotIn(glyph, row)
 
-    def test_task_row_hides_claim_and_blocked_detail(self):
-        t = Task(id=3, milestone_id=2, title="T")
-        row = design.task_row(t)
-        self.assertIn("T3", row)
-        self.assertIn("[bold]T[/]", row)
-        self.assertNotIn("⚑", row)
-        self.assertNotIn("◉", row)
-        self.assertNotIn("blocked", row)
+    def test_rich_rows_fall_back_to_single_cell_glyphs(self):
+        doing = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
+        row = design.task_row(doing, emoji=False)
+        self.assertTrue(row.startswith("[dim]T3[/] "))
+        self.assertTrue(row.endswith("◐"))
+        self.assertNotIn("🔨", row)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_reads_as_id_title_and_words(self):
+    def test_task_row_reads_as_one_mark_id_and_title(self):
         t = Task(id=3, milestone_id=2, title="Compact title")
-
         plain = Text.from_markup(design.task_row(t, width=80)).plain
 
-        self.assertEqual(plain.rstrip(), "T3 Compact title")
-        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!"):
+        self.assertTrue(plain.startswith("T3 Compact title"))
+        self.assertTrue(plain.endswith("📝"))
+        for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!", "doing", "blocked"):
             self.assertNotIn(stat, plain)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_marks_attention_with_one_word(self):
+    def test_task_row_marks_attention_with_review_emoji(self):
         t = Task(id=3, milestone_id=2, title="Compact title")
 
         plain = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
 
-        self.assertTrue(plain.rstrip().endswith("review"))
-        self.assertIn("T3 Compact title", plain)
-        self.assertEqual(plain.count("review"), 1)
+        self.assertTrue(plain.startswith("T3 Compact title"))
+        self.assertTrue(plain.endswith("🔍"))
+        self.assertNotIn("review", plain)
         self.assertNotIn("!", plain)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_truncates_to_the_row_width(self):
+    def test_task_row_width_budget(self):
         t = Task(id=3, milestone_id=2, title="A very long task title that will not fit")
-
         for width in (12, 20, 33, 80):
             with self.subTest(width=width):
                 plain = Text.from_markup(design.task_row(t, width=width)).plain
-                self.assertEqual(len(plain), width)
+                self.assertEqual(cell_len(plain), width)
                 self.assertIn("T3", plain)
-
         narrow = Text.from_markup(design.task_row(t, width=20)).plain
         self.assertIn("…", narrow)
 
-    @unittest.skipUnless(Text is not None, "rich not installed")
-    def test_task_row_gives_the_freed_slots_to_the_title(self):
         title = "A title long enough to be cut by the old slots"
-        t = Task(id=3, milestone_id=2, title=title)
-
-        plain = Text.from_markup(design.task_row(t, width=60)).plain
-
-        self.assertIn(title, plain)
-        self.assertNotIn("…", plain)
+        wide = Text.from_markup(
+            design.task_row(Task(id=3, milestone_id=2, title=title), width=60)
+        ).plain
+        self.assertIn(title, wide)
+        self.assertNotIn("…", wide)
 
     def test_task_label_keeps_blocked_and_claim_detail(self):
         p = self.store.add_plan("P")
@@ -136,20 +135,30 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(label.startswith("○ T"))
         self.assertIn("[blocked]", label)
 
-    def test_rich_rows_show_doing_as_a_word(self):
+    def test_rich_rows_show_doing_as_one_emoji(self):
         p = Plan(id=1, name="N", status=Status.DOING)
         s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)
         t = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
         for row in (design.plan_row(p), design.milestone_row(s), design.task_row(t)):
-            self.assertTrue(row.rstrip().endswith("doing"))
+            self.assertTrue(row.endswith("🔨"))
+            self.assertFalse(row.startswith("🔨"))
+            self.assertNotIn("doing", row)
             self.assertNotIn("◐", row)
+
+    def test_plan_review_panel_reads_review_and_done_tasks_read_done(self):
+        done_plan = Plan(id=4, name="Finished", status=Status.DONE)
+        done_task = Task(id=5, milestone_id=1, title="Finished task", status=Status.DONE)
+
+        self.assertTrue(design.plan_row(done_plan, review=True).endswith("🔍"))
+        self.assertTrue(design.task_row(done_task).endswith("✅"))
+        self.assertTrue(design.task_row(done_task, emoji=False).endswith("●"))
 
     def test_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")
         row = design.plan_row(p, progress=(3, 7), width=24)
         self.assertIn("…", row)
         self.assertNotIn("▰", row)
-        self.assertNotIn("title", row)  # truncated before the last word
+        self.assertNotIn("title", row)
         full = design.plan_row(p, progress=(3, 7), width=80)
         self.assertIn("A very long plan title", full)
         self.assertIn("3/7", full)
@@ -163,17 +172,19 @@ class TestDesignSystem(unittest.TestCase):
         width = 80
         first = Text.from_markup(design.plan_row(p, progress=(3, 7), width=width)).plain
         second = Text.from_markup(
-            design.plan_row(
-                p,
-                progress=(3, 7),
-                attention=True,
-                width=width,
-            )
+            design.plan_row(p, progress=(3, 7), attention=True, width=width)
         ).plain
-
-        self.assertEqual(len(first), width)
-        self.assertEqual(len(second), width)
+        self.assertEqual(cell_len(first), width)
+        self.assertEqual(cell_len(second), width)
         self.assertEqual(first.index("3/7"), second.index("3/7"))
+
+    def test_plan_row_marks_a_registered_worktree_and_escapes(self):
+        p = Plan(id=1, name="Plan")
+        self.assertIn("wt", design.plan_row(p, worktrees=1, width=80))
+        self.assertNotIn("wt", design.plan_row(p, worktrees=0, width=80))
+        escaped = design.plan_row(Plan(id=1, name="Ray [old]"), width=80)
+        self.assertIn(r"[bold]Ray \[old][/]", escaped)
+        self.assertNotIn("TODO", escaped)
 
     def test_no_criteria_progress_in_labels(self):
         p = self.store.add_plan("P")
@@ -184,17 +195,6 @@ class TestDesignSystem(unittest.TestCase):
         label = design.plan_label(p, self.store)
         self.assertEqual(label, "○ P1 P")
         self.assertNotRegex(label, r"\[\d+/\d+✓\]")
-
-    def test_plan_row_marks_a_registered_worktree(self):
-        p = Plan(id=1, name="Plan")
-        self.assertIn("wt", design.plan_row(p, worktrees=1, width=80))
-        self.assertNotIn("wt", design.plan_row(p, worktrees=0, width=80))
-
-    def test_plan_row_escapes_title(self):
-        p = Plan(id=1, name="Ray [old]")
-        row = design.plan_row(p, width=80)
-        self.assertIn(r"[bold]Ray \[old][/]", row)
-        self.assertNotIn("TODO", row)
 
     def test_cli_doing_row_stays_static(self):
         p = self.store.add_plan("P")
@@ -286,7 +286,8 @@ class TestDesignSystem(unittest.TestCase):
         p = Plan(id=1, name="N")
         row = design.plan_row(p, progress=(2, 5), attention=True)
         self.assertIn("2/5", row)
-        self.assertIn("review", row)
+        self.assertIn("🔍", row)
+        self.assertNotIn("review", row)
         self.assertNotIn("!", row)
         self.assertNotIn("1c", row)
         self.assertNotIn("PR", row)
@@ -304,7 +305,8 @@ class TestDesignSystem(unittest.TestCase):
         hot = design.task_row(t, attention=True)
         self.assertNotIn("PR", bare)
         self.assertNotIn("1c", bare)
-        self.assertIn("review", hot)
+        self.assertIn("🔍", hot)
+        self.assertNotIn("review", hot)
         self.assertNotIn("!", hot)
 
     def test_repo_project_name_prefers_remote(self):

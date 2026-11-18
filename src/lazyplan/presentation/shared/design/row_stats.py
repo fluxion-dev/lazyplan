@@ -1,10 +1,10 @@
-"""Fixed-width word slots for tree rows.
+"""Fixed-width slots for tree rows.
 
-The row renderer keeps the title flexible and places counts and state words in
-fixed right-aligned slots. Missing values reserve blanks, so the stats block
-start and right edge do not move when a row changes state. ``stats_layout``
-chooses the visible slots from the row width and kind; it never depends on
-state.
+The row renderer keeps the title flexible and reserves fixed right-aligned
+slots for progress and the status rail. The status mark owns the last two
+cells of the row, so the ID and title lead and the state stays in one column.
+``stats_layout`` chooses the visible slots from the row width and kind; it
+never depends on the mark or the emoji mode.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import lru_cache
 
+from .status import RAIL_WIDTH, cell_width
 from .text import progress_text, truncate
 
 TITLE_MIN = 8
@@ -30,7 +31,8 @@ class StatSlot:
 
 SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 5, 0, "right"),
-    "state": StatSlot("state", 7, 1, "right"),
+    # The right rail holds one mark: two cells for emoji, one for the fallback.
+    "state": StatSlot("state", RAIL_WIDTH, 1, "right"),
 }
 
 #: Slot priority per kind: the first slot that fits survives the narrowest row.
@@ -43,7 +45,7 @@ KIND_SLOTS: dict[str, tuple[str, ...]] = {
 
 @dataclass(frozen=True)
 class RowStats:
-    """Word values rendered into the fixed tree row slots."""
+    """One row's fixed slots: progress count and the right-rail mark."""
 
     progress: tuple[int, int] | None = None
     state: str = ""
@@ -72,11 +74,15 @@ def _slot_text(stats: RowStats, key: str) -> str:
     if key == "progress":
         done, total = stats.progress or (0, 0)
         return truncate(progress_text(done, total), SLOTS[key].width)
-    return truncate(stats.state, SLOTS[key].width)
+    if key == "state":
+        return stats.state
+    return ""
 
 
 def _aligned(text: str, slot: StatSlot) -> str:
-    return text.rjust(slot.width) if slot.align == "right" else text.ljust(slot.width)
+    """Pad to the slot in display cells, so an emoji keeps a two-cell rail."""
+    gap = " " * max(0, slot.width - cell_width(text))
+    return gap + text if slot.align == "right" else text + gap
 
 
 def _slot_markup(key: str, aligned: str) -> str:

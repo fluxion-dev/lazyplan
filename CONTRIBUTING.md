@@ -56,6 +56,25 @@ the failing unittest module names.
 Fix failures rather than editing the scripts around them. If you add a module,
 add tests and type annotations with it.
 
+## Performance
+
+`tools/perf_bench.py --check` is the performance gate. It builds a deterministic
+journal in a temp directory and holds exact query ceilings for the tree, list,
+show, export, audit, fingerprint, and TUI paint/reconcile/expand paths, plus
+cold CLI startup. Wall ceilings stay generous so runner variance does not fail
+a pull request.
+
+When you change a measured path:
+
+1. Run `python tools/perf_bench.py --repeat 3` before and after, and put both
+   numbers in the commit message and the plan note.
+2. Lower a budget only to the measured ceiling. A new metric needs a budget
+   entry in the same commit.
+3. For `site/` or either capture tool, run `python tools/time_phases.py --check`
+   and keep the PNG/WebP bytes identical; report the phase numbers.
+
+Do not trade a contract, determinism, or error handling for a number.
+
 ## Screenshots and the UX review board
 
 Two capture tools build every screenshot from deterministic fixtures — fixed
@@ -101,6 +120,41 @@ and `tests/support`:
 ```bash
 python -m unittest discover -s tests -t .
 ```
+
+### Core suite policy
+
+The suite proves contracts, not implementation. A test belongs in the core
+suite when it covers a store row or transaction, a core policy, a service, a
+CLI command, an MCP tool, setup acceptance, or a TUI screen's smoke, status, or
+resize behavior. `python tools/test_inventory.py --check` holds that matrix:
+every core contract names its proving test, and a missing one fails the check.
+
+Use a contract table when cases differ only by an input variant: a host, scope,
+status, alias, or backend. Add a row and a `subTest` label instead of a new test
+method. Keep one smoke test per screen for mount, render, and focus, and leave
+exact markup, mount order, and widget internals out of the suite.
+
+Delete a test only when the behavior it proved is gone or moves into a named
+row of a contract table. Error paths, empty states, platform branches, and
+safety rules stay direct.
+
+## Resize behavior
+
+Every screen ships a resize matrix. `tests/presentation/test_resize_surfaces.py`
+mounts a surface once and walks 40×24, 80×24, 120×40, and 160×50 through
+`tests.support.resize`, asserting that regions stay inside the screen, siblings
+do not overlap, and selection, cursor, and scroll stay valid.
+
+- Read the tiers from `presentation/tui/size.py` (`classes_for`); do not
+  hardcode 80, 100, 120, or 30 in a screen.
+- Panels reflow instead of keeping a fixed width. Long text wraps or truncates
+  on purpose, and no panel paints outside its region.
+- Measure content from the current layout, not from the width a widget had when
+  it was last painted.
+- After a resize, keep the selected row, cursor, and page when the target still
+  exists; clamp to the new maximum when it does not.
+- Add a case for every new surface. A case that fails first may land as
+  `expectedFailure`; remove the decorator with the fix.
 
 ## Flaky tests
 

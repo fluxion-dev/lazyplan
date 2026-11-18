@@ -20,23 +20,27 @@ class TreeFilter:
     def source_stats(
         self,
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
-        vcs: dict | None = None,
-        forge: dict | None = None,
+        vcs_counts: dict[tuple[str, int], tuple[int, int]] | None = None,
+        forge_counts: dict[tuple[str, int], tuple[int, int]] | None = None,
         repos: dict | None = None,
     ) -> dict[tuple[str, int], tuple[int, int, int, int]]:
-        """Direct plus descendant provenance counts per visible row."""
+        """Direct plus descendant provenance counts per visible row.
+
+        The counts maps come from one grouped read each, so a refresh does not
+        build a link record for every commit.
+        """
         store = self.app.store
-        vcs = store.vcs_links_map() if vcs is None else vcs
-        forge = store.forge_links_map() if forge is None else forge
+        vcs_counts = store.vcs_counts_map() if vcs_counts is None else vcs_counts
+        forge_counts = store.forge_counts_map() if forge_counts is None else forge_counts
         repos = store.repos_map() if repos is None else repos
 
         def direct(kind: str, oid: int) -> tuple[int, int, int, int]:
-            links = vcs.get((kind, oid), [])
-            pulls = forge.get((kind, oid), [])
+            links, stale_links = vcs_counts.get((kind, oid), (0, 0))
+            pulls, stale_pulls = forge_counts.get((kind, oid), (0, 0))
             return (
-                len(links),
-                len(pulls),
-                sum(1 for link in links if link.stale) + sum(1 for pull in pulls if pull.stale),
+                links,
+                pulls,
+                stale_links + stale_pulls,
                 len(repos.get((kind, oid), [])),
             )
 

@@ -343,6 +343,22 @@
     },
     {
       "depth": 1,
+      "id": "app.log",
+      "route": [
+        "tree",
+        "log"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "app.choose",
+      "route": [
+        "tree",
+        "choose"
+      ]
+    },
+    {
+      "depth": 1,
       "id": "app.health",
       "route": [
         "tree",

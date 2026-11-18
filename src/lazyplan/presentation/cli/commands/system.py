@@ -6,15 +6,18 @@ import argparse
 import sqlite3
 import sys
 import time
+import webbrowser
 from pathlib import Path
 
 from lazyplan import services
 from lazyplan.services import (
     audit,
+    choices,
     notes,
 )
 
 from ....core.ports.insights import InsightsPort
+from ...choice_board import ChoiceBoard
 from ...shared import (
     porcelain,
 )
@@ -383,6 +386,41 @@ def _cmd_trace(store: InsightsPort, args: argparse.Namespace, actor: str) -> int
         return 0
     for line in _trace_text(payload):
         print(line)
+    return 0
+
+
+def _cmd_choose(store: object | None, args: argparse.Namespace, actor: str) -> int:
+    """Serve image choices on loopback and record one pick; needs no database."""
+    del store, actor
+    try:
+        manifest = choices.load_manifest(args.manifest)
+    except choices.ChoiceError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    out = Path(args.out) if args.out else manifest.source.parent / "selection.json"
+    try:
+        board = ChoiceBoard(manifest, out, force=bool(args.force), port=int(args.port))
+    except OSError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    print(f"choices:   {board.url()}")
+    print(f"selection: {out}")
+    if args.open:
+        try:
+            webbrowser.open(board.url())
+        except Exception:  # noqa: BLE001 - headless hosts still get the URL
+            pass
+    board.start()
+    try:
+        board.wait()
+    except KeyboardInterrupt:
+        return 130
+    finally:
+        board.stop()
+    selected = board.selected
+    if selected is None:
+        return 1
+    print(f"selected:  {selected.option} — {selected.label}")
     return 0
 
 

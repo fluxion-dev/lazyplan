@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-17" "lazyplan-tui 0.48.0" "User Commands"
+.TH LPUI 1 "2026-11-18" "lazyplan-tui 0.49.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -2325,6 +2325,64 @@ show every bundled release, newest first
 .TP
 .B \-\-since VERSION
 show releases newer than VERSION through the installed one
+.RE
+.TP
+.B lpui choose
+serve a local page of image choices and record the pick
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-heal
+repair parent statuses and leases automatically (default)
+.RE
+.RS
+.TP
+.B \-\-no\-heal
+report drift without automatic repair for this command
+.RE
+.RS
+.TP
+.B \-\-manifest PATH
+choices JSON file with 2\-12 image options Required\.
+.RE
+.RS
+.TP
+.B \-\-out PATH
+selection file (default: selection\.json beside the manifest)
+.RE
+.RS
+.TP
+.B \-\-port PORT
+loopback port (0 picks a free one) Default: 0\.
+.RE
+.RS
+.TP
+.B \-\-open
+open the page in the browser
+.RE
+.RS
+.TP
+.B \-\-force
+replace an existing selection file
 .RE
 .TP
 .B lpui help

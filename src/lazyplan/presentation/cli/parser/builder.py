@@ -42,6 +42,7 @@ from .proof import (
 from .questions import add_question_group
 from .refs import add_ref_group
 from .system import (
+    add_choose,
     add_completion,
     add_doctor,
     add_help,
@@ -135,6 +136,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_completion(sub, common)
     add_upgrade(sub, common)
     add_notes(sub, common)
+    add_choose(sub, common)
     add_help(sub, common)
     add_ui(sub, common)
     return p

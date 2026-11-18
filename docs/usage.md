@@ -110,8 +110,10 @@ newer releases through the installed one, oldest first; `--all` lists every
 bundled release newest first. A successful `lpui upgrade` prints the range it
 skipped, and the TUI opens the same notes once after an upgrade. Press `W` or
 choose Release notes in the palette to reopen the installed version's notes.
-The last version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing
-marker means a first install and stays quiet.
+The overlay renders the notes as Markdown, and clicking a link opens it in the
+browser. `lpui notes` still prints raw Markdown so it can be piped. The last
+version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing marker
+means a first install and stays quiet.
 
 Upgrading from 0.30.1 or earlier is not supported in place: the package layout
 and console scripts changed. Force a reinstall in the environment that owns
@@ -361,11 +363,16 @@ tab-separated rows; `--json` wins when both are present.
 
 ## The screen
 
-Every row reads as plain words: an id, the title, and at most a right-aligned
-count. Plans and milestones end with `done/total`; any row that needs it ends
-with one word: `doing`, `blocked`, or `review`. Completed plans live in the
-`plan review` panel and stay dimmed. Plans start collapsed; `right` or `z`
-reveals milestones, and tasks appear when you open their milestone.
+Every plan-queue and plan-review row ends with one status mark in a fixed
+two-cell rail: 📝 todo, 🔨 doing, 🔍 review, 🚧 blocked, ✅ done. The id and
+title lead, and plans and milestones put their `done/total` count just before
+the rail. A completed plan in the `plan review` panel reads 🔍 review; a
+completed task reads ✅ done. The agents card and hub status rows keep the same
+marks at the left. On a terminal narrower than 80 columns, or one marked
+ASCII-only with `TERM=dumb`, the rail uses the single-cell glyphs ○ todo, ◐
+doing, ? review, ! blocked, and ● done instead. Completed plans stay dimmed.
+Plans start collapsed; `right` or `z` reveals milestones, and tasks appear when
+you open their milestone.
 
 The main screen puts the work in one left column and the overview on the right.
 The left column stacks the plan queue, the agents card, plan review, and the git
@@ -403,14 +410,29 @@ their order in the stacked left column. The footer names only `?`, `c`, and
 The bottom bar also pins the running version at its right edge, for example
 `v0.47.0`. A newer release already in the update cache adds an arrow,
 `v0.47.0 → v0.48.0`; click the badge or press `U` to open the update screen.
-The health count, when present, sits just left of the version. The same bar
-appears at the bottom of the source, hub, plan diff, and setup views.
+The health count, when present, sits just left of the version. The unread
+warning and error count, when present, sits left of the health count and opens
+the notification log when clicked. The same bar appears at the bottom of the
+source, hub, plan diff, setup, and log views.
 
 The update screen names the installed and latest versions and the install
 method. **Download** fetches and verifies the release, which applies the next
 time `lpui` starts; on Windows, **Restart now** applies it without leaving the
 screen. An install lazyplan cannot own, such as a system package or a source
 checkout, gets the command to run instead.
+
+### Notification log
+
+Messages that would once have flashed a toast land in one session log instead:
+time, severity, text, and the screen they came from. Press `L` from any view,
+or run **Notification log** in the palette, to read it. The overlay opens at
+the newest entry and scrolls; `x` clears it, `y` copies the selected line, and
+`escape` closes it. The log keeps the last 500 entries for this session and
+writes nothing to disk. Warnings and errors raise the unread count on the
+taskbar until the log is opened; ordinary messages never badge.
+
+Two notices still toast because they interrupt: the startup update notice and
+the once-per-version update announcement. Both also appear in the log.
 
 The tree loads plan rows first. A plan's milestones appear when you expand it,
 and a milestone's tasks appear when you expand that milestone. A text filter
@@ -442,6 +464,7 @@ before it.
 | `?` | help, from any screen |
 | `c` | command palette, from any screen |
 | `S` | setup wizard, from any screen |
+| `L` | notification log: unread warnings and errors |
 | `U` | update screen: version badge and download |
 | `W` | release notes for the installed version |
 | `t` | cycle theme: mocha, void, latte |
@@ -464,7 +487,7 @@ Criteria, evidence, questions, and references are selectable hubs, not
 read-only text. From the tree, open **criteria hub**, **evidence hub**,
 **questions hub**, or **references hub** from the palette (`c`).
 
-- Criteria: `a` adds, `e` edits the text and done state, `l` and `L` relate or
+- Criteria: `a` adds, `e` edits the text and done state, `l` and `X` relate or
   unrelate a proving task, `d` deletes, and `enter` opens the evidence rows for
   the selected criterion.
 - Evidence: each row shows pass or fail, the command, exit code, commit, note,
@@ -489,7 +512,7 @@ is a read-only summary; it does not open a hub.
 
 - Claims: rows show the holder, expiry, age, and any overlap with another
   active claim that edits the same path. `a` claims the task, `x` renews, `d`
-  releases, `D` forces a takeover, and `l`/`L` add or remove touch-points.
+  releases, `D` forces a takeover, and `l`/`X` add or remove touch-points.
 - Comments and notes: `a` adds a comment, `n` adds a note, `x` resolves or
   reopens a comment, and `u` hides resolved comments.
 
@@ -748,6 +771,34 @@ validates the document and prints the intended tree without writing.
 
 `feature`, `bugfix`, and `refactor` recipes are packaged skeletons with QA,
 refactoring, and documentation tasks. Edit the words, then apply the document.
+
+### Visual choices
+
+When an interview turns on a visual choice, put the alternatives in a manifest
+and serve the board on loopback:
+
+```bash
+lpui choose --manifest choices.json --open
+```
+
+```json
+{
+  "title": "Empty state",
+  "prompt": "Which one should ship?",
+  "options": [
+    {"id": "a", "label": "Compact", "image": "images/a.png"},
+    {"id": "b", "label": "Wide", "image": "images/b.png", "description": "More room"}
+  ]
+}
+```
+
+The command prints a `127.0.0.1` URL with a per-run token and the selection
+path. The page shows each image; one pick writes `selection.json` beside the
+manifest (`--out` changes it) with the option, label, notes, and time. It
+refuses to replace an existing selection unless `--force`, and `--port 0` picks
+a free port. Images resolve under the manifest directory. Run it in the
+background, give the human the URL, then read the selection file; the agent
+folds that choice into the plan.
 
 ### Context and claims
 

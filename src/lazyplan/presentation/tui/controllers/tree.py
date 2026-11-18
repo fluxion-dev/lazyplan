@@ -11,6 +11,7 @@ from .... import services
 from ....core.entities import Milestone, Plan, Task
 from ....core.policies.planning import progress_counts
 from ....services.stats import attention_reasons
+from ..size import classes_for
 from ..views.rows import RowSpec
 from .expansion import ExpansionMixin
 from .filtering import TreeFilter
@@ -45,8 +46,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         self._visible_keys: set[tuple[str, int]] = set()
         self._progress: dict[tuple[str, int], tuple[int, int]] = {}
         self._source_stats: dict[tuple[str, int], tuple[int, int, int, int]] = {}
-        self._forge_map: dict = {}
-        self._vcs_map: dict = {}
         self._drift_map: dict = {}
         self._attention: set[tuple[str, int]] = set()
         self._loading = False
@@ -128,7 +127,9 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         """Usable label width for a row at `depth`, excluding tree guides."""
         app = self.app
         base = tree.size.width or (
-            max(20, app.size.width // 2) if app.size.width >= 100 else max(20, app.size.width)
+            max(20, app.size.width // 2)
+            if not classes_for(app.size.width).narrow
+            else max(20, app.size.width)
         )
         return max(10, base - 5 - depth)
 
@@ -176,12 +177,14 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         self,
         base: list[tuple[Plan, list[tuple[Milestone, list[Task]]]]],
         reasons: dict[int, list[str]],
+        questions: dict | None = None,
     ) -> set[tuple[str, int]]:
         """Task attention, including blocked, rolled up to milestones and plans."""
         keys: set[tuple[str, int]] = {
             ("task", task_id) for task_id, found in reasons.items() if found
         }
-        questions = self.app.store.questions_map()
+        if questions is None:
+            questions = self.app.store.questions_map()
         for plan, milestones in base:
             plan_hot = self._drift_map.get(plan.id, 0) > 0
             if any(question.status == "open" for question in questions.get(plan.id, [])):
@@ -210,30 +213,53 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         try:
             prev_selected = app.selected
             view = self.capture_view()
-            base = services.tree(
-                app.store, status=None, finished="show", archived="hide", plan_mode="all"
-            )
+            store = app.store
+            with store.transaction():
+                source = services.activity_source(store)
+                base = services.tree(
+                    store,
+                    status=None,
+                    finished="show",
+                    archived="hide",
+                    plan_mode="all",
+                    source=source,
+                )
+                active, finished = self.filters.panels(base)
+                visible = active + finished
+                forge = store.forge_links_map()
+                forge_counts = {
+                    key: (len(items), sum(1 for item in items if item.stale))
+                    for key, items in forge.items()
+                }
+                self._source_stats = self.filters.source_stats(
+                    visible, store.vcs_counts_map(), forge_counts, store.repos_map()
+                )
+                self._drift_map = store.drift_counts()
+                questions = store.questions_map()
+                task_rows = [
+                    task for _, milestones in base for _, tasks in milestones for task in tasks
+                ]
+                reasons = attention_reasons(
+                    store,
+                    tasks=task_rows,
+                    claims=store.claims_map(),
+                    forge=forge,
+                    open_criteria=store.open_task_criteria_ids(),
+                    events=source.events,
+                )
             self._prepare_model(base)
-            active, finished = self.filters.panels(base)
-            visible = active + finished
             self._visible_keys = set()
             for plan, milestones in visible:
                 self._visible_keys.add(("plan", plan.id))
                 for milestone, tasks in milestones:
                     self._visible_keys.add(("milestone", milestone.id))
                     self._visible_keys.update(("task", task.id) for task in tasks)
-            self._forge_map = app.store.forge_links_map()
-            self._vcs_map = app.store.vcs_links_map()
-            self._source_stats = self.filters.source_stats(
-                visible, self._vcs_map, self._forge_map, app.store.repos_map()
-            )
-            self._drift_map = app.store.drift_counts()
-            self._attention = self._attention_keys(base, attention_reasons(app.store))
+            self._attention = self._attention_keys(base, reasons, questions)
             changed = self.reconcile_children(
                 active_tree.root, active_tree, self.desired_plans(active)
             )
             changed |= self.reconcile_children(
-                finished_tree.root, finished_tree, self.desired_plans(finished)
+                finished_tree.root, finished_tree, self.desired_plans(finished, review=True)
             )
             filtering = bool(app.filter_text.strip())
             if filtering:
@@ -280,6 +306,6 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
 
     def render_row(self, key: tuple[str, int], spec: RowSpec, tree: Tree) -> str:
         """Render and cache one row at the current tree width."""
-        text = spec.markup(self.row_width(tree, spec.depth))
+        text = spec.markup(self.row_width(tree, spec.depth), emoji=self.app.state.emoji)
         self.app._row_labels[key] = text
         return text

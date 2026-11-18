@@ -74,6 +74,7 @@ examples:
   lpui maint restore --plan 3            return an archived plan to the default views
   lpui upgrade [--check]                 self-update pipx/venv installs (no repo needed)
   lpui notes [--all] [--since VERSION]   read the release notes bundled with this version
+  lpui choose --manifest choices.json    serve image choices on loopback and record the pick
   lpui export --format json > backup.json
   lpui import --file backup.json
 

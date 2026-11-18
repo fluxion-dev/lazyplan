@@ -13,11 +13,13 @@ from lazyplan.store import Store
 try:
     from textual.geometry import Offset
     from textual.selection import Selection
+    from textual.widgets import Button, Input, OptionList, Select, TextArea
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - textual not installed
     Offset = None  # type: ignore[assignment]
     Selection = None  # type: ignore[assignment]
+    Button = Input = OptionList = Select = TextArea = None  # type: ignore[assignment,misc]
     _TEXTUAL_OK = False
 
 try:
@@ -223,6 +225,118 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             selection = Selection.from_offsets(Offset(0, 0), Offset(1, 0))
             app.screen.selections = {bodies[0]: selection, bodies[1]: selection}
             self.assertIsNone(app.screen.current_anchor())
+
+    async def test_annotation_form_saves_the_selected_quote(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            body = list(app.screen.query(".draft-block-body"))[1]
+            body.focus()
+            await pilot.pause()
+            selection = Selection.from_offsets(Offset(0, 0), Offset(3, 0))
+            app.screen.selections = {body: selection}
+            app.screen.action_annotate()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "AnnotationForm")
+            form = app.screen
+            form.query_one("#f-kind", Select).value = "change"
+            form.query_one("#f-body", TextArea).text = "Sharpen this"
+            await pilot.pause()
+            form.query_one("#ok", Button).press()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+            annotations = drafts.list_annotations(self.store, draft.id)
+            self.assertEqual(len(annotations), 1)
+            self.assertEqual(annotations[0].kind, "change")
+            self.assertEqual(annotations[0].body, "Sharpen this")
+            self.assertEqual(annotations[0].quote, "Why")
+            self.assertEqual((annotations[0].start_offset, annotations[0].end_offset), (0, 3))
+
+    async def test_annotation_form_requires_text(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.action_annotate()
+            await pilot.pause()
+            form = app.screen
+            form.query_one("#ok", Button).press()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "AnnotationForm")
+
+    async def test_sidebar_lists_annotations_and_their_details(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "question", "Why does this matter?")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            options = app.screen.query_one("#draft-annotations", OptionList)
+            self.assertEqual(options.option_count, 1)
+            detail = str(app.screen.query_one("#draft-annotation-detail").render())
+            self.assertIn("question", detail)
+            self.assertIn("Why does this matter?", detail)
+            self.assertIn("plan:why", detail)
+
+    async def test_enter_views_one_annotation(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "question", "Why does this matter?")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.query_one("#draft-annotations", OptionList).focus()
+            await pilot.pause()
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "TextScreen")
+            self.assertIn("Why does this matter?", app.screen.HELP)
+
+    async def test_delete_open_annotation(self) -> None:
+        draft = drafts.create(self.store, document())
+        annotation = drafts.annotate(self.store, draft.id, "plan:why", "comment", "Remove me")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.query_one("#draft-annotations", OptionList).focus()
+            await pilot.pause()
+            app.screen.action_delete_annotation()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            self.assertIsNone(self.store.get_draft_annotation(annotation.id))
+
+    async def test_dismiss_annotation_with_a_reason(self) -> None:
+        draft = drafts.create(self.store, document())
+        annotation = drafts.annotate(self.store, draft.id, "plan:why", "comment", "Maybe")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.query_one("#draft-annotations", OptionList).focus()
+            await pilot.pause()
+            app.screen.action_dismiss_annotation()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "FilterPromptScreen")
+            app.screen.query_one("#filter-input", Input).value = "not needed"
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            row = self.store.get_draft_annotation(annotation.id)
+            self.assertIsNotNone(row)
+            assert row is not None
+            self.assertEqual(row.status, "dismissed")
+            self.assertEqual(row.response, "not needed")
 
     async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
         app = create_app(str(self.store.path))

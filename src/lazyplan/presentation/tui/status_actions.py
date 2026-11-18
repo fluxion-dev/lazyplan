@@ -17,6 +17,9 @@ class StatusMixin(ContextMixin):
             self.notify("select a row first (s advances status)")
             return
         kind, oid = self.selected
+        if kind == "draft":
+            self.notify("open the draft to review or promote it", timeout=4)
+            return
         left = self.store.open_criteria(kind, oid)
         current = self.store.get_parent(kind, oid)
         if left and (current is None or current.status != Status.DONE):
@@ -36,6 +39,9 @@ class StatusMixin(ContextMixin):
             self.notify("select a row first, then move it")
             return
         kind, oid = self.selected
+        if kind == "draft":
+            self.notify("open the draft to review or promote it", timeout=4)
+            return
         left = self.store.open_criteria(kind, oid)
         if status == Status.DONE and left:
             self.notify(f"warning: {len(left)} open criteria — closing anyway", timeout=5)

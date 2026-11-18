@@ -30,13 +30,14 @@ class StatSlot:
 
 SLOTS: dict[str, StatSlot] = {
     "progress": StatSlot("progress", 5, 0, "right"),
-    "state": StatSlot("state", 7, 1, "right"),
+    "state": StatSlot("state", 8, 1, "right"),
 }
 
 #: Slot priority per kind: the first slot that fits survives the narrowest row.
 KIND_SLOTS: dict[str, tuple[str, ...]] = {
     "plan": ("state", "progress"),
     "milestone": ("state", "progress"),
+    "draft": ("state", "progress"),
     "task": ("state",),
 }
 

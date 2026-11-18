@@ -53,6 +53,8 @@ from .facts import stale_word as stale_word
 from .row_stats import RowStats as RowStats
 from .row_stats import render_stats as render_stats
 from .row_stats import stats_layout as stats_layout
+from .rows import draft_label as draft_label
+from .rows import draft_row as draft_row
 from .rows import milestone_label as milestone_label
 from .rows import milestone_row as milestone_row
 from .rows import plan_label as plan_label
@@ -118,6 +120,8 @@ __all__ = [
     "TASK",
     "escape_markdown",
     "escape_markup",
+    "draft_label",
+    "draft_row",
     "milestone_label",
     "milestone_row",
     "msg_error",

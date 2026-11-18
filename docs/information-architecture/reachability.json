@@ -49,30 +49,6 @@
     },
     {
       "depth": 1,
-      "id": "draft.open",
-      "route": [
-        "tree",
-        "draft"
-      ]
-    },
-    {
-      "depth": 2,
-      "id": "draft.submit",
-      "route": [
-        "draft",
-        "submit"
-      ]
-    },
-    {
-      "depth": 2,
-      "id": "draft.promote",
-      "route": [
-        "draft",
-        "promote"
-      ]
-    },
-    {
-      "depth": 1,
       "id": "plan.dispatch",
       "route": [
         "tree",
@@ -604,6 +580,30 @@
       "route": [
         "tree",
         "activity"
+      ]
+    },
+    {
+      "depth": 1,
+      "id": "draft.open",
+      "route": [
+        "tree",
+        "draft"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "draft.submit",
+      "route": [
+        "draft",
+        "submit"
+      ]
+    },
+    {
+      "depth": 2,
+      "id": "draft.promote",
+      "route": [
+        "draft",
+        "promote"
       ]
     }
   ],

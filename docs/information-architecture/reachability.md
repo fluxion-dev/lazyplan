@@ -37,9 +37,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `criterion.add` | tree | 0 |
 | `plan.approve` | tree › trust | 1 |
 | `plan.diff` | tree › trust | 1 |
-| `draft.open` | tree › draft | 1 |
-| `draft.submit` | draft › submit | 2 |
-| `draft.promote` | draft › promote | 2 |
 | `plan.dispatch` | tree › coordination | 1 |
 | `criterion.prove` | tree › evidence | 1 |
 | `question.add` | tree › questions | 1 |
@@ -109,6 +106,9 @@ Budget: every action is at most **3** interactions from the tree.
 | `repo.open` | tree › source | 1 |
 | `event.list` | tree › activity | 1 |
 | `event.open` | tree › activity | 1 |
+| `draft.open` | tree › draft | 1 |
+| `draft.submit` | draft › submit | 2 |
+| `draft.promote` | draft › promote | 2 |
 
 ## Over budget
 

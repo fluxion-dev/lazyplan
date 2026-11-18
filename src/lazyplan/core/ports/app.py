@@ -11,7 +11,5 @@ from .sessions import SessionsPort
 from .transfer import TransferPort
 
 
-class AppPort(
-    DraftsPort, TransferPort, CoordinationPort, InsightsPort, SessionsPort, Protocol
-):
+class AppPort(DraftsPort, TransferPort, CoordinationPort, InsightsPort, SessionsPort, Protocol):
     """Every read and write surface a surface adapter may call."""

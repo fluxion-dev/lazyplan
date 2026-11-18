@@ -38,6 +38,8 @@ Budget: every action is at most **3** interactions from the tree.
 | `plan.approve` | tree › trust | 1 |
 | `plan.diff` | tree › trust | 1 |
 | `draft.open` | tree › draft | 1 |
+| `draft.submit` | draft › submit | 2 |
+| `draft.promote` | draft › promote | 2 |
 | `plan.dispatch` | tree › coordination | 1 |
 | `criterion.prove` | tree › evidence | 1 |
 | `question.add` | tree › questions | 1 |

@@ -338,6 +338,81 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(row.status, "dismissed")
             self.assertEqual(row.response, "not needed")
 
+    async def test_submit_feedback_moves_the_draft_to_revising(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.action_submit_feedback()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            updated = self.store.get_draft(draft.id)
+            assert updated is not None
+            self.assertEqual(updated.status, "revising")
+            head = str(app.screen.query_one("#draft-head").render())
+            self.assertIn("revising", head)
+
+    async def test_promote_clean_draft_returns_to_the_plan_queue(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.action_promote()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+            promotion = self.store.get_draft(draft.id)
+            assert promotion is not None
+            self.assertEqual(promotion.status, "promoted")
+            self.assertIsNotNone(promotion.plan_id)
+            self.assertEqual(app.selected, ("plan", promotion.plan_id))
+
+    async def test_promote_refuses_open_annotations(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            app.screen.action_promote()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+            self.assertEqual(self.store.counts()["plans"], 0)
+
+    async def test_draft_history_round_trips(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 2)
+            app.action_history_back()
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+            self.assertEqual(app.selected, ("draft", draft.id))
+            app.action_history_forward()
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 2)
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+
+    async def test_palette_offers_submit_and_promote_on_the_draft_screen(self) -> None:
+        context = registry.Context(screen="draft", selected_kind="draft")
+        availability = registry.palette_context(context)
+        self.assertIsNone(availability["submit-draft"])
+        self.assertIsNone(availability["promote-draft"])
+        self.assertIsNotNone(availability["open-draft"])
+
     async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:

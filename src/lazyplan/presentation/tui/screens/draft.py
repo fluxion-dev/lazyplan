@@ -75,6 +75,8 @@ if _TEXTUAL_OK:
             Binding("j", "next_block", "Next block", show=False),
             Binding("k", "prev_block", "Prev block", show=False),
             Binding("a", "annotate", "Annotate"),
+            Binding("s", "submit_feedback", "Submit"),
+            Binding("P", "promote", "Promote"),
             Binding("x", "dismiss_annotation", "Dismiss"),
             Binding("d", "delete_annotation", "Delete"),
             Binding("r", "refresh", "Refresh", show=False),
@@ -136,7 +138,13 @@ if _TEXTUAL_OK:
             self.query_one("#draft-hints", Taskbar).set_for_app(
                 action_bar(
                     None,
-                    [("a", "annotate"), ("tab", "feedback"), ("x", "dismiss"), ("esc", "back")],
+                    [
+                        ("j/k", "block"),
+                        ("a", "annotate"),
+                        ("s", "submit"),
+                        ("P", "promote"),
+                        ("esc", "back"),
+                    ],
                 )
             )
             self.call_after_refresh(self._focus_first)
@@ -319,6 +327,80 @@ if _TEXTUAL_OK:
             if row.response:
                 lines.append(f"response: {row.response}")
             self.app.push_screen(TextScreen(f"A{row.id} {row.kind}", "\n".join(lines)))
+
+        def action_submit_feedback(self) -> None:
+            """Submit open annotations and hand the draft back to the agent."""
+            if self._detail is None:
+                return
+            draft = self._detail.draft
+            if draft.status == "promoted":
+                self.notify("this draft is already promoted", timeout=4)
+                return
+            if draft.status == "revising":
+                self.notify("this draft is already out for revision", timeout=4)
+                return
+            if self._detail.open_annotations == 0:
+                self.notify("add at least one open annotation first", timeout=4)
+                return
+            count = self._detail.open_annotations
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                try:
+                    draft_services.submit(self._store, self.draft_id, actor="tui")
+                except (KeyError, ValueError) as exc:
+                    self.notify(f"error: {exc}", timeout=5)
+                    return
+                self.notify(f"submitted {count} annotation(s) for revision", timeout=5)
+                self._reload()
+
+            self.app.push_screen(
+                ConfirmScreen(
+                    f"Submit {count} open annotation(s) for revision?",
+                    confirm_label="Submit",
+                    variant="primary",
+                ),
+                cb,
+            )
+
+        def action_promote(self) -> None:
+            """Create the plan tree from a clean draft."""
+            if self._detail is None:
+                return
+            draft = self._detail.draft
+            if draft.status == "promoted":
+                self.notify("this draft is already promoted", timeout=4)
+                return
+            if draft.status != "review":
+                self.notify("the agent must revise this draft before promotion", timeout=5)
+                return
+            if self._detail.open_annotations:
+                self.notify("resolve or dismiss open annotations first", timeout=5)
+                return
+
+            def cb(confirmed: bool | None) -> None:
+                if not confirmed:
+                    return
+                try:
+                    promotion = draft_services.promote(self._store, self.draft_id, actor="tui")
+                except (KeyError, ValueError) as exc:
+                    self.notify(f"error: {exc}", timeout=5)
+                    return
+                self.notify(
+                    f"created P{promotion.plan.id} {promotion.plan.name!r}",
+                    timeout=8,
+                )
+                self.app.select_row("plan", promotion.plan.id)  # type: ignore[attr-defined]
+
+            self.app.push_screen(
+                ConfirmScreen(
+                    f"Promote D{self.draft_id} into the plan queue?",
+                    confirm_label="Promote",
+                    variant="primary",
+                ),
+                cb,
+            )
 
         def action_dismiss_annotation(self) -> None:
             row = self._focused_annotation()

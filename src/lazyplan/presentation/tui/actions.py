@@ -21,7 +21,6 @@ from .reference_actions import ReferenceMixin
 from .screens import (
     ConfirmScreen,
     CriterionScreen,
-    DraftScreen,
     ExportScreen,
     FilterPromptScreen,
     HelpScreen,
@@ -181,10 +180,6 @@ if _TEXTUAL_OK:
                 self.notify("select a plan draft first", timeout=4)
                 return
             self.open_draft(self.selected[1])
-
-        def open_draft(self, draft_id: int) -> None:
-            """Push the draft review screen for one draft."""
-            self.push_screen(DraftScreen(self.store, draft_id))
 
         def action_help(self) -> None:
             self.push_screen(HelpScreen())

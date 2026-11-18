@@ -169,11 +169,17 @@ def task_row(
     return _render_row("task", t, stats, width, attention=attention, emoji=emoji)
 
 
+def _draft_state(draft: PlanDraft) -> str:
+    """The one word a draft row shows beside its annotation counts."""
+    return "revising" if draft.status == "revising" else ""
+
+
 def draft_label(draft: PlanDraft, open_count: int, total_count: int) -> str:
     """Canonical row label for a plan draft."""
-    state = " revising" if draft.status == "revising" else ""
+    state = _draft_state(draft)
+    suffix = f" {state}" if state else ""
     target = f" -> P{draft.plan_id}" if draft.plan_id else ""
-    return f"D{draft.id} {draft.title} {open_count}/{total_count}{state}{target}"
+    return f"D{draft.id} {draft.title} {open_count}/{total_count}{suffix}{target}"
 
 
 def draft_row(
@@ -190,7 +196,7 @@ def draft_row(
     row_width = DEFAULT_ROW_WIDTH if width is None else width
     stats = RowStats(
         progress=(open_count, total_count),
-        state="revising" if draft.status == "revising" else "",
+        state=_draft_state(draft),
     )
     layout = stats_layout("draft", row_width, len(prefix_plain))
     stats_rich, stats_plain = render_stats(stats, layout)

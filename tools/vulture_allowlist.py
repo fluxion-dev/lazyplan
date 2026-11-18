@@ -31,7 +31,8 @@ _.action_more, _.action_new_context, _.action_next_file, _.action_note
 _.action_open, _.action_open_owner, _.action_open_value, _.action_prev_file
 _.action_quit, _.action_relate, _.action_restore, _.action_source_hub
 _.action_toggle_expand_all, _.action_toggle_fold, _.action_toggle_split, _.action_toggle_wrap
-_.action_unrelate, _.on_click, _.on_key, _.on_notifications_changed, _.on_resize, _.on_tree_node_collapsed
+_.action_unrelate, _.on_click, _.on_key, _.on_markdown_link_clicked, _.on_notifications_changed
+_.on_resize, _.on_tree_node_collapsed
 _.on_tree_node_expanded, _.on_tree_node_highlighted, _.on_tree_node_selected, _.on_unmount
 _.watch_rev
 # Widget state and class attributes read by the framework.

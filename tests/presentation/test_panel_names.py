@@ -16,6 +16,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
 
 class TestPanelCopy(unittest.TestCase):
     def test_panel_titles_and_empty_states_use_plan_names(self) -> None:
+        self.assertEqual(design.PANEL_PLAN_DRAFTS_TITLE, "plan drafts")
         self.assertEqual(design.PANEL_PLAN_QUEUE_TITLE, "plan queue")
         self.assertEqual(design.PANEL_PLAN_REVIEW_TITLE, "plan review")
         self.assertEqual(
@@ -43,12 +44,17 @@ class TestMountedPanelCopy(unittest.IsolatedAsyncioTestCase):
                     app.query_one("#plans-finished").border_title,
                     f" {design.PANEL_PLAN_REVIEW_TITLE} ",
                 )
+                self.assertEqual(
+                    app.query_one("#plans-drafts").border_title,
+                    f" {design.PANEL_PLAN_DRAFTS_TITLE} ",
+                )
                 self.assertIn(
                     "No plans in the plan queue",
                     str(app.query_one("#tree-empty").render()),
                 )
                 self.assertTrue(app.query_one("#plans-active").display)
                 self.assertFalse(app.query_one("#plans-finished").display)
+                self.assertFalse(app.query_one("#plans-drafts").display)
                 self.assertFalse(app.query_one("#agents").display)
                 self.assertFalse(app.query_one("#git").display)
 

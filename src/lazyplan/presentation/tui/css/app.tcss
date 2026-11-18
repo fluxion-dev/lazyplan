@@ -23,6 +23,10 @@
     border-title-align: left;
 }
 
+#plans-drafts {
+    height: 2fr;
+}
+
 #plans-active {
     height: 3fr;
 }
@@ -34,6 +38,7 @@
 #side {
     width: 1fr;
     min-width: 34;
+    height: 1fr;
 }
 
 #preview {
@@ -153,6 +158,7 @@
 }
 
 #main.narrow #left,
+#main.narrow #plans-drafts,
 #main.narrow #plans-active,
 #main.narrow #plans-finished {
     width: 100%;

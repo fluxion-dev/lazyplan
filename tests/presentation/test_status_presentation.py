@@ -40,7 +40,10 @@ class StatusMapTest(unittest.TestCase):
                 self.assertEqual(len(design.status_mark(state, emoji=False)), 1)
 
     def test_emoji_are_two_cells(self) -> None:
-        from rich.cells import cell_len
+        try:
+            from rich.cells import cell_len
+        except ImportError:  # pragma: no cover - rich ships with the TUI venv only
+            self.skipTest("rich not installed")
 
         for state in design.STATUS_EMOJI:
             with self.subTest(state=state):

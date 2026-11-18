@@ -10,25 +10,29 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from lazyplan.presentation.tui.controllers.notifications import (
-    BADGE_SEVERITIES,
-    CAPACITY,
-    NotificationEntry,
-    NotificationLog,
-)
-
 try:
     from textual.app import App
 
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.controllers.notifications import (
+        BADGE_SEVERITIES,
+        CAPACITY,
+        NotificationEntry,
+        NotificationLog,
+    )
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - textual not installed
     _TEXTUAL_OK = False
+    BADGE_SEVERITIES = ()
+    CAPACITY = 0
+    NotificationEntry = None  # type: ignore[assignment,misc]
+    NotificationLog = None  # type: ignore[assignment,misc]
 
 CLOCK = re.compile(r"^\d{2}:\d{2}:\d{2}$")
 
 
+@unittest.skipUnless(_TEXTUAL_OK, "textual not installed")
 class NotificationLogTest(unittest.TestCase):
     def test_an_append_stores_every_field(self) -> None:
         log = NotificationLog()

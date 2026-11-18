@@ -9,7 +9,6 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan.core.entities import PlanRevision
-from lazyplan.presentation.tui.controllers.notifications import CAPACITY
 from lazyplan.services.revisions import DiffResult
 from tests.support.paths import ROOT
 
@@ -17,11 +16,13 @@ try:
     from textual.app import App
 
     from lazyplan.presentation.tui import create_app
+    from lazyplan.presentation.tui.controllers.notifications import CAPACITY
     from lazyplan.presentation.tui.screens.plan_diff import PlanDiffScreen
 
     _TEXTUAL_OK = True
 except ImportError:  # pragma: no cover - textual not installed
     _TEXTUAL_OK = False
+    CAPACITY = 0
 
 TUI = ROOT / "src" / "lazyplan" / "presentation" / "tui"
 SEVERITIES = ("information", "warning", "error")

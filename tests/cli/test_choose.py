@@ -7,7 +7,7 @@ import io
 import json
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
@@ -111,6 +111,50 @@ class BoardPageTest(BoardCase):
         self.assertEqual(status, 200)
         self.assertEqual(body, PNG)
 
+    def test_page_is_self_contained_and_keyboard_ready(self) -> None:
+        board = self.board()
+
+        status, body = self.request(board, "GET", "/")
+        page = body.decode("utf-8")
+
+        self.assertEqual(status, 200)
+        self.assertNotIn("http://", page)
+        self.assertNotIn("https://", page)
+        self.assertIn("textContent", page)
+        self.assertNotIn("innerHTML", page)
+        self.assertIn('type = "radio"', page)
+        self.assertIn("prefers-color-scheme", page)
+        self.assertIn("grid-template-columns", page)
+        self.assertIn(":focus-within", page)
+
+    def test_labels_with_markup_round_trip_as_text(self) -> None:
+        (self.root / "a.png").write_bytes(PNG)
+        (self.root / "b.png").write_bytes(PNG)
+        path = self.root / "markup.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "title": "Markup <b>",
+                    "prompt": "Pick & choose",
+                    "options": [
+                        {"id": "a", "label": '<b>&"quoted"</b>', "image": "a.png"},
+                        {"id": "b", "label": "Plain", "image": "b.png"},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        board = ChoiceBoard(choices.load_manifest(path), self.selection, port=0)
+        board.start()
+        self.addCleanup(board.stop)
+
+        status, body = self.request(board, "GET", "/api/manifest")
+        manifest = json.loads(body)
+
+        self.assertEqual(status, 200)
+        self.assertEqual(manifest["title"], "Markup <b>")
+        self.assertEqual(manifest["options"][0]["label"], '<b>&"quoted"</b>')
+
     def test_unknown_images_and_traversal_are_not_found(self) -> None:
         board = self.board()
 
@@ -194,6 +238,33 @@ class ChooseCommandTest(unittest.TestCase):
             parser.parse_args(["choose", "--help"])
 
         self.assertEqual(raised.exception.code, 0)
+
+    def test_command_prints_the_url_and_selection_path(self) -> None:
+        selection = choices.Selection("a", "Compact", "", "2026-01-01T00:00:00+00:00")
+        manifest = SimpleNamespace(source=self.root / "choices.json")
+        board = mock.MagicMock()
+        board.url.return_value = "http://127.0.0.1:9/?t=t"
+        board.selected = selection
+        board.wait.return_value = True
+        args = SimpleNamespace(
+            manifest=str(self.root / "choices.json"), out="", port=0, open=False, force=False
+        )
+        out = io.StringIO()
+        with (
+            mock.patch.object(system_cli, "ChoiceBoard", return_value=board),
+            mock.patch.object(system_cli, "choices") as fake_choices,
+            redirect_stdout(out),
+        ):
+            fake_choices.load_manifest.return_value = manifest
+            code = system_cli._cmd_choose(None, args, "a")
+
+        self.assertEqual(code, 0)
+        text = out.getvalue()
+        self.assertIn("http://127.0.0.1:9/?t=t", text)
+        self.assertIn(str(self.root / "selection.json"), text)
+        self.assertIn("selected:  a", text)
+        board.start.assert_called_once()
+        board.stop.assert_called_once()
 
     def test_open_calls_the_browser_and_reports_the_pick(self) -> None:
         selection = choices.Selection("a", "Compact", "", "2026-01-01T00:00:00+00:00")

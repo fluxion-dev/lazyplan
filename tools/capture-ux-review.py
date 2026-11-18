@@ -1578,6 +1578,51 @@ def scenes() -> list[Scene]:
                 "n apply · l later",
                 "review",
             ),
+            Scene(
+                "draft-review",
+                "draft",
+                "Draft review",
+                "Three anchored notes open",
+                "The draft review screen: the plan document on the left, a selected task block, and a comment, a question, and a change anchored on the right.",
+                (
+                    "Can you tell which block each note belongs to?",
+                    "Are the three note kinds distinguishable without opening them?",
+                    "Is promotion clearly blocked while notes are open?",
+                ),
+                "j/k block · a annotate · s submit · P promote",
+                cs.build_draft_fixture,
+                cs.capture_draft,
+            ),
+            Scene(
+                "notification-log",
+                "shell",
+                "Notification log",
+                "Six entries with live severities",
+                "The session notification log at the newest entry, with setup, draft, claim, appearance, task, and pull-request notices.",
+                (
+                    "Is severity scannable before the message?",
+                    "Does the source in parentheses earn its space?",
+                    "Is the newest-entry position obvious?",
+                ),
+                "↑↓ scroll · x clear · y copy · esc close",
+                cs.build_empty_fixture,
+                cs.capture_notification_log,
+            ),
+            Scene(
+                "icons-orbit",
+                "shell",
+                "Icon palette: orbit",
+                "Orbit glyphs across every pane",
+                "The main shell on the orbit icon palette, with round section and git-card glyphs across the tree, preview, and panes.",
+                (
+                    "Do orbit glyphs stay aligned with the other palettes?",
+                    "Does the palette read as one language across panes?",
+                    "Would ASCII be the safer default on this terminal?",
+                ),
+                "i cycle · setup remembers",
+                cs.build_source_fixture,
+                cs.capture_icons_orbit,
+            ),
         ]
     )
     # Keep a stable, human-readable order inside each group.
@@ -1703,6 +1748,7 @@ async def _capture_setup(store: Store, target: Path) -> None:
 
 GROUPS = [
     ("shell", "Main shell", "The tree, overview, panes, themes, and terminal widths."),
+    ("draft", "Draft review", "Anchored notes before a plan joins the queue."),
     ("trust", "Trust hubs", "Criteria, evidence, questions, and references."),
     ("coordination", "Coordination hubs", "Claims, comments, and handoffs."),
     ("provenance", "Provenance hubs", "Pull requests and the activity feed."),

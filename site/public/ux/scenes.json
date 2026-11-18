@@ -1,12 +1,18 @@
 {
-  "version": "0.48.0",
+  "version": "0.49.0",
   "generated": "2026-11-15",
   "groups": [
     {
       "id": "shell",
       "title": "Main shell",
       "blurb": "The tree, overview, panes, themes, and terminal widths.",
-      "count": 13
+      "count": 15
+    },
+    {
+      "id": "draft",
+      "title": "Draft review",
+      "blurb": "Anchored notes before a plan joins the queue.",
+      "count": 1
     },
     {
       "id": "trust",
@@ -1103,6 +1109,57 @@
       "keys": "n apply \u00b7 l later",
       "image": "setup-review.png",
       "webp": "setup-review.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "draft-review",
+      "group": "draft",
+      "title": "Draft review",
+      "state": "Three anchored notes open",
+      "description": "The draft review screen: the plan document on the left, a selected task block, and a comment, a question, and a change anchored on the right.",
+      "lookFor": [
+        "Can you tell which block each note belongs to?",
+        "Are the three note kinds distinguishable without opening them?",
+        "Is promotion clearly blocked while notes are open?"
+      ],
+      "keys": "j/k block \u00b7 a annotate \u00b7 s submit \u00b7 P promote",
+      "image": "draft-review.png",
+      "webp": "draft-review.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "notification-log",
+      "group": "shell",
+      "title": "Notification log",
+      "state": "Six entries with live severities",
+      "description": "The session notification log at the newest entry, with setup, draft, claim, appearance, task, and pull-request notices.",
+      "lookFor": [
+        "Is severity scannable before the message?",
+        "Does the source in parentheses earn its space?",
+        "Is the newest-entry position obvious?"
+      ],
+      "keys": "\u2191\u2193 scroll \u00b7 x clear \u00b7 y copy \u00b7 esc close",
+      "image": "notification-log.png",
+      "webp": "notification-log.webp",
+      "width": 1604,
+      "height": 904
+    },
+    {
+      "id": "icons-orbit",
+      "group": "shell",
+      "title": "Icon palette: orbit",
+      "state": "Orbit glyphs across every pane",
+      "description": "The main shell on the orbit icon palette, with round section and git-card glyphs across the tree, preview, and panes.",
+      "lookFor": [
+        "Do orbit glyphs stay aligned with the other palettes?",
+        "Does the palette read as one language across panes?",
+        "Would ASCII be the safer default on this terminal?"
+      ],
+      "keys": "i cycle \u00b7 setup remembers",
+      "image": "icons-orbit.png",
+      "webp": "icons-orbit.webp",
       "width": 1604,
       "height": 904
     }

@@ -49,6 +49,19 @@ from .facts import checkout_state as checkout_state
 from .facts import evidence_label as evidence_label
 from .facts import short_sha as short_sha
 from .facts import stale_word as stale_word
+from .icons import DEFAULT_ICONS as DEFAULT_ICONS
+from .icons import ENV_VAR as ICON_ENV
+from .icons import ICON_NAMES as ICON_NAMES
+from .icons import ICON_PALETTES as ICON_PALETTES
+from .icons import active_icons as active_icons
+from .icons import apply_icons as apply_icons
+from .icons import choose_icons as choose_icons
+from .icons import icon_palette as icon_palette
+from .icons import next_icons as next_icons
+from .icons import remember_icons as remember_icons
+from .icons import remembered_icons as remembered_icons
+from .icons import resolve_icons as resolve_icons
+from .icons import select_icons as select_icons
 from .row_stats import RowStats as RowStats
 from .row_stats import render_stats as render_stats
 from .row_stats import stats_layout as stats_layout
@@ -84,6 +97,8 @@ __all__ = [
     "stale_word",
     "ANSI",
     "action_bar",
+    "active_icons",
+    "apply_icons",
     "ASCII_ICONS",
     "EMPTY_COMMITS",
     "EMPTY_FEED",
@@ -94,9 +109,15 @@ __all__ = [
     "EMPTY_NO_PLANS_TITLE",
     "EMPTY_PLAN_QUEUE_HINT",
     "EMPTY_PLAN_QUEUE_TITLE",
+    "choose_icons",
+    "DEFAULT_ICONS",
     "empty_state",
     "HELP_TEXT",
+    "ICON_ENV",
+    "ICON_NAMES",
+    "ICON_PALETTES",
     "ICONS",
+    "icon_palette",
     "INDENT",
     "KEYMAP",
     "KIND_ICON",
@@ -122,12 +143,17 @@ __all__ = [
     "msg_no_head",
     "msg_no_vcs",
     "msg_not_found",
+    "next_icons",
     "plan_label",
     "plan_row",
     "pr_chip",
     "progress_text",
-    "repo_project_name",
+    "remember_icons",
+    "remembered_icons",
     "render_stats",
+    "repo_project_name",
+    "resolve_icons",
+    "select_icons",
     "stats_layout",
     "status_word",
     "task_label",

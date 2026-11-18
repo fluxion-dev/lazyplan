@@ -9,6 +9,8 @@ re-exports the public names.
 
 from __future__ import annotations
 
+from .icons import DEFAULT_PALETTE
+
 # -- label language ---------------------------------------------------------
 # Canonical row grammar (plain text: `lpui list`, tests):
 #   GLYPH KIND<id> title  (GLYPH is ○ todo, ◐ doing, ● done;
@@ -33,37 +35,17 @@ ANSI = {
     "white": "\x1b[97m",
 }
 
-ICONS = {
-    "setup": "◆",
-    "check": "✓",
-    "circle": "○",
-    "arrow": "→",
-    "warn": "⚠",
-    "dot": "·",
-}
+# The live maps start on the classic palette and ``apply_icons`` rewrites them
+# in place when the choice changes. Palette data lives in ``icons``.
+ICONS = dict(DEFAULT_PALETTE.icons)
 
 # -- TUI icon language ------------------------------------------------------
 # One cell each, so rows, preview headings, and the git pane stay aligned in
 # any terminal. Kind icons label a breadcrumb; section icons head the git
 # pane; state icons mark a checkout. The CLI keeps the plain label grammar.
-KIND_ICON = {"plan": "◈", "milestone": "◇", "task": "▹"}
-SECTION_ICON = {
-    "why": "◎",
-    "what": "◇",
-    "details": "◇",
-    "next": "▸",
-    "acceptance": "✓",
-    "notes": "✎",
-    "comments": "✎",
-    "source": "⌁",
-    "git": "⎇",
-    "repos": "⌂",
-    "commits": "◆",
-    "pulls": "⇄",
-    "milestones": "◇",
-    "tasks": "▹",
-}
-STATE_ICON = {"clean": "○", "dirty": "●", "detached": "⊘"}
+KIND_ICON = dict(DEFAULT_PALETTE.kind)
+SECTION_ICON = dict(DEFAULT_PALETTE.section)
+STATE_ICON = dict(DEFAULT_PALETTE.state)
 
 ASCII_ICONS = {
     "setup": "*",

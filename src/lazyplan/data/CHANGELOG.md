@@ -12,6 +12,14 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   and wizard glyphs. Press `i` in the TUI to cycle them, and the setup wizard's
   appearance step previews and remembers the choice.
 
+### Fixed
+
+- **The setup wizard's dropdowns show their selected value.** The hooks, model
+  target, role tier, role effort, integration, and theme selectors now draw the
+  current choice inside the field. A value that wraps sizes its field, and the
+  option menu opens attached to the control instead of floating over the copy.
+
+
 ## v0.49.0 — 2026-11-17
 
 ### Added

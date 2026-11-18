@@ -374,6 +374,15 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("cycle-theme",),
     ),
     _action(
+        "theme.icons",
+        "Cycle icons",
+        "i",
+        "global",
+        ("tui",),
+        ("tree",),
+        ("cycle-icons",),
+    ),
+    _action(
         "palette.open",
         "Command palette",
         "c",

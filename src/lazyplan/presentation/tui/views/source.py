@@ -17,7 +17,7 @@ from lazyplan.services.source import (
     read_diff_page,
 )
 
-from ...shared.design import action_bar, escape_markup
+from ...shared.design import SECTION_ICON, STATE_ICON, action_bar, escape_markup
 from .diff_render import (
     DiffOptions,
     DiffPalette,
@@ -106,7 +106,7 @@ def commit_label(commit: SourceCommit, stats: CommitStats | None = None) -> str:
     if stats is not None and stats.state == "ok":
         changes = f" [green]+{stats.additions}[/] [red]-{stats.deletions}[/]"
     stale = " [red]stale[/]" if commit.stale else ""
-    return f"[dim]◆ {commit.short}[/] {subject}{changes}{stale}"
+    return f"[dim]{SECTION_ICON['commits']} {commit.short}[/] {subject}{changes}{stale}"
 
 
 def file_label(item: SourceFile, stat: FileStat | None = None) -> str:
@@ -130,10 +130,10 @@ def file_label(item: SourceFile, stat: FileStat | None = None) -> str:
 
 def repo_label(repo: SourceRepo) -> str:
     state = "dirty" if repo.dirty else "clean"
-    icon = "●" if repo.dirty else "○"
+    icon = STATE_ICON[state]
     branch = repo.branch or ("detached" if repo.detached else "unknown")
     return (
-        f"[bold]⎇ {escape_markup(repo.name)}[/] "
+        f"[bold]{SECTION_ICON['git']} {escape_markup(repo.name)}[/] "
         f"[dim]{escape_markup(branch)} · {icon} {state} · {len(repo.commits)} commits[/]"
     )
 
@@ -141,7 +141,7 @@ def repo_label(repo: SourceRepo) -> str:
 def pull_label(pull: SourcePull) -> str:
     title = escape_markup(pull.title or "")
     state = pull.state or "unknown"
-    return f"[dim]⇄ PR #{pull.number}[/] {state} {title}".rstrip()
+    return f"[dim]{SECTION_ICON['pulls']} PR #{pull.number}[/] {state} {title}".rstrip()
 
 
 def repo_matches(repo: SourceRepo, needle: str) -> bool:
@@ -223,10 +223,10 @@ def pull_data(repo: SourceRepo, pull: SourcePull) -> dict[str, Any]:
 
 def repo_preview(repo: SourceRepo) -> str:
     state = "dirty" if repo.dirty else "clean"
-    icon = "●" if repo.dirty else "○"
+    icon = STATE_ICON[state]
     track = f"{repo.ahead} ahead, {repo.behind} behind"
     lines = [
-        f"[bold]⎇ {escape_markup(repo.name)}[/] [dim]{escape_markup(repo.branch or 'unknown')}[/]",
+        f"[bold]{SECTION_ICON['git']} {escape_markup(repo.name)}[/] [dim]{escape_markup(repo.branch or 'unknown')}[/]",
         f"[dim]{escape_markup(repo.path)}[/]",
     ]
     if repo.remote:
@@ -235,7 +235,8 @@ def repo_preview(repo: SourceRepo) -> str:
     if repo.error:
         lines.append(f"[red]{escape_markup(repo.error)}[/]")
     lines.append(
-        f"[dim]⌁ {len(repo.commits)} commits · {repo.file_count} files · {len(repo.pulls)} PRs[/]"
+        f"[dim]{SECTION_ICON['source']} {len(repo.commits)} commits · "
+        f"{repo.file_count} files · {len(repo.pulls)} PRs[/]"
     )
     return "\n".join(lines)
 
@@ -276,7 +277,8 @@ def source_files(
 def commit_summary(commit: SourceCommit, stats: CommitStats | None = None) -> list[str]:
     """Two-line commit summary: subject, then metadata and totals."""
     lines = [
-        f"[bold]◆ {commit.short}[/] {escape_markup(commit.subject or '(no subject)')}",
+        f"[bold]{SECTION_ICON['commits']} {commit.short}[/] "
+        f"{escape_markup(commit.subject or '(no subject)')}",
     ]
     parts = [escape_markup(commit.author), when(commit.timestamp)]
     if commit.owners:
@@ -304,7 +306,7 @@ def commit_index(
     for index, (item, _stat) in enumerate(shown):
         path = escape_markup(item.path)
         if index == current:
-            parts.append(f"[bold cyan]▸ {path}[/]")
+            parts.append(f"[bold cyan]{SECTION_ICON['next']} {path}[/]")
         else:
             parts.append(f"[dim]{path}[/]")
     if len(items) > len(shown):
@@ -339,7 +341,7 @@ def file_preview(
         head = f"[bold]file {current + 1}/{len(items)}[/]"
     else:
         head = (
-            f"[dim]◆ {commit.short}[/] "
+            f"[dim]{SECTION_ICON['commits']} {commit.short}[/] "
             f"{escape_markup(commit.subject or '(no subject)')} · "
             f"[bold]file {current + 1}/{len(items)}[/]"
         )
@@ -350,7 +352,7 @@ def file_preview(
 
 def pull_preview(pull: SourcePull) -> str:
     lines = [
-        f"[bold]⇄ PR #{pull.number}[/] {escape_markup(pull.title or '')}",
+        f"[bold]{SECTION_ICON['pulls']} PR #{pull.number}[/] {escape_markup(pull.title or '')}",
         f"[dim]state[/] {pull.state or 'unknown'}",
     ]
     if pull.checks and pull.checks != "none":

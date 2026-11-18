@@ -111,7 +111,7 @@ def current_line(session: SetupSession, step: Step) -> str:
     if step.key == INTEGRATIONS.key:
         return f"{len(session.pending)} catalog item(s) are waiting for a decision."
     if step.key == APPEARANCE.key:
-        return f"Theme: {draft.theme or 'not chosen'}."
+        return f"Theme: {draft.theme or 'not chosen'}; icons: {draft.icons or 'not chosen'}."
     return "The next step reviews every write, removal, and state change."
 
 
@@ -255,6 +255,11 @@ def _review_state(session: SetupSession) -> list[str]:
         if draft.theme and draft.theme != state.theme
         else f"theme: unchanged ({state.theme or 'default'})"
     )
+    icons = (
+        f"icons: {state.icons or 'default'} -> {draft.icons}"
+        if draft.icons and draft.icons != state.icons
+        else f"icons: unchanged ({state.icons or 'default'})"
+    )
     return [
         f"setup state: {state_path(session.home)}",
         f"placement: {state.placement} -> {draft.placement}",
@@ -262,6 +267,7 @@ def _review_state(session: SetupSession) -> list[str]:
         f"hooks: {state.effective_mode()} -> {draft.hooks_mode}",
         f"AGENTS.md pointer: {'on' if draft.agents_pointer else 'off'}",
         theme,
+        icons,
         "pending wizard marker: cleared for this version",
     ]
 

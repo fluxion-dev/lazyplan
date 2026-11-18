@@ -54,6 +54,7 @@ try:
     )
     from textual.widgets.option_list import Option
 
+    from ...shared.design import ICON_NAMES, active_icons, apply_icons
     from ..navigation import NAV_BINDINGS
     from ..query import query_one_opt
     from ..theme.themes import THEME_NAMES
@@ -99,6 +100,7 @@ if _TEXTUAL_OK:
             self._index = self._start_index(start)
             self._initial = copy.deepcopy(session.draft)
             self._initial_theme = ""
+            self._initial_icons = ""
             self._checks = checks
             self._check_findings: tuple[HealthFinding, ...] | None = None
             self._check_error = ""
@@ -147,6 +149,7 @@ if _TEXTUAL_OK:
         def on_mount(self) -> None:
             self._apply_size(self.app.size.width, self.app.size.height)
             self._initial_theme = str(getattr(self.app, "theme", ""))
+            self._initial_icons = active_icons()
             page = self.query_one("#setup-page")
             page.border_title = " setup "
             self._fill_rail()
@@ -380,13 +383,15 @@ if _TEXTUAL_OK:
             if self._result is not None:
                 self.dismiss(self._result)
                 return
-            self._restore_theme()
+            self._restore_appearance()
             self.dismiss(WizardResult())
 
-        def _restore_theme(self) -> None:
-            """Put the preview back when the run ends without applying."""
+        def _restore_appearance(self) -> None:
+            """Put both previews back when the run ends without applying."""
             if self._initial_theme and getattr(self.app, "theme", "") != self._initial_theme:
                 self.app.theme = self._initial_theme
+            if self._initial_icons and active_icons() != self._initial_icons:
+                apply_icons(self._initial_icons)
 
         def action_update_prompt(self) -> None:
             """Open the update screen without leaving this view."""
@@ -400,14 +405,14 @@ if _TEXTUAL_OK:
                 self.dismiss(self._result)
                 return
             if not self._dirty():
-                self._restore_theme()
+                self._restore_appearance()
                 self.dismiss(WizardResult())
                 return
             from .forms import ConfirmScreen
 
             def cb(confirmed: bool | None) -> None:
                 if confirmed:
-                    self._restore_theme()
+                    self._restore_appearance()
                     self.dismiss(WizardResult())
 
             self.app.push_screen(
@@ -497,6 +502,14 @@ if _TEXTUAL_OK:
             if name in THEME_NAMES:
                 self.session.draft.theme = name
                 self.app.theme = name
+
+        @on(Select.Changed, "#setup-icons")
+        def _icons_changed(self, event: Select.Changed) -> None:
+            """Preview an icon palette and remember the choice in the draft."""
+            name = str(event.value)
+            if name in ICON_NAMES:
+                self.session.draft.icons = name
+                apply_icons(name)
 
         @on(Button.Pressed, "#setup-recheck")
         def _recheck(self) -> None:

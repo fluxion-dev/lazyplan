@@ -20,7 +20,7 @@ _._on_filter_changed, _._on_filter_submitted, _._on_highlight, _._on_row_action
 _._on_selection_changed, _._open_link, _._path_submitted, _._pick
 _._run_first, _._save, _._select, _._submit
 # Setup wizard panels and controls, dispatched by widget id.
-_._back, _._checkbox_changed, _._hooks_changed, _._model_submitted
+_._back, _._checkbox_changed, _._hooks_changed, _._icons_changed, _._model_submitted
 _._next, _._placement_selected, _._rail_selected, _._recheck
 _._reset_roles, _._select_changed, _._theme_changed
 _.action_add, _.action_apply_archive, _.action_apply_trim, _.action_apply_vacuum

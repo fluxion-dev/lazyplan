@@ -66,6 +66,13 @@
       "group": "agents"
     },
     {
+      "id": "drafts",
+      "title": "Review before it ships",
+      "description": "A plan arrives as a draft with anchored comments, questions, and change requests. The agent revises against them, and promotion waits until every note is answered.",
+      "icon": "messages-square",
+      "group": "plan"
+    },
+    {
       "id": "control-room",
       "title": "A control room for what needs you",
       "description": "Health, drift, open questions, and blocked work surface in one line, so you know where to look.",
@@ -115,9 +122,16 @@
       "group": "product"
     },
     {
+      "id": "notifications",
+      "title": "A log, not a toast stack",
+      "description": "Ordinary notices collect in a session log with their time and source; only startup and update notices interrupt. Warnings and errors badge the taskbar until you read them.",
+      "icon": "activity",
+      "group": "product"
+    },
+    {
       "id": "themes",
-      "title": "Three terminal themes",
-      "description": "Mocha, void, and latte. The screen follows your terminal, not the other way around.",
+      "title": "Themes and icon palettes",
+      "description": "Mocha, void, and latte themes, plus classic, orbit, blocks, marks, and ASCII glyph sets. Both choices survive restarts and keep every row aligned.",
       "icon": "palette",
       "group": "product"
     }

@@ -12,6 +12,16 @@ export const FAQ: readonly FaqItem[] = [
       "lpui detects your agents, offers the setup wizard, and creates the plan store. The wizard asks where plans live, which agents receive the skill, how hooks behave, and which models each role uses. It lists every file it will write before anything is applied. Reopen it with lpui setup or by pressing S in the screen.",
   },
   {
+    question: "How does draft review work?",
+    answer:
+      "An agent can add a plan as a draft instead of writing straight into the queue. You select a block or a quote, leave a comment, question, or change request, and submit. The agent revises against the notes and answers each one; promotion creates the plan tree only when no annotation is open.",
+  },
+  {
+    question: "Where did the toasts go?",
+    answer:
+      "Ordinary notices now land in a session log with their time and source. Press L from any screen to read it, scroll it, clear it, or copy a line. Only the startup notice and the once-per-version update notice still interrupt; warnings and errors badge the taskbar until you open the log.",
+  },
+  {
     question: "Do I need more than one agent?",
     answer:
       "No. One agent can plan and execute. When you add workers, milestones become lanes and lpui dispatch --plan P prints the waves, the worktree commands, and the next command for each ready task.",

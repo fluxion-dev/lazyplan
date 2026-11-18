@@ -22,13 +22,15 @@ from lazyplan.store import Store
 
 try:
     from rich.cells import cell_len
-    from textual.widgets import Static
+    from textual.containers import VerticalScroll
+    from textual.widgets import Markdown, Static
 
     from lazyplan.presentation.tui import create_app
     from lazyplan.presentation.tui.screens import (
         HealthScreen,
         HelpScreen,
         PaletteScreen,
+        ReleaseNotesScreen,
         SetupWizardScreen,
         TextScreen,
         UpdateScreen,
@@ -59,10 +61,10 @@ try:
     from lazyplan.presentation.tui.screens.source import SourceScreen
 except ImportError:  # pragma: no cover - textual not installed
     cell_len = None  # type: ignore[assignment]
-    Static = None  # type: ignore[assignment,misc]
+    Static = Markdown = VerticalScroll = None  # type: ignore[assignment,misc]
     create_app = None  # type: ignore[assignment]
     HealthScreen = HelpScreen = PaletteScreen = None  # type: ignore[assignment]
-    SetupWizardScreen = TextScreen = UpdateScreen = None  # type: ignore[assignment]
+    ReleaseNotesScreen = SetupWizardScreen = TextScreen = UpdateScreen = None  # type: ignore[assignment]
     ExportScreen = None  # type: ignore[assignment]
     ConfirmScreen = CriterionScreen = FilterPromptScreen = NewPlanScreen = None  # type: ignore[assignment]
     ClaimsHub = CommentsHub = None  # type: ignore[assignment]
@@ -132,6 +134,11 @@ DIFF = DiffResult(
     summary={"add": 0, "remove": 0, "change": 1, "move": 0, "total": 1},
 )
 
+NOTES_SAMPLE = "## v0.49.0 — 2026-11-17\n\n### Added\n\n" + "\n".join(
+    f"- **Item {index}** with `inline code` and a [link](https://example.com/{index})."
+    for index in range(60)
+)
+
 MODALS = (
     ("new plan", NewPlanScreen, "#dlg"),
     ("confirm", lambda: ConfirmScreen("Delete plan P1 and everything below it?"), "#dlg"),
@@ -147,7 +154,7 @@ MODALS = (
         "#dlg",
     ),
     ("health", lambda: HealthScreen((), review=True), "#dlg"),
-    ("notes", lambda: TextScreen("NOTES", "line one\n" + "long line " * 20), "#help"),
+    ("notes", lambda: ReleaseNotesScreen(NOTES_SAMPLE), "#help"),
 )
 FORM_MODALS = (
     ("new plan", NewPlanScreen),
@@ -156,7 +163,7 @@ FORM_MODALS = (
     ("criterion", lambda: CriterionScreen("A criterion", creating=True)),
     ("help", HelpScreen),
     ("palette", PaletteScreen),
-    ("notes", lambda: TextScreen("NOTES", "line one\n" + "long line " * 20)),
+    ("notes", lambda: ReleaseNotesScreen(NOTES_SAMPLE)),
 )
 
 
@@ -533,6 +540,45 @@ class SetupResizeTest(unittest.IsolatedAsyncioTestCase):
 
 
 class ModalResizeTest(_SurfaceCase):
+    async def test_the_release_notes_render_at_every_width(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.push_screen(ReleaseNotesScreen(NOTES_SAMPLE))
+            await pilot.pause()
+            body = app.screen.query_one("#notes-body", Markdown)
+            matrix = await ResizeMatrix("notes").walk(
+                pilot,
+                parts={"dialog": "#help", "scroll": "#notes-scroll"},
+                scrolls=("#notes-scroll",),
+            )
+            self.assertEqual(matrix.sizes(), SIZES)
+            for snapshot in matrix.snapshots:
+                with self.subTest(size=snapshot.size):
+                    snapshot.assert_inside(self)
+                    snapshot.assert_unclipped(self, ("scroll",))
+                    scroll, maximum = snapshot.scroll["#notes-scroll"]
+                    self.assertLessEqual(scroll, maximum)
+            children = [type(child).__name__ for child in body.children]
+            self.assertIn("MarkdownH2", children)
+            self.assertIn("MarkdownBulletList", children)
+
+    async def test_the_notes_scroll_survives_a_resize(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.push_screen(ReleaseNotesScreen(NOTES_SAMPLE))
+            await pilot.pause()
+            scroll = app.screen.query_one("#notes-scroll", VerticalScroll)
+            scroll.scroll_to(y=20, animate=False)
+            await pilot.pause()
+            self.assertGreater(scroll.scroll_y, 0)
+            await pilot.resize_terminal(80, 24)
+            await pilot.pause()
+            await pilot.pause()
+            self.assertGreater(scroll.scroll_y, 0)
+            self.assertLessEqual(scroll.scroll_y, scroll.max_scroll_y)
+
     async def test_every_modal_fits_and_keeps_focus(self) -> None:
         for label, factory, selector in MODALS:
             with self.subTest(modal=label):

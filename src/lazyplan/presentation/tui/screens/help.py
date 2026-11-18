@@ -62,12 +62,16 @@ if _TEXTUAL_OK:
             help_panel.border_title = self.dialog_title
 
         def compose(self) -> ComposeResult:
-            body = f"{self.HELP.rstrip()}\n{self.EXTRA}" if self.EXTRA else self.HELP
             with Vertical(id="help"):
-                with VerticalScroll(id="help-scroll"):
-                    yield Static(body, markup=False)
+                yield from self._content()
                 with _row():
                     yield Button("Close", id="cancel")
+
+        def _content(self) -> ComposeResult:
+            """The scrollable body; read-only overlays swap this in place."""
+            body = f"{self.HELP.rstrip()}\n{self.EXTRA}" if self.EXTRA else self.HELP
+            with VerticalScroll(id="help-scroll"):
+                yield Static(body, markup=False)
 
         @on(Button.Pressed, "#cancel")
         def _close(self) -> None:
@@ -89,12 +93,9 @@ if _TEXTUAL_OK:
         def __init__(self, text: str) -> None:
             super().__init__("RELEASE NOTES", text)
 
-        def compose(self) -> ComposeResult:
-            with Vertical(id="help"):
-                with VerticalScroll(id="notes-scroll"):
-                    yield Markdown(self.HELP, id="notes-body", open_links=False)
-                with _row():
-                    yield Button("Close", id="cancel")
+        def _content(self) -> ComposeResult:
+            with VerticalScroll(id="notes-scroll"):
+                yield Markdown(self.HELP, id="notes-body", open_links=False)
 
         def on_mount(self) -> None:
             super().on_mount()

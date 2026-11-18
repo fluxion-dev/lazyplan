@@ -28,6 +28,7 @@ from ...setup.steps import (
     ROLES,
     Step,
 )
+from ..size import classes_for
 
 LATER_LABEL = "Finish later"
 NEXT_LABEL = "Next"
@@ -119,7 +120,7 @@ def hint_text(width: int) -> str:
     """One keyboard hint line, trimmed on narrow terminals."""
     items = ["b back", "n next", "l finish later", "? help"]
     text = " · ".join(items)
-    if width < 80:
+    if classes_for(width).compact:
         text = " · ".join(items[:3])
     return text
 

@@ -6,6 +6,7 @@ repository budget. ``registry`` re-exports every name here.
 
 from __future__ import annotations
 
+from .registry_actions_drafts import DRAFT_ACTIONS
 from .registry_actions_provenance import PROVENANCE_ACTIONS
 from .registry_model import ENTITIES as ENTITIES
 from .registry_model import HOOK_EVENTS as HOOK_EVENTS
@@ -421,6 +422,22 @@ CORE_ACTIONS: tuple[Action, ...] = (
         cli_paths=("notes",),
     ),
     _action(
+        "app.log",
+        "Notification log",
+        "L",
+        "global",
+        ("tui",),
+        ("tree", "log"),
+        ("notification-log",),
+    ),
+    _action(
+        "app.choose",
+        "Choose from visual previews",
+        surfaces=("cli",),
+        route=("tree", "choose"),
+        cli_paths=("choose",),
+    ),
+    _action(
         "app.health",
         "Health check",
         surfaces=("tui", "cli"),
@@ -571,7 +588,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
     ),
 )
 
-ACTIONS: tuple[Action, ...] = CORE_ACTIONS + PROVENANCE_ACTIONS
+ACTIONS: tuple[Action, ...] = CORE_ACTIONS + PROVENANCE_ACTIONS + DRAFT_ACTIONS
 
 PALETTE_TO_ACTION: dict[str, str] = {
     palette_id: action.id for action in ACTIONS for palette_id in action.palette_ids

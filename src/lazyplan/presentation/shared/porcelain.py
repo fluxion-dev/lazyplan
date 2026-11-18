@@ -44,6 +44,13 @@ Reads reuse the same envelope:
   title, parent `kind:id`, extra the URL.
 - `pr status`: id is the path, status `ready|error`, title the slug, parent
   `kind:id` or `-`, extra provider/auth/cache/remote.
+- `draft`: id is the draft, status `review|revising|promoted`, title the draft
+  title, parent `plan:<id>` when promoted or `-`, extra `r<revision>
+  <open>/<total>`.
+- `block`: id is the stable block key, status the block kind, title the label,
+  parent `draft:<id>`, extra `level N`.
+- `annotation`: id is the annotation, status `open|addressed|dismissed`, title
+  the body, parent `draft:<id>`, extra `<kind> <block> <anchor>`.
 
 Text fields never carry a tab or newline: separators become a
 single space, so every record stays parseable with `line.split("\\t")`.
@@ -176,3 +183,42 @@ def link_row(criterion_id: Any, status: Any, task_id: Any, title: Any) -> str:
 def note_row(note_id: Any, actor: Any, text: Any, parent_kind: Any, parent_id: Any, ts: Any) -> str:
     """A handoff note: status is the actor, parent is the owning row."""
     return row("note", note_id, actor, text, f"{field(parent_kind)}:{field(parent_id)}", int(ts))
+
+
+def draft_row(
+    draft_id: Any,
+    status: Any,
+    title: Any,
+    plan_id: Any,
+    revision: Any,
+    open_count: Any,
+    total_count: Any,
+) -> str:
+    """A draft: status is its lifecycle, extra is revision and annotation counts."""
+    parent = f"plan:{field(plan_id)}" if plan_id else "-"
+    return row("draft", draft_id, status, title, parent, f"r{revision} {open_count}/{total_count}")
+
+
+def block_row(block_key: Any, kind: Any, label: Any, draft_id: Any, level: Any) -> str:
+    """One selectable draft block: id is the stable key, extra is its depth."""
+    return row("block", block_key, kind, label, f"draft:{field(draft_id)}", f"level {level}")
+
+
+def annotation_row(
+    annotation_id: Any,
+    status: Any,
+    body: Any,
+    draft_id: Any,
+    kind: Any,
+    block_key: Any,
+    anchor_state: Any,
+) -> str:
+    """One draft annotation: status is its state, extra is kind/block/anchor."""
+    return row(
+        "annotation",
+        annotation_id,
+        status,
+        body,
+        f"draft:{field(draft_id)}",
+        f"{field(kind)} {field(block_key)} {field(anchor_state)}",
+    )

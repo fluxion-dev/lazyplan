@@ -254,6 +254,9 @@ def _plan_tasks(snap: _Snapshot, plan_ids: list[int]) -> dict[int, int]:
 def _links(snap: _Snapshot, plan_ids: list[int]) -> tuple[dict[str, set[int]], set[str]]:
     """Commit SHA -> owning task ids, plus every linked SHA for coverage."""
     tasks = _plan_tasks(snap, plan_ids)
+    owners_by_milestone: dict[int, set[int]] = {}
+    for task_id, milestone_id in tasks.items():
+        owners_by_milestone.setdefault(milestone_id, set()).add(task_id)
     links = snap.links
     by_sha: dict[str, set[int]] = {}
     linked: set[str] = set()
@@ -263,10 +266,10 @@ def _links(snap: _Snapshot, plan_ids: list[int]) -> tuple[dict[str, set[int]], s
             linked.add(link.sha)
             by_sha.setdefault(link.sha, set()).update(owners)
 
+    all_owners = set(tasks)
     for plan_id in plan_ids:
-        absorb("plan", plan_id, set(tasks))
-    for milestone_id in set(tasks.values()):
-        owners = {task_id for task_id, mid in tasks.items() if mid == milestone_id}
+        absorb("plan", plan_id, all_owners)
+    for milestone_id, owners in owners_by_milestone.items():
         absorb("milestone", milestone_id, owners)
     for task_id in tasks:
         absorb("task", task_id, {task_id})
@@ -450,25 +453,26 @@ def report(
     cwd: str | Path = ".",
 ) -> Report:
     """Audit live: resolve the window, read git, then compute."""
-    starts = plan_starts(store)
-    snap = _snapshot(store)
-    if plan_ids is None:
-        if since is None:
-            known = [start for start in starts.values() if start > 0]
-            since = min(known) if known else 0.0
-        plans = [
-            plan.id
-            for plan in store.list_plans(archived="hide")
-            if plan.status == Status.DOING or starts.get(plan.id, 0.0) >= since
-        ]
-    else:
-        archived = {plan.id for plan in store.list_plans(archived="only")}
-        plans = [plan_id for plan_id in plan_ids if plan_id not in archived]
-        if since is None:
-            known = [starts[plan_id] for plan_id in plans if plan_id in starts]
-            since = min(known) if known else 0.0
-    commits, repos = gather_commits(store, plans, since, cwd, snapshot=snap)
-    return compute(store, plans, commits, since=since, repos=repos, snapshot=snap)
+    with store.transaction():
+        starts = plan_starts(store)
+        snap = _snapshot(store)
+        if plan_ids is None:
+            if since is None:
+                known = [start for start in starts.values() if start > 0]
+                since = min(known) if known else 0.0
+            plans = [
+                plan.id
+                for plan in store.list_plans(archived="hide")
+                if plan.status == Status.DOING or starts.get(plan.id, 0.0) >= since
+            ]
+        else:
+            archived = {plan.id for plan in store.list_plans(archived="only")}
+            plans = [plan_id for plan_id in plan_ids if plan_id not in archived]
+            if since is None:
+                known = [starts[plan_id] for plan_id in plans if plan_id in starts]
+                since = min(known) if known else 0.0
+        commits, repos = gather_commits(store, plans, since, cwd, snapshot=snap)
+        return compute(store, plans, commits, since=since, repos=repos, snapshot=snap)
 
 
 def linked_shas(store: InsightsPort, plan_ids: list[int]) -> set[str]:

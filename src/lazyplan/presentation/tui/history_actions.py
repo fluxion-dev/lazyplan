@@ -39,6 +39,16 @@ class HistoryMixin:
             self.state.history.push(NavEntry("source", kind, oid, label))
         self.app.push_screen(SourceScreen(self.store, kind, oid))
 
+    def open_draft(self, draft_id: int, record: bool = True) -> None:
+        """Open the draft review screen and remember it in history."""
+        from .screens.draft import DraftScreen
+
+        if record:
+            draft = self.store.get_draft(draft_id)
+            label = f"D{draft_id} {draft.title}" if draft is not None else f"draft #{draft_id}"
+            self.state.history.push(NavEntry("draft", "draft", draft_id, label))
+        self.app.push_screen(DraftScreen(self.store, draft_id))
+
     def action_history_back(self) -> None:
         """Return to the prior screen and restore its exact selection."""
         entry = self.state.history.back()
@@ -65,3 +75,5 @@ class HistoryMixin:
         kind, oid = entry.selection
         if entry.screen == "source":
             self.open_source(kind, oid, record=False)
+        elif entry.screen == "draft":
+            self.open_draft(oid, record=False)

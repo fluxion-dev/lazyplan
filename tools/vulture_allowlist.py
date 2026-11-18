@@ -19,21 +19,29 @@ _._highlight, _._later, _._never, _._on_click, _._on_expanded
 _._on_filter_changed, _._on_filter_submitted, _._on_highlight, _._on_row_action
 _._on_selection_changed, _._open_link, _._path_submitted, _._pick
 _._run_first, _._save, _._select, _._submit
+# Draft review screen: @on callbacks and key actions.
+_._highlight_annotation, _._open_annotation
+_.action_annotate, _.action_delete_annotation, _.action_dismiss_annotation
+_.action_next_block, _.action_prev_block, _.action_promote, _.action_submit_feedback
+_.action_view_annotation
 # Setup wizard panels and controls, dispatched by widget id.
 _._back, _._checkbox_changed, _._hooks_changed, _._icons_changed, _._model_submitted
 _._next, _._placement_selected, _._rail_selected, _._recheck
 _._reset_roles, _._select_changed, _._theme_changed
 _.action_add, _.action_apply_archive, _.action_apply_trim, _.action_apply_vacuum
-_.action_back, _.action_clear_filter, _.action_copy, _.action_edit_row
+_.action_back, _.action_clear, _.action_clear_filter, _.action_copy, _.action_edit_row
 _.action_filter, _.action_filter_actor, _.action_filter_kind, _.action_fold_left
 _.action_fold_right, _.action_force, _.action_hub_toggle, _.action_less
 _.action_more, _.action_new_context, _.action_next_file, _.action_note
 _.action_open, _.action_open_owner, _.action_open_value, _.action_prev_file
 _.action_quit, _.action_relate, _.action_restore, _.action_source_hub
 _.action_toggle_expand_all, _.action_toggle_fold, _.action_toggle_split, _.action_toggle_wrap
-_.action_unrelate, _.on_click, _.on_key, _.on_resize, _.on_tree_node_collapsed
+_.action_unrelate, _.on_click, _.on_key, _.on_markdown_link_clicked, _.on_notifications_changed
+_.on_resize, _.on_tree_node_collapsed
 _.on_tree_node_expanded, _.on_tree_node_highlighted, _.on_tree_node_selected, _.on_unmount
 _.watch_rev
+# HTTP handler hooks called by BaseHTTPRequestHandler.
+_.daemon_threads, _.do_GET, _.do_POST, _.log_message, _.server_version
 # Widget state and class attributes read by the framework.
 _.BINDINGS, _.CSS_PATH, _.ENABLE_COMMAND_PALETTE, _.TITLE
 _.border_subtitle, _.border_title, _.bubble, _.can_focus
@@ -42,10 +50,11 @@ _.rev, _.show_root
 # Dataclass fields consumed through serialization.
 _.auto_closed, _.daily_rate, _.deprecated_in, _.elapsed_seconds
 _.from_cache, _.handoff, _.host_session, _.new_count, _.old_count, _.rebuilds
-_.rev, _.tui_only
+_.rev, _.tui_only, _.promoted_at
 # sqlite3/shlex API noise and docs metadata read by tools/gen-man.py.
 _.ENVIRONMENT, _.FILES, _.row_factory, _.whitespace
 _.whitespace_split
 # Kept-live seams, each with a caller or contract outside src discovery.
 _._status_keep_ids, _.attention_ids, _.criteria_progress, _.is_available
-_.plan_uid, _.poll_now, _.task_criteria
+_.drawn_width, _.plan_uid, _.poll_now, _.task_criteria
+_.get_draft_revision, _.list_draft_revisions, _.resolve_anchor

@@ -402,6 +402,67 @@ def leading_int(text: str, start: int) -> int | None:
     return int(text[start:end]) if end > start else None
 
 
+#: Event detail prefixes that name a plan or a row under one. Every recent-first
+#: activity read cares about these rows and no others.
+PLAN_EVENT_PREFIXES = (
+    "P#",
+    "plan #",
+    "M#",
+    "milestone #",
+    "T#",
+    "task #",
+    "criteria #",
+    "criterion #",
+)
+
+
+def plan_for_event(
+    detail: str,
+    milestone_plan: dict[int, int],
+    task_milestone: dict[int, int],
+    criterion_parent: dict[int, tuple[str, int]],
+) -> int | None:
+    """Owning plan id encoded in one event detail, or None.
+
+    Writers use a fixed prefix per kind. Slicing beats a regex here because the
+    activity sort walks the whole bounded event feed.
+    """
+    if detail.startswith("P#"):
+        return leading_int(detail, 2)
+    if detail.startswith("plan #"):
+        return leading_int(detail, 6)
+    if detail.startswith("M#"):
+        mid = leading_int(detail, 2)
+        return milestone_plan.get(mid) if mid is not None else None
+    if detail.startswith("milestone #"):
+        mid = leading_int(detail, 11)
+        return milestone_plan.get(mid) if mid is not None else None
+    if detail.startswith("T#"):
+        tid = leading_int(detail, 2)
+        mid = task_milestone.get(tid) if tid is not None else None
+        return milestone_plan.get(mid) if mid is not None else None
+    if detail.startswith("task #"):
+        tid = leading_int(detail, 6)
+        mid = task_milestone.get(tid) if tid is not None else None
+        return milestone_plan.get(mid) if mid is not None else None
+    if detail.startswith("criteria #"):
+        cid = leading_int(detail, 10)
+    elif detail.startswith("criterion #"):
+        cid = leading_int(detail, 11)
+    else:
+        return None
+    found = criterion_parent.get(cid) if cid is not None else None
+    if found is None:
+        return None
+    kind, parent_id = found
+    if kind == "plan":
+        return parent_id
+    if kind == "milestone":
+        return milestone_plan.get(parent_id)
+    mid = task_milestone.get(parent_id)
+    return milestone_plan.get(mid) if mid is not None else None
+
+
 def one_line(value: object, limit: int = 60) -> str:
     """Flattened one-line excerpt of a value."""
     text = " ".join(str(value).split())

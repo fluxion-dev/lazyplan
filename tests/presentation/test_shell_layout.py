@@ -15,8 +15,8 @@ except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
 
 
-EXPECTED_LEFT = ("plans-active", "agents", "plans-finished", "git")
-EXPECTED_RIGHT = ("preview",)
+EXPECTED_LEFT = ("plans-drafts", "plans-active", "plans-finished")
+EXPECTED_RIGHT = ("preview", "agents", "git")
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -42,6 +42,7 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
             self.assertLessEqual(abs(left.size.width - side.size.width), 1)
             self.assertTrue(app.query_one("#plans-active").display)
             self.assertFalse(app.query_one("#plans-finished").display)
+            self.assertFalse(app.query_one("#plans-drafts").display)
             self.assertFalse(app.query_one("#agents").display)
             self.assertFalse(app.query_one("#git").display)
             preview = app.query_one("#preview")
@@ -79,6 +80,7 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             left = app.query_one("#left")
             self.assertEqual(tuple(child.id for child in left.children), EXPECTED_LEFT)
+            self.assertFalse(app.query_one("#plans-drafts").display)
             self.assertFalse(app.query_one("#side").display)
             self.assertFalse(app.query_one("#preview").display)
 

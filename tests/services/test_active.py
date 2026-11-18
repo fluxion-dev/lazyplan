@@ -3,23 +3,17 @@
 from __future__ import annotations
 
 import ast
-import tempfile
 import unittest
 from pathlib import Path
 
 from lazyplan.core.entities import Status
 from lazyplan.services import active
-from lazyplan.store import Store
+from tests.support.state import StoreCase
 
 SERVICES = Path(__file__).resolve().parents[2] / "src" / "lazyplan" / "services"
 
 
-class ActiveSelectionTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.tmp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.tmp.cleanup)
-        self.store = Store(Path(self.tmp.name) / "active.db")
-
+class ActiveSelectionTest(StoreCase):
     def make_plan(self, name: str, status: Status = Status.TODO) -> tuple[int, int]:
         """Add a plan with one milestone and two tasks; return both ids."""
         plan = self.store.add_plan(name, actor="fixture")

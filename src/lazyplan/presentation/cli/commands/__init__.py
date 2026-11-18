@@ -33,6 +33,21 @@ from .comment import (
 )
 from .dispatch import _cmd_dispatch
 from .doctor import _cmd_doctor
+from .drafts import (
+    _cmd_draft_add,
+    _cmd_draft_annotate,
+    _cmd_draft_annotations,
+    _cmd_draft_delete,
+    _cmd_draft_dismiss,
+    _cmd_draft_list,
+    _cmd_draft_promote,
+    _cmd_draft_ready,
+    _cmd_draft_resolve,
+    _cmd_draft_respond,
+    _cmd_draft_revise,
+    _cmd_draft_show,
+    _cmd_draft_submit,
+)
 from .forge import (
     _cmd_pr_auth,
     _cmd_pr_link,
@@ -112,13 +127,14 @@ from .system import (
     _cmd_brief as _cmd_brief,
 )
 from .system import (
-    _cmd_context as _cmd_context,
-)
-from .system import (
+    _cmd_choose,
     _cmd_lint,
     _cmd_notes,
     _cmd_stats,
     _cmd_trace,
+)
+from .system import (
+    _cmd_context as _cmd_context,
 )
 from .system import (
     _cmd_review as _cmd_review,
@@ -174,6 +190,19 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("question", "list"): "question-list",
     ("question", "resolve"): "question-resolve",
     ("question", "reopen"): "question-reopen",
+    ("draft", "list"): "draft-list",
+    ("draft", "show"): "draft-show",
+    ("draft", "annotations"): "draft-annotations",
+    ("draft", "add"): "draft-add",
+    ("draft", "revise"): "draft-revise",
+    ("draft", "submit"): "draft-submit",
+    ("draft", "ready"): "draft-ready",
+    ("draft", "annotate"): "draft-annotate",
+    ("draft", "respond"): "draft-respond",
+    ("draft", "resolve"): "draft-resolve",
+    ("draft", "dismiss"): "draft-dismiss",
+    ("draft", "promote"): "draft-promote",
+    ("draft", "delete"): "draft-delete",
     ("touch", "add"): "touch-add",
     ("touch", "list"): "touch-list",
     ("touch", "remove"): "touch-remove",
@@ -245,6 +274,19 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "question-list": _cmd_question_list,
     "question-resolve": _cmd_question_resolve,
     "question-reopen": _cmd_question_reopen,
+    "draft-list": _cmd_draft_list,
+    "draft-show": _cmd_draft_show,
+    "draft-annotations": _cmd_draft_annotations,
+    "draft-add": _cmd_draft_add,
+    "draft-revise": _cmd_draft_revise,
+    "draft-submit": _cmd_draft_submit,
+    "draft-ready": _cmd_draft_ready,
+    "draft-annotate": _cmd_draft_annotate,
+    "draft-respond": _cmd_draft_respond,
+    "draft-resolve": _cmd_draft_resolve,
+    "draft-dismiss": _cmd_draft_dismiss,
+    "draft-promote": _cmd_draft_promote,
+    "draft-delete": _cmd_draft_delete,
     "touch-add": _cmd_touch_add,
     "touch-list": _cmd_touch_list,
     "touch-remove": _cmd_touch_remove,
@@ -281,6 +323,7 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "feed": _cmd_feed,
     "completion": _cmd_completion,
     "notes": _cmd_notes,
+    "choose": _cmd_choose,
     "ui": _cmd_ui,
     "maint-report": _cmd_maint_report,
     "maint-archive": _cmd_maint_archive,

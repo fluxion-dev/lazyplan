@@ -50,7 +50,7 @@ class ContextMixin(AppBase):
 
     def _cursor_is_root(self) -> bool:
         """True when neither plan panel holds a real row under its cursor."""
-        for tree_id in ("#tree", "#tree-finished"):
+        for tree_id in ("#tree", "#tree-finished", "#tree-drafts"):
             try:
                 tree = self.query_one(tree_id, Tree)
                 cursor = tree.cursor_node

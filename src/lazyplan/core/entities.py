@@ -10,7 +10,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from .kinds import KINDS, PARENT_KIND_ERROR, QUESTION_STATUSES, SCOPE_KINDS
+from .kinds import (
+    DRAFT_ANCHOR_STATES,
+    DRAFT_ANNOTATION_KINDS,
+    DRAFT_ANNOTATION_STATUSES,
+    DRAFT_STATUSES,
+    KINDS,
+    PARENT_KIND_ERROR,
+    QUESTION_STATUSES,
+    SCOPE_KINDS,
+)
 from .policies.lanes import (
     DEFAULT_AGENT_ROLE,
     DEFAULT_DISPATCH_MODE,
@@ -189,6 +198,107 @@ class PlanChange:
             raise ValueError("action must be add|edit|delete")
         if self.obj_id < 0:
             raise ValueError("obj_id must not be negative")
+
+
+@dataclass(frozen=True)
+class PlanDraft:
+    """A validated plan document waiting for review before it becomes a plan."""
+
+    id: int
+    title: str
+    document: str
+    status: str = "review"
+    revision: int = 1
+    actor: str = "human"
+    created_at: float = 0.0
+    updated_at: float = 0.0
+    plan_id: int | None = None
+    promoted_at: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.id < 0:
+            raise ValueError("draft id must not be negative")
+        if not self.title.strip():
+            raise ValueError("draft title must not be empty")
+        if not self.document.strip():
+            raise ValueError("draft document must not be empty")
+        if self.status not in DRAFT_STATUSES:
+            raise ValueError(f"draft status must be {'|'.join(DRAFT_STATUSES)}")
+        if self.revision < 1:
+            raise ValueError("draft revision must be at least 1")
+        if self.plan_id is not None and self.plan_id < 1:
+            raise ValueError("draft plan_id must be positive when set")
+
+
+@dataclass(frozen=True)
+class DraftRevision:
+    """One immutable snapshot of a draft document."""
+
+    id: int
+    draft_id: int
+    revision: int
+    document: str
+    actor: str = "human"
+    ts: float = 0.0
+    note: str = ""
+
+    def __post_init__(self) -> None:
+        if self.id < 0:
+            raise ValueError("draft revision id must not be negative")
+        if self.draft_id < 1:
+            raise ValueError("draft revision draft_id must be positive")
+        if self.revision < 1:
+            raise ValueError("draft revision number must be at least 1")
+        if not self.document.strip():
+            raise ValueError("draft revision document must not be empty")
+
+
+@dataclass(frozen=True)
+class DraftAnnotation:
+    """One reviewer annotation anchored to a draft block and quote."""
+
+    id: int
+    draft_id: int
+    block_key: str
+    kind: str
+    body: str
+    author: str = "human"
+    ts: float = 0.0
+    revision: int = 1
+    quote: str = ""
+    start_offset: int = 0
+    end_offset: int = 0
+    status: str = "open"
+    response: str = ""
+    responded_by: str = ""
+    responded_at: float = 0.0
+    anchor_state: str = "ok"
+
+    def __post_init__(self) -> None:
+        if self.id < 0:
+            raise ValueError("annotation id must not be negative")
+        if self.draft_id < 1:
+            raise ValueError("annotation draft_id must be positive")
+        if not self.block_key.strip():
+            raise ValueError("annotation block_key must not be empty")
+        if self.kind not in DRAFT_ANNOTATION_KINDS:
+            raise ValueError(f"annotation kind must be {'|'.join(DRAFT_ANNOTATION_KINDS)}")
+        if not self.body.strip():
+            raise ValueError("annotation body must not be empty")
+        if self.status not in DRAFT_ANNOTATION_STATUSES:
+            raise ValueError(f"annotation status must be {'|'.join(DRAFT_ANNOTATION_STATUSES)}")
+        if self.anchor_state not in DRAFT_ANCHOR_STATES:
+            raise ValueError(f"anchor_state must be {'|'.join(DRAFT_ANCHOR_STATES)}")
+        if self.revision < 1:
+            raise ValueError("annotation revision must be at least 1")
+        if not isinstance(self.quote, str):
+            raise ValueError("annotation quote must be a string")
+        if self.start_offset < 0 or self.end_offset < 0:
+            raise ValueError("annotation offsets must not be negative")
+        if self.quote and self.end_offset <= self.start_offset:
+            raise ValueError("annotation end_offset must follow start_offset")
+        if self.responded_at < 0:
+            raise ValueError("annotation responded_at must not be negative")
 
 
 @dataclass(frozen=True)

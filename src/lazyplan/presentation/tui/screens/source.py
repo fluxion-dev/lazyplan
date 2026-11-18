@@ -40,6 +40,7 @@ from ..controllers.source_nav import file_nodes
 from ..controllers.source_state import SourceViewState
 from ..controllers.source_tree import build_trail_tree
 from ..navigation import NAV_BINDINGS, NavigationMixin
+from ..size import apply_classes, classes_for
 from ..views.diff_split import MIN_SPLIT_WIDTH
 from ..views.diff_style import palette_from_theme
 from ..views.source import (
@@ -127,12 +128,14 @@ if _TEXTUAL_OK:
 
         def _apply_width_classes(self, width: int) -> None:
             """Switch between the stacked and side-by-side layouts."""
-            self.set_class(width < 80, "compact")
-            self.set_class(width < 100, "stacked")
-            self.set_class(width >= 120, "wide")
+            apply_classes(self, classes_for(width), ("compact", "stacked", "wide"))
 
         def on_resize(self, event: events.Resize) -> None:
-            """Re-render the current preview after a width change."""
+            """Re-render the current preview after a width change.
+
+            The selected node and diff page are the user's place; only the
+            pagination cache is stale, so the page offset is kept.
+            """
             self._apply_width_classes(event.size.width)
             if self._view.split and event.size.width - 2 < MIN_SPLIT_WIDTH:
                 self._view.split = False
@@ -143,7 +146,15 @@ if _TEXTUAL_OK:
             self._diff_cache.clear()
             node = self.query_one("#source-tree", NavTree).cursor_node
             if node is not None:
-                self._preview(node)
+                self._preview(node, reset_page=False)
+            self.call_after_refresh(self._clamp_scroll)
+
+        def _clamp_scroll(self) -> None:
+            """A wider preview can leave the old offset past the last page."""
+            scroll = self.query_one("#source-preview", VerticalScroll)
+            target = min(scroll.scroll_y, scroll.max_scroll_y)
+            if target != scroll.scroll_y:
+                scroll.scroll_to(y=target, animate=False)
 
         def check_action(self, action: str, parameters: tuple[object, ...]) -> bool | None:
             """Keep the filter field's keys free while it owns the keyboard."""

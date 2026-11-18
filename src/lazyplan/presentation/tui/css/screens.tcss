@@ -20,7 +20,8 @@ ModalScreen {
 }
 
 #dlg .form-title {
-    height: 1;
+    width: 1fr;
+    height: auto;
     color: $lp-accent;
     text-style: bold;
     margin-bottom: 1;
@@ -31,8 +32,7 @@ ModalScreen {
     color: $lp-text-muted;
 }
 
-#dlg Input,
-#dlg Select {
+#dlg Input {
     width: 100%;
     height: 3;
     border: tall $lp-border;
@@ -118,12 +118,120 @@ Screen.short #dlg.form-tall TextArea {
     height: 1fr;
 }
 
+#notes-scroll {
+    height: 1fr;
+    background: transparent;
+}
+
 #source-page {
     height: 1fr;
     border: round $lp-border;
     border-title-color: $lp-accent;
     background: $lp-surface-alt;
     padding: 0 1;
+}
+
+#draft-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#draft-head {
+    height: auto;
+    min-height: 2;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#draft-scroll {
+    width: 3fr;
+    height: 1fr;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#draft-main {
+    height: 1fr;
+}
+
+#draft-side {
+    width: 2fr;
+    height: 1fr;
+    min-width: 28;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+    padding: 0 1;
+}
+
+#draft-side-title {
+    height: 1;
+    color: $lp-text-muted;
+    text-style: bold;
+}
+
+#draft-annotations {
+    height: 1fr;
+}
+
+#draft-annotation-detail {
+    height: auto;
+    max-height: 12;
+    padding: 0 1;
+}
+
+Screen.compact #draft-main {
+    layout: vertical;
+}
+
+Screen.compact #draft-scroll {
+    width: 100%;
+    height: 3fr;
+    min-height: 8;
+}
+
+Screen.compact #draft-side {
+    width: 100%;
+    height: 2fr;
+    min-height: 6;
+}
+
+#draft-body {
+    height: auto;
+    padding: 0 1;
+}
+
+.draft-block {
+    height: auto;
+    margin-bottom: 1;
+}
+
+.draft-block.level-1 {
+    margin-left: 2;
+}
+
+.draft-block.level-2 {
+    margin-left: 4;
+}
+
+.draft-block-label {
+    height: 1;
+    color: $lp-text-muted;
+    text-style: bold;
+}
+
+.draft-block-body {
+    height: auto;
+    padding: 0 1;
+}
+
+.draft-block-body:focus {
+    background: $lp-surface-raised;
 }
 
 #source-head {
@@ -252,6 +360,8 @@ Screen.compact #source-head {
 }
 
 #palette-title {
+    width: 1fr;
+    height: auto;
     color: $lp-accent;
     text-style: bold;
 }
@@ -309,6 +419,24 @@ Screen.compact #source-head {
 #hub-list-wrap:focus-within,
 #hub-preview:focus-within {
     border: round $lp-border-focus;
+}
+
+Screen.compact #hub-main {
+    layout: vertical;
+}
+
+Screen.compact #hub-list-wrap {
+    width: 100%;
+    min-width: 0;
+    height: 2fr;
+    min-height: 5;
+}
+
+Screen.compact #hub-preview {
+    width: 100%;
+    min-width: 0;
+    height: 3fr;
+    min-height: 7;
 }
 
 #hub-list > .option-list--option {
@@ -480,12 +608,10 @@ Screen.compact #source-head {
 
 #setup-panel .setup-row Select {
     width: 2fr;
-    height: 3;
 }
 
 #setup-panel .setup-row Input {
     width: 2fr;
-    height: 3;
 }
 
 Screen.compact #setup-panel .setup-row {
@@ -538,14 +664,16 @@ Screen.compact #setup-panel .setup-row Input {
     border: none;
 }
 
-#setup-page Input,
-#setup-page Select {
+#setup-page Input {
     height: 3;
     border: tall $lp-border;
 }
 
 #setup-page Select {
     width: 1fr;
+    height: auto;
+    min-height: 3;
+    border: none;
 }
 
 Screen.compact #setup-page {
@@ -576,4 +704,62 @@ Screen.short #setup-head {
 
 Screen.short #setup-copy {
     max-height: 1;
+}
+
+#log-page {
+    height: 1fr;
+    border: round $lp-border;
+    border-title-color: $lp-accent;
+    background: $lp-surface-alt;
+    padding: 0 1;
+}
+
+#log-head {
+    height: auto;
+    max-height: 3;
+    background: $lp-surface;
+    color: $lp-accent;
+    padding: 0 1;
+    margin-bottom: 1;
+    text-wrap: wrap;
+}
+
+#log-scroll {
+    height: 1fr;
+    padding: 0 1;
+    border: round $lp-border-muted;
+    border-title-color: $lp-text-muted;
+}
+
+#log-scroll:focus-within {
+    border: round $lp-border-focus;
+}
+
+#log-list {
+    height: auto;
+    background: transparent;
+}
+
+#log-list > .option-list--option {
+    padding: 0 1;
+}
+
+#log-list > .option-list--option-highlighted {
+    background: $lp-cursor;
+    color: $lp-accent;
+    text-style: bold;
+}
+
+#log-list > .option-list--option-disabled {
+    color: $lp-text-faint;
+}
+
+#log-hints {
+    width: 100%;
+    height: auto;
+    max-height: 2;
+    padding: 0 1;
+    background: $lp-surface;
+    color: $lp-text-muted;
+    text-wrap: wrap;
 }

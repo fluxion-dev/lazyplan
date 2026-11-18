@@ -20,6 +20,10 @@ if _TEXTUAL_OK:
 
         def on_tree_node_selected(self, e: Tree.NodeSelected) -> None:
             """Clicks and cursor moves select only; the overview follows."""
+            key = self._node_key(e.node)
+            if key is not None and key[0] == "draft":
+                self.open_draft(key[1])
+                return
             self.tree_controller.track(e.node)
 
         def on_tree_node_highlighted(self, e: Tree.NodeHighlighted) -> None:

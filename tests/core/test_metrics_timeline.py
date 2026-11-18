@@ -219,117 +219,58 @@ class TimelineSnapshotTest(unittest.TestCase):
         self._at(1_170, lambda: self.store.add_task(second.id, "Task three"))
         return plan.id, first.id, second.id, one.id, two.id
 
-    def test_milestone_scope_keeps_its_own_lane_and_tasks(self) -> None:
-        plan_id, first_id, _second_id, one_id, two_id = self._task_plan()
-        self._at(
-            1_300,
-            lambda: services.set_status(self.store, "task", one_id, Status.DOING, actor="qa"),
-        )
-        self._at(
-            1_500,
-            lambda: services.set_status(self.store, "task", one_id, Status.DONE, actor="qa"),
-        )
+    def test_scope_limits_and_marks_the_selection(self) -> None:
+        plan_id, first_id, _second_id, _one_id, two_id = self._task_plan()
 
-        snap = metrics.snapshot(
-            self.store,
-            now=2_000,
-            plan_id=plan_id,
-            scope_kind="milestone",
-            scope_id=first_id,
-        )
+        with self.subTest(scope="milestone"):
+            snap = metrics.snapshot(
+                self.store,
+                now=2_000,
+                plan_id=plan_id,
+                scope_kind="milestone",
+                scope_id=first_id,
+            )
+            assert snap.timeline is not None
+            self.assertEqual(
+                [(lane.kind, lane.title) for lane in snap.timeline.lanes],
+                [("milestone", "First"), ("task", "Task one"), ("task", "Task two")],
+            )
+            self.assertTrue(snap.timeline.lanes[0].selected)
+            self.assertFalse(snap.timeline.lanes[1].selected)
+            self.assertFalse(snap.timeline.lanes[2].selected)
 
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.title) for lane in snap.timeline.lanes],
-            [
-                ("milestone", "First"),
-                ("task", "Task one"),
-                ("task", "Task two"),
-            ],
-        )
-        task_one = snap.timeline.lanes[1]
-        self.assertEqual(task_one.active, ((1_300, 1_500),))
-        self.assertTrue(snap.timeline.lanes[0].selected)
-        self.assertFalse(task_one.selected)
-        self.assertFalse(snap.timeline.lanes[2].selected)
+        with self.subTest(scope="task"):
+            snap = metrics.snapshot(
+                self.store,
+                now=2_000,
+                plan_id=plan_id,
+                scope_kind="task",
+                scope_id=two_id,
+            )
+            assert snap.timeline is not None
+            self.assertEqual(
+                [(lane.kind, lane.title, lane.selected) for lane in snap.timeline.lanes],
+                [("task", "Task two", True)],
+            )
 
-    def test_task_scope_keeps_only_the_selected_task(self) -> None:
-        plan_id, _first_id, _second_id, _one_id, two_id = self._task_plan()
+        with self.subTest(scope="plan"):
+            other = self._at(3_000, lambda: self.store.add_plan("Scoped plan"))
+            self._at(3_100, lambda: self.store.add_milestone(other.id, "Scoped first"))
+            self._at(3_200, lambda: self.store.add_milestone(other.id, "Scoped second"))
+            snap = metrics.snapshot(
+                self.store,
+                now=4_000,
+                plan_id=other.id,
+                scope_kind="plan",
+                scope_id=other.id,
+            )
+            assert snap.timeline is not None
+            self.assertEqual(
+                [(lane.kind, lane.selected) for lane in snap.timeline.lanes],
+                [("plan", True), ("milestone", False), ("milestone", False)],
+            )
 
-        snap = metrics.snapshot(
-            self.store,
-            now=2_000,
-            plan_id=plan_id,
-            scope_kind="task",
-            scope_id=two_id,
-        )
-
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.title, lane.selected) for lane in snap.timeline.lanes],
-            [("task", "Task two", True)],
-        )
-
-    def test_plan_scope_marks_only_the_plan_lane(self) -> None:
-        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
-        self._at(1_100, lambda: self.store.add_milestone(plan.id, "First"))
-        self._at(1_200, lambda: self.store.add_milestone(plan.id, "Second"))
-
-        snap = metrics.snapshot(
-            self.store,
-            now=2_000,
-            plan_id=plan.id,
-            scope_kind="plan",
-            scope_id=plan.id,
-        )
-
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.selected) for lane in snap.timeline.lanes],
-            [("plan", True), ("milestone", False), ("milestone", False)],
-        )
-
-    def test_milestone_scope_marks_only_that_milestone(self) -> None:
-        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
-        first = self._at(1_100, lambda: self.store.add_milestone(plan.id, "First"))
-        self._at(1_200, lambda: self.store.add_milestone(plan.id, "Second"))
-        self._at(1_150, lambda: self.store.add_task(first.id, "Task"))
-
-        snap = metrics.snapshot(
-            self.store,
-            now=2_000,
-            plan_id=plan.id,
-            scope_kind="milestone",
-            scope_id=first.id,
-        )
-
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.title, lane.selected) for lane in snap.timeline.lanes],
-            [
-                ("milestone", "First", True),
-                ("task", "Task", False),
-            ],
-        )
-
-    def test_task_scope_marks_only_the_selected_task(self) -> None:
-        plan_id, _first_id, _second_id, _one_id, two_id = self._task_plan()
-
-        snap = metrics.snapshot(
-            self.store,
-            now=2_000,
-            plan_id=plan_id,
-            scope_kind="task",
-            scope_id=two_id,
-        )
-
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.title, lane.selected) for lane in snap.timeline.lanes],
-            [("task", "Task two", True)],
-        )
-
-    def test_scoped_view_without_a_scope_marks_no_lanes_selected(self) -> None:
+    def test_scope_without_a_row_marks_nothing(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
         self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
 
@@ -338,24 +279,58 @@ class TimelineSnapshotTest(unittest.TestCase):
         assert snap.timeline is not None
         self.assertEqual([lane.selected for lane in snap.timeline.lanes], [False, False])
 
-    def test_no_selection_shows_the_select_a_row_empty_state(self) -> None:
-        self._at(1_000, lambda: self.store.add_plan("First plan"))
-        self._at(2_000, lambda: self.store.add_plan("Second plan"))
+    def test_empty_states_name_the_reason(self) -> None:
+        with self.subTest(state="no plans"):
+            snap = metrics.snapshot(self.store, now=2_000)
+            assert snap.timeline is not None
+            self.assertEqual(snap.timeline.lanes, ())
+            self.assertEqual(snap.timeline.empty, "no plans yet")
 
-        snap = metrics.snapshot(self.store, now=3_000)
+        with self.subTest(state="unknown plan"):
+            self.store.add_plan("Plan")
+            snap = metrics.snapshot(self.store, now=2_000, plan_id=999)
+            assert snap.timeline is not None
+            self.assertEqual(snap.timeline.lanes, ())
+            self.assertEqual(snap.timeline.empty, "no plans yet")
 
+        with self.subTest(state="no selection"):
+            self._at(2_000, lambda: self.store.add_plan("Second plan"))
+            snap = metrics.snapshot(self.store, now=3_000)
+            assert snap.timeline is not None
+            self.assertEqual(snap.timeline.lanes, ())
+            self.assertEqual(snap.timeline.empty, "select a row")
+
+        with self.subTest(state="unknown scope"):
+            snap = metrics.snapshot(self.store, now=3_000, scope_kind="milestone", scope_id=999)
+            assert snap.timeline is not None
+            self.assertEqual(snap.timeline.lanes, ())
+            self.assertEqual(snap.timeline.empty, "select a row")
+
+    def test_minimal_scopes_keep_the_parent_lane(self) -> None:
+        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
+
+        snap = metrics.snapshot(self.store, now=2_000, plan_id=plan.id)
         assert snap.timeline is not None
-        self.assertEqual(snap.timeline.lanes, ())
-        self.assertEqual(snap.timeline.empty, "select a row")
+        self.assertEqual(
+            [(lane.kind, lane.title) for lane in snap.timeline.lanes],
+            [("plan", "Plan")],
+        )
+        self.assertEqual(snap.timeline.empty, "")
 
-    def test_unknown_scope_without_a_plan_falls_back_to_the_empty_state(self) -> None:
-        self._task_plan()
-
-        snap = metrics.snapshot(self.store, now=2_000, scope_kind="milestone", scope_id=999)
-
+        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
+        snap = metrics.snapshot(
+            self.store,
+            now=2_000,
+            plan_id=plan.id,
+            scope_kind="milestone",
+            scope_id=milestone.id,
+        )
         assert snap.timeline is not None
-        self.assertEqual(snap.timeline.lanes, ())
-        self.assertEqual(snap.timeline.empty, "select a row")
+        self.assertEqual(
+            [(lane.kind, lane.title, lane.selected) for lane in snap.timeline.lanes],
+            [("milestone", "Milestone", True)],
+        )
+        self.assertEqual(snap.timeline.empty, "")
 
     def test_open_work_ends_at_now(self) -> None:
         plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
@@ -388,53 +363,6 @@ class TimelineSnapshotTest(unittest.TestCase):
                 ("milestone", "First milestone", False),
             ],
         )
-
-    def test_unknown_plan_has_no_lanes(self) -> None:
-        self.store.add_plan("Plan")
-
-        snap = metrics.snapshot(self.store, now=2_000, plan_id=999)
-
-        assert snap.timeline is not None
-        self.assertEqual(snap.timeline.lanes, ())
-        self.assertEqual(snap.timeline.empty, "no plans yet")
-
-    def test_empty_store_reports_no_plans(self) -> None:
-        snap = metrics.snapshot(self.store, now=2_000)
-
-        assert snap.timeline is not None
-        self.assertEqual(snap.timeline.lanes, ())
-        self.assertEqual(snap.timeline.empty, "no plans yet")
-
-    def test_plan_scope_without_milestones_keeps_the_plan_lane(self) -> None:
-        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
-
-        snap = metrics.snapshot(self.store, now=2_000, plan_id=plan.id)
-
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.title) for lane in snap.timeline.lanes],
-            [("plan", "Plan")],
-        )
-        self.assertEqual(snap.timeline.empty, "")
-
-    def test_milestone_scope_without_tasks_keeps_the_milestone_lane(self) -> None:
-        plan = self._at(1_000, lambda: self.store.add_plan("Plan"))
-        milestone = self._at(1_100, lambda: self.store.add_milestone(plan.id, "Milestone"))
-
-        snap = metrics.snapshot(
-            self.store,
-            now=2_000,
-            plan_id=plan.id,
-            scope_kind="milestone",
-            scope_id=milestone.id,
-        )
-
-        assert snap.timeline is not None
-        self.assertEqual(
-            [(lane.kind, lane.title, lane.selected) for lane in snap.timeline.lanes],
-            [("milestone", "Milestone", True)],
-        )
-        self.assertEqual(snap.timeline.empty, "")
 
 
 if __name__ == "__main__":

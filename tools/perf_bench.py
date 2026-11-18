@@ -11,9 +11,10 @@ Run it by hand:
     python3 tools/perf_bench.py --quick
     python3 tools/perf_bench.py --no-tui --repeat 3
 
-The benchmark reports wall time, SQL statement count, and connection count.
-`BUDGETS` gates the read paths: query counts are exact and deterministic, so
-an accidental per-row query fails the check immediately.
+The benchmark reports wall time, SQL statement count, and connection count,
+plus cold CLI startup for import, version, and list. `BUDGETS` gates the read
+paths: query counts are exact and deterministic, so an accidental per-row
+query fails the check immediately.
 """
 
 from __future__ import annotations
@@ -35,11 +36,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from unittest import mock
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
 
 import lazyplan.store.base as store_mod  # noqa: E402
-from lazyplan import services
-from lazyplan.presentation.shared import render
+from lazyplan import services  # noqa: E402
+from lazyplan.presentation.shared import render  # noqa: E402
 from lazyplan.services import audit, needs_me, stats  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -113,35 +115,42 @@ class Budget:
     nodes: int | None = None
 
 
-# Query ceilings sit within 20% of the measured count on the default fixture;
-# query counts are exact and deterministic, so an accidental per-row query
-# breaks the gate immediately. Wall ceilings stay generous because runner
-# variance dwarfs the real cost; see WALL_MULTIPLIER below.
+# Query ceilings are the measured count on the default fixture: a single added
+# statement fails the gate, which is the point. Wall ceilings are roughly ten
+# times the measured Linux time so runner variance never trips them; see
+# WALL_MULTIPLIER below for macOS and Windows.
 BUDGETS: dict[str, Budget] = {
-    "services.tree": Budget(14, 2_000),
-    "services.tree_limit5": Budget(14, 2_000),
-    "attention_ids": Budget(16, 2_000),
-    "store.fingerprint": Budget(20, 500),
-    "needs_me": Budget(15, 3_000),
-    "list_text": Budget(26, 3_000),
-    "list_json": Budget(25, 6_000),
-    "show_plan": Budget(24, 1_000),
-    "share_payload": Budget(24, 1_000),
-    "full_many": Budget(20, 1_500),
-    "export_all": Budget(40, 5_000),
-    "audit_report": Budget(28, 5_000),
-    "tui_first_paint": Budget(48, 8_000, nodes=100),
-    "tui_expand": Budget(0, 8_000, nodes=120),
-    "tui_reconcile": Budget(48, 1_500, nodes=100),
-    "git_status": Budget(0, 3_000),
-    "git_show": Budget(0, 3_000),
+    "services.tree": Budget(7, 500),
+    "services.tree_limit5": Budget(7, 500),
+    "attention_ids": Budget(8, 400),
+    "store.fingerprint": Budget(3, 100),
+    "needs_me": Budget(13, 500),
+    "list_text": Budget(8, 500),
+    "list_json": Budget(12, 800),
+    "show_plan": Budget(20, 400),
+    "store.counts": Budget(2, 100),
+    "tui_preview": Budget(20, 400),
+    "share_payload": Budget(20, 400),
+    "full_many": Budget(19, 400),
+    "export_all": Budget(18, 500),
+    "audit_report": Budget(13, 800),
+    # The draft panel adds two reads per pass (draft list and annotation
+    # counts), so first paint and reconcile sit at 23 rather than 19.
+    "tui_first_paint": Budget(23, 1_000, nodes=88),
+    "tui_expand": Budget(0, 500, nodes=93),
+    "tui_reconcile": Budget(23, 1_000, nodes=88),
+    "cli_import": Budget(0, 500),
+    "cli_version": Budget(0, 600),
+    "cli_list": Budget(0, 900),
+    "git_status": Budget(0, 500),
+    "git_show": Budget(0, 500),
 }
 
 # Wall time is noisy across hosted runners and Windows spawns are much dearer.
 # Query counts are the hard gate; these ceilings catch sleeps, network waits,
 # and accidental whole-database scans rather than small runner variance.
 WALL_MULTIPLIER = {"linux": 1.0, "darwin": 2.0, "win32": 4.0}
-OPTIONAL_METRICS = {"git_status", "git_show"}
+OPTIONAL_METRICS = {"git_status", "git_show", "cli_import", "cli_version", "cli_list"}
 
 
 def _split(total: int, buckets: int) -> list[int]:
@@ -441,6 +450,17 @@ def measure(
     return Measurement(name, round(best, 1), queries, connections)
 
 
+def _preview_render(store: Store, plan_id: int) -> object:
+    """The preview bytes the TUI builds for one selected plan."""
+    from lazyplan.presentation.tui.views.control import build_control_strip
+    from lazyplan.presentation.tui.views.preview import build_preview
+
+    full = store.get_full("plan", plan_id)
+    if full is None:
+        return None
+    return build_preview("plan", plan_id, full), build_control_strip(store, "plan", plan_id, full)
+
+
 def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measurement]:
     from lazyplan.presentation.cli.rows import _list_payload
     from lazyplan.services import share
@@ -462,6 +482,7 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
             repeat=repeat,
         ),
         measure("show_plan", lambda: store.get_full("plan", fixture.first_plan_id), repeat=repeat),
+        measure("store.counts", store.counts, repeat=repeat),
         measure("store.fingerprint", store.fingerprint, repeat=repeat),
         measure("full_many", lambda: store.get_full_many("plan", plan_ids), repeat=repeat),
         measure(
@@ -474,6 +495,49 @@ def _core_metrics(store: Store, fixture: Fixture, repeat: int) -> list[Measureme
             repeat=repeat,
         ),
     ]
+
+
+def _timed_command(argv: list[str], env: dict[str, str], repeat: int) -> float:
+    """Best-of-`repeat` cold subprocess wall time, in milliseconds."""
+    best = float("inf")
+    for _ in range(max(1, repeat)):
+        start = time.perf_counter()
+        subprocess.run(
+            argv,
+            cwd=ROOT,
+            env=env,
+            check=True,
+            capture_output=True,
+            timeout=120,
+        )
+        best = min(best, (time.perf_counter() - start) * 1_000)
+    return best
+
+
+def _cli_measurements(db: Path, repeat: int) -> list[Measurement]:
+    """Cold interpreter startups: import only, version, and a store read."""
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT / "src")
+    env["LAZYPLAN_NO_SETUP"] = "1"
+    env["LAZYPLAN_NO_UPDATE_CHECK"] = "1"
+    env.pop("LAZYPLAN_DB", None)
+    specs = (
+        ("cli_import", [sys.executable, "-c", "import lazyplan.presentation.cli"]),
+        ("cli_version", [sys.executable, "-m", "lazyplan", "--version"]),
+        (
+            "cli_list",
+            [sys.executable, "-m", "lazyplan", "--db", str(db), "list", "--limit", "5"],
+        ),
+    )
+    out: list[Measurement] = []
+    for name, argv in specs:
+        try:
+            ms = _timed_command(argv, env, repeat)
+        except (OSError, subprocess.SubprocessError) as exc:
+            out.append(Measurement(name, None, None, None, f"skipped: {exc}"))
+            continue
+        out.append(Measurement(name, round(ms, 1), None, None, "cold subprocess"))
+    return out
 
 
 def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
@@ -505,7 +569,7 @@ def _git_metrics(repo: Path | None, repeat: int) -> list[Measurement]:
     ]
 
 
-def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
+def _tui_measurements(fixture: Fixture, repeat: int) -> list[Measurement]:
     try:
         from lazyplan.presentation import tui
         from lazyplan.presentation.tui.controllers import updates as update_mod
@@ -514,6 +578,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
             Measurement("tui_first_paint", None, None, None, "textual not installed"),
             Measurement("tui_expand", None, None, None, "textual not installed"),
             Measurement("tui_reconcile", None, None, None, "textual not installed"),
+            Measurement("tui_preview", None, None, None, "textual not installed"),
         ]
 
     old_spinner = os.environ.get("LAZYPLAN_NO_SPINNER")
@@ -521,7 +586,7 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
     try:
 
         async def run() -> list[Measurement]:
-            app = tui.create_app(str(db))
+            app = tui.create_app(str(fixture.db))
             with mock.patch.object(update_mod, "refresh_update", return_value=None):
                 async with app.run_test(size=(120, 40)) as pilot:
                     await pilot.pause()
@@ -583,7 +648,16 @@ def _tui_measurements(db: Path, repeat: int) -> list[Measurement]:
                         ),
                     ]
 
-        return asyncio.run(run())
+        measurements = asyncio.run(run())
+        store = Store(fixture.db)
+        measurements.append(
+            measure(
+                "tui_preview",
+                lambda: _preview_render(store, fixture.first_plan_id),
+                repeat=repeat,
+            )
+        )
+        return measurements
     finally:
         if old_spinner is None:
             os.environ.pop("LAZYPLAN_NO_SPINNER", None)
@@ -596,6 +670,7 @@ def run(
     *,
     repeat: int = 1,
     include_tui: bool = True,
+    include_cli: bool = True,
 ) -> dict:
     """Build a throwaway fixture and return fixture counts plus measurements."""
     with tempfile.TemporaryDirectory(prefix="lazyplan-perf-") as tmp:
@@ -604,12 +679,18 @@ def run(
         store = Store(fixture.db)
         metrics = _core_metrics(store, fixture, max(1, repeat))
         metrics.extend(_git_metrics(_make_git_repo(base), max(1, repeat)))
+        if include_cli:
+            metrics.extend(_cli_measurements(fixture.db, max(1, repeat)))
+        else:
+            for name in ("cli_import", "cli_version", "cli_list"):
+                metrics.append(Measurement(name, None, None, None, "disabled by --no-cli"))
         if include_tui:
-            metrics.extend(_tui_measurements(fixture.db, max(1, repeat)))
+            metrics.extend(_tui_measurements(fixture, max(1, repeat)))
         else:
             metrics.append(Measurement("tui_first_paint", None, None, None, "disabled by --no-tui"))
             metrics.append(Measurement("tui_expand", None, None, None, "disabled by --no-tui"))
             metrics.append(Measurement("tui_reconcile", None, None, None, "disabled by --no-tui"))
+            metrics.append(Measurement("tui_preview", None, None, None, "disabled by --no-tui"))
         return {
             "fixture": fixture.counts,
             "metrics": [asdict(metric) for metric in metrics],
@@ -671,6 +752,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--quick", action="store_true", help="use the small test fixture")
     parser.add_argument("--repeat", type=int, default=1, help="timed runs per metric")
     parser.add_argument("--no-tui", action="store_true", help="skip the headless TUI refresh")
+    parser.add_argument("--no-cli", action="store_true", help="skip the cold CLI startups")
     parser.add_argument("--json", action="store_true", help="print the full JSON report")
     parser.add_argument(
         "--check",
@@ -682,6 +764,7 @@ def main(argv: list[str] | None = None) -> int:
         QUICK_COUNTS if args.quick else DEFAULT_COUNTS,
         repeat=max(1, args.repeat),
         include_tui=not args.no_tui,
+        include_cli=not args.no_cli,
     )
     if args.json:
         print(json.dumps(result, indent=2))

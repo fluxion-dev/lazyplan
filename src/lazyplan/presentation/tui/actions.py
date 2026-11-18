@@ -86,6 +86,9 @@ if _TEXTUAL_OK:
                 self.notify("select a row first (d deletes with confirm)")
                 return
             kind, oid = self.selected
+            if kind == "draft":
+                self.notify("open the draft to review or promote it", timeout=4)
+                return
 
             def reason_cb(reason: str | None) -> None:
                 if reason is None:
@@ -164,6 +167,9 @@ if _TEXTUAL_OK:
             self.push_screen(PaletteScreen(self._palette_context()), self._run_palette_command)
 
         def action_new_context(self) -> None:
+            if self.selected is not None and self.selected[0] == "draft":
+                self.action_open_draft()
+                return
             if self._cursor_is_root():
                 self.action_new_plan()
                 return
@@ -177,6 +183,13 @@ if _TEXTUAL_OK:
                 return
             self.action_new_plan()
 
+        def action_open_draft(self) -> None:
+            """Open the selected plan draft in the review screen."""
+            if self.selected is None or self.selected[0] != "draft":
+                self.notify("select a plan draft first", timeout=4)
+                return
+            self.open_draft(self.selected[1])
+
         def action_help(self) -> None:
             self.push_screen(HelpScreen())
 
@@ -186,6 +199,9 @@ if _TEXTUAL_OK:
                 self.notify("select a row first (a adds a criterion)")
                 return
             kind, oid = self.selected
+            if kind == "draft":
+                self.notify("open the draft to review or promote it", timeout=4)
+                return
 
             def cb(data: dict[str, object] | None) -> None:
                 if not data:
@@ -309,6 +325,9 @@ if _TEXTUAL_OK:
                 self.notify("select a row first (e edits it)")
                 return
             kind, oid = self.selected
+            if kind == "draft":
+                self.action_open_draft()
+                return
             full = self.store.get_full(kind, oid)
             if full is None:
                 self.notify("row is gone — refreshing")

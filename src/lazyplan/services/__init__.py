@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import attribution as attribution
+from . import drafts as drafts
 from . import maintenance as maintenance
 from .base import GateError
 from .collaboration import (
@@ -40,6 +41,8 @@ from .evidence import (
 )
 from .planning import (
     DEFAULT_PLAN_LIMIT,
+    TreeSource,
+    activity_source,
     create_milestone,
     create_plan,
     create_task,
@@ -203,6 +206,8 @@ __all__ = [
     "_import_all",
     "GateError",
     "DEFAULT_PLAN_LIMIT",
+    "TreeSource",
+    "activity_source",
     "ReviewPacket",
     "build_review",
     "active_plan",

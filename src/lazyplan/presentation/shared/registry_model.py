@@ -10,6 +10,7 @@ from dataclasses import dataclass
 
 ENTITIES: tuple[str, ...] = (
     "plan",
+    "draft",
     "milestone",
     "task",
     "criterion",

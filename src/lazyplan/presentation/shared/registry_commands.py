@@ -89,6 +89,9 @@ COMMANDS: tuple[Command, ...] = (
     Command(id='git-refresh', label='Refresh commit links', section=VIEW, action_id='commit.refresh', context='selection', handler='git_refresh', aliases=('refresh commits', 'stale commits', 'refresh git'), help_group='FIND', help_hint='re-resolve commits and mark stale links', tui_only=True),
     Command(id='open-pr', label='Open pull request', section=VIEW, action_id='pull_request.open', context='selection', handler='open_pr', aliases=('open pr', 'pull request', 'github', 'browser'), help_group='FIND', help_hint='open the first linked PR in your browser', tui_only=True),
     Command(id='source-trail', label='Open source trail', section=VIEW, action_id='source.trail', key='g', context='selection', handler='source_trail', aliases=('source', 'git trail', 'where', 'provenance'), help_group='FIND', help_hint='repos, commits, files, and PRs for the selected row', tui_only=True),
+    Command(id='open-draft', label='Open plan draft', section=VIEW, action_id='draft.open', context='selection', handler='open_draft', aliases=('open draft', 'review draft', 'draft'), help_group='TRUST', help_hint='review and annotate a plan draft', tui_only=True),
+    Command(id='submit-draft', label='Submit draft feedback', section=EDIT, action_id='draft.submit', context='always', handler='submit_draft', aliases=('submit draft', 'send feedback', 'request revision'), help_group='CHANGE', help_hint='send open annotations back to the agent', screens=('draft',), tui_only=True),
+    Command(id='promote-draft', label='Promote plan draft', section=EDIT, action_id='draft.promote', context='always', handler='promote_draft', aliases=('promote draft', 'accept draft', 'make plan'), help_group='CHANGE', help_hint='create the plan queue row from a clean draft', screens=('draft',), tui_only=True),
     Command(id='criteria-hub', label='Open criteria hub', section=VIEW, action_id='view.criteria_hub', context='selection', handler='open_criteria_hub', aliases=('criteria hub', 'criteria', 'checklist'), help_group='TRUST', help_hint='select, add, edit, or delete criteria', screens=('tree', 'hub'), tui_only=True),
     Command(id='evidence-hub', label='Open evidence hub', section=VIEW, action_id='view.evidence_hub', context='plan', handler='open_evidence_hub', aliases=('evidence hub', 'proof', 'evidence'), help_group='TRUST', help_hint='browse proof rows for a criterion', screens=('tree', 'hub'), tui_only=True),
     Command(id='questions-hub', label='Open questions hub', section=VIEW, action_id='view.questions_hub', context='plan', handler='open_questions_hub', aliases=('questions hub', 'questions', 'ambiguities'), help_group='TRUST', help_hint='add, resolve, or reopen plan questions', screens=('tree', 'hub'), tui_only=True),
@@ -109,6 +112,7 @@ COMMANDS: tuple[Command, ...] = (
     Command(id='export-plan', label='Export plan as Markdown…', section=APP, action_id='plan.export', verb='export', context='plan', handler='export_md', aliases=('export plan .md', 'export md', 'markdown'), help_group='APP', help_hint='choose a folder and filename for the Markdown export'),
     Command(id='update-lpui', label='Update lpui', section=APP, action_id='app.update', key='U', handler='update_prompt', aliases=('update', 'upgrade', 'new version'), help_group='APP', help_hint='download a newer release for the next launch', screens=('any',), tui_only=True),
     Command(id='release-notes', label='Release notes', section=APP, action_id='app.notes', key='W', handler='release_notes', aliases=('notes', 'changelog', "what's new", 'release notes'), help_group='APP', help_hint='read the notes bundled with this version', screens=('any',), tui_only=True),
+    Command(id='notification-log', label='Notification log', section=APP, action_id='app.log', key='L', handler='notification_log', aliases=('log', 'notifications', 'messages', 'toasts', 'alerts', 'unread'), help_group='APP', help_hint='recent notifications, warnings, and errors', screens=('any',), tui_only=True),
     Command(id='health-check', label='Health check', section=APP, action_id='app.health', handler='health_prompt', aliases=('health', 'doctor', 'missing skills', 'missing hooks', 'install hooks'), help_group='APP', help_hint='see what lazyplan is missing and fix it', screens=('any',), tui_only=True),
     Command(id='open-setup', label='Open setup wizard', section=APP, action_id='app.setup', key='S', handler='open_setup', aliases=('setup', 'wizard', 'first run', 'configure', 'onboarding'), help_group='APP', help_hint='review placement, agents, hooks, models, and theme', screens=('any',), tui_only=True),
     Command(id='help', label='Help', section=APP, action_id='app.help', verb='help', key='?', handler='help', aliases=('keys', 'keybindings'), help_group='APP', help_hint='this help', screens=('any',)),
@@ -201,6 +205,11 @@ class Context:
 #: Row kinds where a command is unavailable even though it has a selection.
 DISABLED_FOR: dict[str, tuple[tuple[str, str], ...]] = {
     "fold-one": (("task", "Nothing to fold"),),
+    "open-draft": (
+        ("plan", "Select a row in the plan drafts panel"),
+        ("milestone", "Select a row in the plan drafts panel"),
+        ("task", "Select a row in the plan drafts panel"),
+    ),
 }
 
 

@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 try:
-    from textual import on
+    from textual import events, on
     from textual.app import ComposeResult
     from textual.binding import Binding
     from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -15,6 +15,7 @@ try:
     from textual.widgets.option_list import Option
 
     from ..navigation import NAV_BINDINGS, NavigationMixin
+    from ..size import apply_classes, classes_for
     from ..widgets.taskbar import Taskbar
 
     _TEXTUAL_OK = True
@@ -22,7 +23,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from ...shared import registry
-from ...shared.design import action_bar
+from ...shared.design import action_bar, status_mark
 
 
 @dataclass(frozen=True)
@@ -55,7 +56,7 @@ if _TEXTUAL_OK:
             Binding("D", "force", "Force"),
             Binding("n", "note", "Note"),
             Binding("l", "relate", "Relate"),
-            Binding("L", "unrelate", "Unrelate"),
+            Binding("X", "unrelate", "Unrelate"),
             Binding("o", "open_value", "Open"),
             Binding("g", "source_hub", "Source"),
             Binding("r", "refresh", "Refresh"),
@@ -66,11 +67,17 @@ if _TEXTUAL_OK:
             super().__init__()
             self.store = store
             self.entries: list[HubEntry] = []
+            self._emoji = True
 
         @property
         def source_parent(self) -> tuple[str, int] | None:
             """Row whose source trail this hub can open with `g`."""
             return None
+
+        def _mark(self, state: str) -> str:
+            """One status mark using the shell's live emoji decision."""
+            emoji = getattr(getattr(self.app, "state", None), "emoji", True)
+            return status_mark(state, emoji=bool(emoji))
 
         def compose(self) -> ComposeResult:
             with Vertical(id="hub-page"):
@@ -82,16 +89,29 @@ if _TEXTUAL_OK:
                 yield Taskbar("", id="hub-hints")
 
         def on_mount(self) -> None:
-            width = self.app.size.width
-            self.set_class(width < 80, "compact")
-            self.set_class(width >= 120, "wide")
+            self._apply_size(self.app.size.width)
             self.query_one("#hub-page").border_title = f" {self.title} "
             self.query_one("#hub-list-wrap").border_title = " list "
             self.query_one("#hub-preview").border_title = " overview "
             self._reload()
             self.query_one("#hub-list", OptionList).focus()
 
+        def _apply_size(self, width: int) -> None:
+            """Mirror the shell tiers; the compact split stacks the panes."""
+            apply_classes(self, classes_for(width), ("compact", "wide"))
+
+        def on_resize(self, event: events.Resize | None = None) -> None:
+            """Keep the split in step with the width and re-render status marks."""
+            self._apply_size(self.size.width if event is None else event.size.width)
+            emoji = bool(getattr(getattr(self.app, "state", None), "emoji", True))
+            if emoji == self._emoji or not self.entries:
+                self._emoji = emoji
+                return
+            self._emoji = emoji
+            self._reload()
+
         def _reload(self) -> None:
+            self._emoji = bool(getattr(getattr(self.app, "state", None), "emoji", True))
             entries = self.load_entries()
             self.entries = entries
             options = self.query_one("#hub-list", OptionList)

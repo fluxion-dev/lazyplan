@@ -10,6 +10,7 @@ Budget: every action is at most **3** interactions from the tree.
 | Entity | Depth |
 | --- | ---: |
 | `plan` | 1 |
+| `draft` | 1 |
 | `milestone` | 1 |
 | `task` | 0 |
 | `criterion` | 0 |
@@ -74,6 +75,8 @@ Budget: every action is at most **3** interactions from the tree.
 | `plan.export` | tree › export | 1 |
 | `app.update` | tree › update | 1 |
 | `app.notes` | tree › notes | 1 |
+| `app.log` | tree › log | 1 |
+| `app.choose` | tree › choose | 1 |
 | `app.health` | tree › health | 1 |
 | `app.setup` | tree › setup | 1 |
 | `app.help` | any | 0 |
@@ -106,6 +109,9 @@ Budget: every action is at most **3** interactions from the tree.
 | `repo.open` | tree › source | 1 |
 | `event.list` | tree › activity | 1 |
 | `event.open` | tree › activity | 1 |
+| `draft.open` | tree › draft | 1 |
+| `draft.submit` | draft › submit | 2 |
+| `draft.promote` | draft › promote | 2 |
 
 ## Over budget
 

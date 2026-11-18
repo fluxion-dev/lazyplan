@@ -155,7 +155,7 @@ class ReconcileMixin:
         """Relabel one surviving row; return True when its text changed."""
         app = self.app
         app._row_specs[key] = spec
-        text = spec.markup(self.row_width(tree, spec.depth))
+        text = spec.markup(self.row_width(tree, spec.depth), emoji=app.state.emoji)
         if app._row_labels.get(key) == text:
             return False
         app._row_labels[key] = text
@@ -213,7 +213,9 @@ class ReconcileMixin:
             changed.add(key)
         return changed
 
-    def desired_plans(self, plans: list) -> list[tuple[tuple[str, int], RowSpec, bool]]:
+    def desired_plans(
+        self, plans: list, *, review: bool = False
+    ) -> list[tuple[tuple[str, int], RowSpec, bool]]:
         """Row specs for one panel's plans, in order."""
         counts = {
             plan_id: len(rows) for plan_id, rows in self.app.store.plan_worktrees_map().items()
@@ -226,6 +228,7 @@ class ReconcileMixin:
                     self._progress,
                     attention=("plan", plan.id) in self._attention,
                     worktrees=counts.get(plan.id, 0),
+                    review=review,
                 ),
                 bool(milestones),
             )

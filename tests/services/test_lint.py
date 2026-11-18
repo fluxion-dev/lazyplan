@@ -6,33 +6,29 @@ import contextlib
 import io
 import json
 import os
-import tempfile
 import unittest
 
 from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.presentation.cli import main as lpui_main
 from lazyplan.services import lint
-from lazyplan.store import Store
 from tests.support.home import sandbox_home
+from tests.support.state import StoreCase
 
 
-class TestLint(unittest.TestCase):
+class TestLint(StoreCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory()
-        self.db = os.path.join(self.tmp.name, "lint.db")
-        store = Store(self.db)
-        plan = store.add_plan("P", actor="fixture")
-        milestone = store.add_milestone(plan.id, "M", actor="fixture")
-        task = store.add_task(
+        super().setUp()
+        plan = self.store.add_plan("P", actor="fixture")
+        milestone = self.store.add_milestone(plan.id, "M", actor="fixture")
+        task = self.store.add_task(
             milestone.id,
             "T",
             "Commit slice: one commit.\n\nVerification: pytest.",
             actor="fixture",
         )
-        criterion = store.add_criteria("plan", plan.id, "Works", actor="fixture")
-        store.relate_criterion(criterion.id, task.id, actor="fixture")
-        self.store = store
+        criterion = self.store.add_criteria("plan", plan.id, "Works", actor="fixture")
+        self.store.relate_criterion(criterion.id, task.id, actor="fixture")
         self.old_setup = os.environ.get("LAZYPLAN_NO_SETUP")
         sandbox_home(self, self.tmp.name)
         os.environ["LAZYPLAN_NO_SETUP"] = "1"
@@ -43,7 +39,6 @@ class TestLint(unittest.TestCase):
                 os.environ.pop(key, None)
             else:
                 os.environ[key] = value
-        self.tmp.cleanup()
 
     def _run(self, *argv: str) -> tuple[int, str, str]:
         out = io.StringIO()

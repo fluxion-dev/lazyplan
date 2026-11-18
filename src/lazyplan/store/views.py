@@ -11,7 +11,7 @@ from ..core.entities import (
     Task,
 )
 from ..core.kinds import KIND_ERROR, table_for
-from ..core.policies.insights import leading_int
+from ..core.policies.insights import PLAN_EVENT_PREFIXES, plan_for_event
 from .base import StoreBase
 from .full_reader import _FullReader
 from .status_events import parse_plan_status_detail
@@ -23,69 +23,6 @@ def _release_lease_for_status(
     """A task that is no longer doing cannot keep a lease."""
     if kind == "task" and status is not Status.DOING:
         conn.execute("DELETE FROM task_claims WHERE task_id=?", (obj_id,))
-
-
-def _plan_for_milestone(mid: int | None, milestone_plan: dict[int, int]) -> int | None:
-    return milestone_plan.get(mid) if mid is not None else None
-
-
-def _plan_for_task(
-    tid: int | None,
-    task_milestone: dict[int, int],
-    milestone_plan: dict[int, int],
-) -> int | None:
-    if tid is None:
-        return None
-    return _plan_for_milestone(task_milestone.get(tid), milestone_plan)
-
-
-def _plan_for_criterion(
-    cid: int | None,
-    criterion_parent: dict[int, tuple[str, int]],
-    task_milestone: dict[int, int],
-    milestone_plan: dict[int, int],
-) -> int | None:
-    if cid is None:
-        return None
-    found = criterion_parent.get(cid)
-    if found is None:
-        return None
-    kind, parent_id = found
-    if kind == "plan":
-        return parent_id
-    if kind == "milestone":
-        return _plan_for_milestone(parent_id, milestone_plan)
-    return _plan_for_task(parent_id, task_milestone, milestone_plan)
-
-
-def _detail_plan_id(
-    detail: str,
-    milestone_plan: dict[int, int],
-    task_milestone: dict[int, int],
-    criterion_parent: dict[int, tuple[str, int]],
-) -> int | None:
-    """Owning plan encoded in one event detail, or None."""
-    if detail.startswith("P#"):
-        return leading_int(detail, 2)
-    if detail.startswith("plan #"):
-        return leading_int(detail, 6)
-    if detail.startswith("M#"):
-        return _plan_for_milestone(leading_int(detail, 2), milestone_plan)
-    if detail.startswith("milestone #"):
-        return _plan_for_milestone(leading_int(detail, 11), milestone_plan)
-    if detail.startswith("T#"):
-        return _plan_for_task(leading_int(detail, 2), task_milestone, milestone_plan)
-    if detail.startswith("task #"):
-        return _plan_for_task(leading_int(detail, 6), task_milestone, milestone_plan)
-    if detail.startswith("criteria #"):
-        return _plan_for_criterion(
-            leading_int(detail, 10), criterion_parent, task_milestone, milestone_plan
-        )
-    if detail.startswith("criterion #"):
-        return _plan_for_criterion(
-            leading_int(detail, 11), criterion_parent, task_milestone, milestone_plan
-        )
-    return None
 
 
 class ViewsMixin(StoreBase):
@@ -166,11 +103,11 @@ class ViewsMixin(StoreBase):
     def plan_activity_map(self, limit_events: int = 100_000) -> dict[int, float]:
         """Latest event timestamp per plan from one bounded, prefix-parsed read.
 
-        The event table is the largest read path in the tree. This keeps the
-        scan bounded and parses the structured prefixes with slicing instead of
-        compiling a regex per row.
+        The event table is the largest read path in the tree. The SQL prefix
+        filter and the shared parser keep the scan bounded and skip rows no
+        activity rule can use.
         """
-        events = self.feed(limit=max(1, int(limit_events)))
+        events = self.events_by_prefix(PLAN_EVENT_PREFIXES, limit=max(1, int(limit_events)))
         if not events:
             return {}
         milestone_plan = {
@@ -190,8 +127,12 @@ class ViewsMixin(StoreBase):
         }
         out: dict[int, float] = {}
         for event in events:
-            detail = str(event.get("detail") or "")
-            plan_id = _detail_plan_id(detail, milestone_plan, task_milestone, criterion_parent)
+            plan_id = plan_for_event(
+                str(event.get("detail") or ""),
+                milestone_plan,
+                task_milestone,
+                criterion_parent,
+            )
             if plan_id is None:
                 continue
             stamp = float(event.get("ts") or 0.0)
@@ -226,19 +167,21 @@ class ViewsMixin(StoreBase):
     def counts(self) -> dict[str, int]:
         """Plan, milestone, and task totals, plus per-state plan counts."""
         with self._connect() as conn:
-            np = conn.execute("SELECT COUNT(*) c FROM plans").fetchone()["c"]
-            ns = conn.execute("SELECT COUNT(*) c FROM milestones").fetchone()["c"]
-            nt = conn.execute("SELECT COUNT(*) c FROM tasks").fetchone()["c"]
-            nd = conn.execute("SELECT COUNT(*) c FROM tasks WHERE status='done'").fetchone()["c"]
-            npt = conn.execute("SELECT COUNT(*) c FROM plans WHERE status='todo'").fetchone()["c"]
-            npd = conn.execute("SELECT COUNT(*) c FROM plans WHERE status='doing'").fetchone()["c"]
-            npn = conn.execute("SELECT COUNT(*) c FROM plans WHERE status='done'").fetchone()["c"]
+            row = conn.execute(
+                "SELECT (SELECT COUNT(*) FROM plans) AS plans,"
+                " (SELECT COUNT(*) FROM milestones) AS milestones,"
+                " (SELECT COUNT(*) FROM tasks) AS tasks,"
+                " (SELECT COUNT(*) FROM tasks WHERE status='done') AS tasks_done,"
+                " (SELECT COUNT(*) FROM plans WHERE status='todo') AS plans_todo,"
+                " (SELECT COUNT(*) FROM plans WHERE status='doing') AS plans_doing,"
+                " (SELECT COUNT(*) FROM plans WHERE status='done') AS plans_done"
+            ).fetchone()
         return {
-            "plans": np,
-            "milestones": ns,
-            "tasks": nt,
-            "tasks_done": nd,
-            "plans_todo": npt,
-            "plans_doing": npd,
-            "plans_done": npn,
+            "plans": row["plans"],
+            "milestones": row["milestones"],
+            "tasks": row["tasks"],
+            "tasks_done": row["tasks_done"],
+            "plans_todo": row["plans_todo"],
+            "plans_doing": row["plans_doing"],
+            "plans_done": row["plans_done"],
         }

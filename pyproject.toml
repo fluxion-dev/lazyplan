@@ -1,6 +1,6 @@
 [project]
 name = "lazyplan-tui"
-version = "0.48.0"
+version = "0.49.0"
 description = "Plan work with your coding agent, in the terminal."
 readme = "README.md"
 license = "MIT"
@@ -51,6 +51,7 @@ where = ["src"]
 lazyplan = [
     "data/*.md",
     "data/*.json",
+    "data/*.html",
     "data/agents/*/*.md",
     "data/orchestrate/*.md",
     "data/recipes/*.json",

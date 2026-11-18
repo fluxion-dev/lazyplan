@@ -20,6 +20,21 @@ SCOPE_KINDS: tuple[str, str, str, str] = (PLAN, MILESTONE, TASK, CRITERION)
 #: Plan-question states.
 QUESTION_STATUSES: tuple[str, str] = ("open", "resolved")
 
+#: Draft lifecycle states.
+DRAFT_STATUSES: tuple[str, str, str] = ("review", "revising", "promoted")
+
+#: Annotation kinds a reviewer can leave on a draft block.
+DRAFT_ANNOTATION_KINDS: tuple[str, str, str] = ("comment", "question", "change")
+
+#: Annotation states; only open annotations block promotion.
+DRAFT_ANNOTATION_STATUSES: tuple[str, str, str] = ("open", "addressed", "dismissed")
+
+#: How a stored annotation tracked its block across revisions.
+ANCHOR_OK = "ok"
+ANCHOR_MOVED = "moved"
+ANCHOR_ORPHANED = "orphaned"
+DRAFT_ANCHOR_STATES: tuple[str, str, str] = (ANCHOR_OK, ANCHOR_MOVED, ANCHOR_ORPHANED)
+
 #: Row label letters, matching the design row grammar.
 LABEL_LETTERS: dict[str, str] = {PLAN: "P", MILESTONE: "M", TASK: "T"}
 

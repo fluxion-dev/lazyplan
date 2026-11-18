@@ -29,6 +29,7 @@ class AppState:
     narrow: bool | None = None
     compact: bool = False
     wide: bool = False
+    emoji: bool = True
     timeline_visible: bool = False
 
     def timeline_shown(self, narrow: bool) -> bool:

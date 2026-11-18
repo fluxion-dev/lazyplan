@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Choose</title>
+    <style>
+      :root {
+        --bg: #f7f7f5;
+        --panel: #ffffff;
+        --text: #17181a;
+        --muted: #5f6368;
+        --line: #d9dbe0;
+        --accent: #2f6f4f;
+        --accent-soft: #e6f2ea;
+        --focus: #2f6f4f;
+        --danger: #a13737;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15171a;
+          --panel: #1d2024;
+          --text: #f0f1f3;
+          --muted: #a4a9b1;
+          --line: #343940;
+          --accent: #7fcaa3;
+          --accent-soft: #203229;
+          --focus: #7fcaa3;
+          --danger: #f08f8f;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 1040px; margin: 0 auto; padding: 28px 20px 48px; }
+      header { margin-bottom: 22px; }
+      h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 6px; }
+      .prompt { color: var(--muted); margin: 0; }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+        gap: 14px;
+        margin-top: 22px;
+      }
+      .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: var(--panel);
+        cursor: pointer;
+      }
+      .card:hover { border-color: var(--accent); }
+      .card:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+      .card input {
+        position: absolute;
+        inset: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+      .card img {
+        width: 100%;
+        height: 170px;
+        object-fit: contain;
+        background: var(--bg);
+        border-radius: 6px;
+      }
+      .card .label { font-weight: 650; }
+      .card .description { color: var(--muted); margin: 0; }
+      .card.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+      .notes { margin-top: 20px; }
+      .notes label { display: block; font-weight: 600; margin-bottom: 6px; }
+      textarea {
+        width: 100%;
+        min-height: 84px;
+        padding: 10px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        color: var(--text);
+        font: inherit;
+        resize: vertical;
+      }
+      .actions { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+      button {
+        border: 0;
+        border-radius: 8px;
+        padding: 10px 18px;
+        background: var(--accent);
+        color: var(--bg);
+        font: inherit;
+        font-weight: 650;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.45; cursor: not-allowed; }
+      .status { color: var(--muted); }
+      .status.error { color: var(--danger); }
+      .done {
+        margin-top: 26px;
+        padding: 18px;
+        border: 1px solid var(--accent);
+        border-radius: 10px;
+        background: var(--accent-soft);
+      }
+      .done strong { display: block; font-size: 1.1rem; margin-bottom: 4px; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1 id="title">Choose</h1>
+        <p class="prompt" id="prompt">Loading options…</p>
+      </header>
+
+      <form id="form" hidden>
+        <div class="grid" id="grid"></div>
+        <div class="notes" id="notes-wrap" hidden>
+          <label for="notes">Notes (optional)</label>
+          <textarea id="notes" maxlength="2000" placeholder="Why this one?"></textarea>
+        </div>
+        <div class="actions">
+          <button type="submit" id="submit" disabled>Record choice</button>
+          <span class="status" id="status" role="status" aria-live="polite"></span>
+        </div>
+      </form>
+
+      <section class="done" id="done" hidden>
+        <strong id="done-title">Choice recorded</strong>
+        <span id="done-detail"></span> You can close this tab.
+      </section>
+    </main>
+
+    <script>
+      (() => {
+        const token = new URLSearchParams(window.location.search).get("t") || "";
+        const headers = { "X-Choice-Token": token };
+        const form = document.getElementById("form");
+        const grid = document.getElementById("grid");
+        const submit = document.getElementById("submit");
+        const status = document.getElementById("status");
+        const done = document.getElementById("done");
+        const notesWrap = document.getElementById("notes-wrap");
+        const notes = document.getElementById("notes");
+
+        const fail = (text) => {
+          status.textContent = text;
+          status.classList.add("error");
+        };
+
+        const pick = (card) => {
+          for (const other of grid.querySelectorAll(".card")) {
+            other.classList.toggle("selected", other === card);
+          }
+          submit.disabled = false;
+        };
+
+        const render = (manifest) => {
+          document.title = manifest.title;
+          document.getElementById("title").textContent = manifest.title;
+          document.getElementById("prompt").textContent = manifest.prompt;
+          notesWrap.hidden = !manifest.allow_notes;
+          for (const option of manifest.options) {
+            const card = document.createElement("label");
+            card.className = "card";
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = "choice";
+            radio.value = option.id;
+            radio.addEventListener("change", () => pick(card));
+            const image = document.createElement("img");
+            image.src = `/image/${option.image}?t=${encodeURIComponent(token)}`;
+            image.alt = option.label;
+            image.loading = "lazy";
+            const label = document.createElement("span");
+            label.className = "label";
+            label.textContent = option.label;
+            const description = document.createElement("p");
+            description.className = "description";
+            description.textContent = option.description || "";
+            description.hidden = !option.description;
+            card.append(radio, image, label, description);
+            grid.append(card);
+          }
+          form.hidden = false;
+          grid.querySelector("input")?.focus();
+        };
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const checked = form.querySelector("input[name=choice]:checked");
+          if (!checked) return;
+          submit.disabled = true;
+          status.classList.remove("error");
+          status.textContent = "Recording…";
+          try {
+            const response = await fetch("/api/choose", {
+              method: "POST",
+              headers: { ...headers, "Content-Type": "application/json" },
+              body: JSON.stringify({
+                option: checked.value,
+                notes: notesWrap.hidden ? "" : notes.value,
+              }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+            form.hidden = true;
+            done.hidden = false;
+            document.getElementById("done-title").textContent = `Recorded: ${payload.label}`;
+            document.getElementById("done-detail").textContent = payload.notes || "";
+          } catch (error) {
+            fail(error.message || "could not record the choice");
+            submit.disabled = false;
+          }
+        });
+
+        fetch("/api/manifest", { headers })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then(render)
+          .catch((error) => fail(error.message || "could not load the choices"));
+      })();
+    </script>
+  </body>
+</html>

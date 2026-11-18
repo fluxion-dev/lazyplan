@@ -106,7 +106,7 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
                     self.assertNotIn("## ACCEPTANCE", task_body)
                     self.assertNotIn("## SOURCE", task_body)
 
-    async def test_tree_rows_lead_with_one_emoji_and_no_state_word(self) -> None:
+    async def test_tree_rows_end_with_one_emoji_and_no_state_word(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(120, 40)) as pilot:
             await pilot.pause()
@@ -114,11 +114,11 @@ class TestOverviewGlance(unittest.IsolatedAsyncioTestCase):
             plan_row = self._tree_row(app, ("plan", self.plan.id))
             self.assertIn("0/3", plan_row)
             # A blocked task rolls review up to its plan.
-            self.assertTrue(plan_row.startswith("🔍 "))
+            self.assertTrue(plan_row.endswith("🔍"))
             doing_row = self._tree_row(app, ("task", self.doing.id))
-            self.assertTrue(doing_row.startswith("🔨 "))
+            self.assertTrue(doing_row.endswith("🔨"))
             blocked_row = self._tree_row(app, ("task", self.blocked.id))
-            self.assertTrue(blocked_row.startswith("🚧 "))
+            self.assertTrue(blocked_row.endswith("🚧"))
             for row in (plan_row, doing_row, blocked_row):
                 for glyph in ("○", "◐", "●", "?", "!"):
                     self.assertNotIn(glyph, row)

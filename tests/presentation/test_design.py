@@ -62,22 +62,27 @@ class TestDesignSystem(unittest.TestCase):
         self.assertTrue(design.task_label(t, dot="ansi").startswith("\x1b[90m○\x1b[0m T3"))
         self.assertNotIn("\x1b[", design.plan_label(p))
 
-    def test_rich_rows_lead_with_one_emoji_per_state(self):
+    def test_rich_rows_end_with_one_emoji_per_state(self):
         s = Milestone(id=2, plan_id=1, title="S")
-        self.assertTrue(design.milestone_row(s).startswith("📝 [dim]M2[/] "))
+        self.assertTrue(design.milestone_row(s).endswith("📝"))
+        self.assertTrue(design.milestone_row(s).startswith("[dim]M2[/] "))
         self.assertIn("[bold]S[/]", design.milestone_row(s))
         t = Task(id=3, milestone_id=2, title="T")
-        self.assertTrue(design.task_row(t).startswith("📝 [dim]T3[/] "))
+        self.assertTrue(design.task_row(t).endswith("📝"))
+        self.assertTrue(design.task_row(t).startswith("[dim]T3[/] "))
         p = Plan(id=1, name="N")
-        self.assertTrue(design.plan_row(p).startswith("📝 [dim]P1[/] "))
+        self.assertTrue(design.plan_row(p).endswith("📝"))
+        self.assertTrue(design.plan_row(p).startswith("[dim]P1[/] "))
         for row in (design.milestone_row(s), design.task_row(t), design.plan_row(p)):
+            self.assertNotIn("📝 [dim]", row)
             for glyph in ("○", "◐", "●", "?", "!", "⬜"):
                 self.assertNotIn(glyph, row)
 
     def test_rich_rows_fall_back_to_single_cell_glyphs(self):
         doing = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
         row = design.task_row(doing, emoji=False)
-        self.assertTrue(row.startswith("◐ [dim]T3[/] "))
+        self.assertTrue(row.startswith("[dim]T3[/] "))
+        self.assertTrue(row.endswith("◐"))
         self.assertNotIn("🔨", row)
 
     @unittest.skipUnless(Text is not None, "rich not installed")
@@ -85,7 +90,8 @@ class TestDesignSystem(unittest.TestCase):
         t = Task(id=3, milestone_id=2, title="Compact title")
         plain = Text.from_markup(design.task_row(t, width=80)).plain
 
-        self.assertEqual(plain.rstrip(), "📝 T3 Compact title")
+        self.assertTrue(plain.startswith("T3 Compact title"))
+        self.assertTrue(plain.endswith("📝"))
         for stat in ("○", "◐", "●", "⚑", "◉", "▰", "▱", "@", "/", "!", "doing", "blocked"):
             self.assertNotIn(stat, plain)
 
@@ -95,7 +101,8 @@ class TestDesignSystem(unittest.TestCase):
 
         plain = Text.from_markup(design.task_row(t, attention=True, width=80)).plain
 
-        self.assertTrue(plain.startswith("🔍 T3 Compact title"))
+        self.assertTrue(plain.startswith("T3 Compact title"))
+        self.assertTrue(plain.endswith("🔍"))
         self.assertNotIn("review", plain)
         self.assertNotIn("!", plain)
 
@@ -133,7 +140,8 @@ class TestDesignSystem(unittest.TestCase):
         s = Milestone(id=2, plan_id=1, title="S", status=Status.DOING)
         t = Task(id=3, milestone_id=2, title="T", status=Status.DOING)
         for row in (design.plan_row(p), design.milestone_row(s), design.task_row(t)):
-            self.assertTrue(row.startswith("🔨 "))
+            self.assertTrue(row.endswith("🔨"))
+            self.assertFalse(row.startswith("🔨"))
             self.assertNotIn("doing", row)
             self.assertNotIn("◐", row)
 
@@ -141,9 +149,9 @@ class TestDesignSystem(unittest.TestCase):
         done_plan = Plan(id=4, name="Finished", status=Status.DONE)
         done_task = Task(id=5, milestone_id=1, title="Finished task", status=Status.DONE)
 
-        self.assertTrue(design.plan_row(done_plan, review=True).startswith("🔍 "))
-        self.assertTrue(design.task_row(done_task).startswith("✅ "))
-        self.assertTrue(design.task_row(done_task, emoji=False).startswith("● "))
+        self.assertTrue(design.plan_row(done_plan, review=True).endswith("🔍"))
+        self.assertTrue(design.task_row(done_task).endswith("✅"))
+        self.assertTrue(design.task_row(done_task, emoji=False).endswith("●"))
 
     def test_progress_and_truncation(self):
         p = Plan(id=12, name="A very long plan title")

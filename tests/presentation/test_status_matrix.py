@@ -72,15 +72,15 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
             await self.open_tree(app, pilot)
 
             expected = {
-                ("task", self.todo.id): "📝 ",
-                ("task", self.doing.id): "🔨 ",
-                ("task", self.blocked.id): "🚧 ",
-                ("task", self.done.id): "✅ ",
-                ("plan", self.plan.id): "🔍 ",  # blocked work rolls review up
+                ("task", self.todo.id): "📝",
+                ("task", self.doing.id): "🔨",
+                ("task", self.blocked.id): "🚧",
+                ("task", self.done.id): "✅",
+                ("plan", self.plan.id): "🔍",  # blocked work rolls review up
             }
             for key, mark in expected.items():
                 with self.subTest(key=key, width="wide"):
-                    self.assertTrue(self.row(app, key).startswith(mark))
+                    self.assertTrue(self.row(app, key).endswith(mark))
                     self.assert_no_state_words(self.row(app, key))
 
             app._apply_layout(design.EMOJI_MIN_WIDTH - 1)  # type: ignore[attr-defined]
@@ -88,15 +88,15 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
 
             fallback = {
-                ("task", self.todo.id): "○ ",
-                ("task", self.doing.id): "◐ ",
-                ("task", self.blocked.id): "! ",
-                ("task", self.done.id): "● ",
-                ("plan", self.plan.id): "? ",
+                ("task", self.todo.id): "○",
+                ("task", self.doing.id): "◐",
+                ("task", self.blocked.id): "!",
+                ("task", self.done.id): "●",
+                ("plan", self.plan.id): "?",
             }
             for key, mark in fallback.items():
                 with self.subTest(key=key, width="narrow"):
-                    self.assertTrue(self.row(app, key).startswith(mark))
+                    self.assertTrue(self.row(app, key).endswith(mark))
                     for emoji in ("📝", "🔨", "🔍", "🚧", "✅"):
                         self.assertNotIn(emoji, self.row(app, key))
 
@@ -107,15 +107,15 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
             await self.open_tree(app, pilot)
             plan_key = ("plan", self.done_plan.id)
             task_key = ("task", self.done_task.id)
-            self.assertTrue(self.row(app, plan_key).startswith("🔍 "))
-            self.assertTrue(self.row(app, task_key).startswith("✅ "))
+            self.assertTrue(self.row(app, plan_key).endswith("🔍"))
+            self.assertTrue(self.row(app, task_key).endswith("✅"))
             self.assert_no_state_words(self.row(app, plan_key))
 
             app._apply_layout(40)  # type: ignore[attr-defined]
             app.refresh_all()  # type: ignore[attr-defined]
             await pilot.pause()
-            self.assertTrue(self.row(app, plan_key).startswith("? "))
-            self.assertTrue(self.row(app, task_key).startswith("● "))
+            self.assertTrue(self.row(app, plan_key).endswith("?"))
+            self.assertTrue(self.row(app, task_key).endswith("●"))
 
     async def test_agents_card_matrix_wide_and_narrow(self) -> None:
         services.start_claim(self.store, self.doing.id, "claude")
@@ -196,7 +196,7 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
         random.Random(28).shuffle(order)
         for task in order:
             row = Text.from_markup(design.task_row(task, width=80)).plain
-            self.assertTrue(row.startswith(expected[task.id]))
+            self.assertTrue(row.endswith(expected[task.id]))
             self.assert_no_state_words(row)
 
     async def test_no_row_clips_cells_at_any_width(self) -> None:

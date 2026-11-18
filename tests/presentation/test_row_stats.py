@@ -36,7 +36,7 @@ class StatsLayoutTest(unittest.TestCase):
         self.assertEqual(layout, ("state",))
 
     def test_milestone_layout_keeps_the_status_column_at_a_narrow_width(self) -> None:
-        layout = stats_layout("milestone", 25, 6)
+        layout = stats_layout("milestone", 21, 6)
 
         self.assertEqual(layout, ("state",))
 
@@ -76,11 +76,15 @@ class StatsRenderTest(unittest.TestCase):
         self.assertNotIn("▰", plain)
         self.assertNotIn("PR", plain)
 
-    def test_status_column_stays_blank(self) -> None:
+    def test_status_column_holds_the_mark(self) -> None:
         layout = ("state",)
-        rich, plain = render_stats(RowStats(), layout)
+        rich, plain = render_stats(RowStats(state="📝"), layout)
         self.assertEqual(Text.from_markup(rich).plain, plain)
-        self.assertEqual(plain.strip(), "")
+        self.assertEqual(plain, "📝")
+        rich, plain = render_stats(RowStats(state="○"), layout)
+        self.assertEqual(plain, " ○")
+        rich, plain = render_stats(RowStats(), layout)
+        self.assertEqual(plain, "  ")
 
     def test_progress_is_a_count_without_a_bar(self) -> None:
         stats = RowStats(progress=(1, 4))

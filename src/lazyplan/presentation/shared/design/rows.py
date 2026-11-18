@@ -58,22 +58,25 @@ def _render_row(
     review: bool = False,
     emoji: bool = True,
 ) -> str:
-    """Render one TUI row: one status mark, id, title, and fixed stats slots."""
+    """Render one TUI row: id, title, progress, and the right-rail mark."""
     _letter, title_attr = _CORE_SPEC[kind]
     id_part = f"{_letter}{obj.id}"
     title = getattr(obj, title_attr)
     if badge:
         title = f"{title} {badge}"
     mark = status_mark(_row_state(obj, attention, review), emoji=emoji)
-    prefix_rich = f"{mark} [dim]{id_part}[/] "
-    prefix_plain = f"{mark} {id_part} "
+    prefix_rich = f"[dim]{id_part}[/] "
+    prefix_plain = f"{id_part} "
     row_width = DEFAULT_ROW_WIDTH if width is None else width
     layout = stats_layout(kind, row_width, cell_width(prefix_plain))
+    stats = RowStats(progress=stats.progress, state=mark)
     stats_rich, stats_plain = render_stats(stats, layout)
-    available = row_width - cell_width(prefix_plain) - cell_width(stats_plain)
-    title = truncate(title, available)
+    gap = 1 if layout else 0
+    available = row_width - cell_width(prefix_plain) - cell_width(stats_plain) - gap
+    title = truncate(title, max(0, available))
     pad = " " * max(
-        0, row_width - cell_width(prefix_plain) - cell_width(title) - cell_width(stats_plain)
+        gap,
+        row_width - cell_width(prefix_plain) - cell_width(title) - cell_width(stats_plain),
     )
     style = "dim" if obj.status == Status.DONE else "bold"
     return f"{prefix_rich}[{style}]{_escape_markup(title)}[/]{pad}{stats_rich}"

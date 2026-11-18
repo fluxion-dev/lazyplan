@@ -46,9 +46,9 @@ class TestCombinedSurfaces(RefreshCase):
         """A task row is one status mark, its id, and its title."""
         text = self.plain_row(app, ("task", task.id)).strip()  # type: ignore[attr-defined]
         tokens = text.split()
-        self.assertEqual(tokens[0], mark)
-        self.assertEqual(tokens[1], f"T{task.id}")
-        self.assertEqual(" ".join(tokens[2:]), task.title)
+        self.assertEqual(tokens[-1], mark)
+        self.assertEqual(tokens[0], f"T{task.id}")
+        self.assertEqual(" ".join(tokens[1:-1]), task.title)
         for banned in ("○", "◐", "●", "@", "◉", "⚑", "!", "0/", "doing", "blocked", "review"):
             self.assertNotIn(banned, text)
 

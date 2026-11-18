@@ -53,7 +53,7 @@ class TestStatusFallback(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             await self.expand(app, pilot)
             key = ("task", self.task.id)
-            self.assertTrue(self.row(app, key).startswith("🔨 "))
+            self.assertTrue(self.row(app, key).endswith("🔨"))
 
             app._apply_layout(79)  # type: ignore[attr-defined]
             await pilot.pause()
@@ -61,7 +61,7 @@ class TestStatusFallback(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
 
             plain = self.row(app, key)
-            self.assertTrue(plain.startswith("◐ "))
+            self.assertTrue(plain.endswith("◐"))
             self.assertNotIn("🔨", plain)
             cells, width = self.row_cells(app, key, 11)
             self.assertEqual(cells, width)
@@ -76,12 +76,12 @@ class TestStatusFallback(unittest.IsolatedAsyncioTestCase):
             app._apply_layout(40)  # type: ignore[attr-defined]
             app.refresh_all()  # type: ignore[attr-defined]
             await pilot.pause()
-            self.assertTrue(self.row(app, key).startswith("◐ "))
+            self.assertTrue(self.row(app, key).endswith("◐"))
 
             app._apply_layout(120)  # type: ignore[attr-defined]
             app.refresh_all()  # type: ignore[attr-defined]
             await pilot.pause()
-            self.assertTrue(self.row(app, key).startswith("🔨 "))
+            self.assertTrue(self.row(app, key).endswith("🔨"))
 
     async def test_an_ascii_terminal_never_gets_emoji(self) -> None:
         with mock.patch.dict(os.environ, {"TERM": "dumb"}):
@@ -91,7 +91,7 @@ class TestStatusFallback(unittest.IsolatedAsyncioTestCase):
                 await self.expand(app, pilot)
                 self.assertFalse(app.state.emoji)
                 plain = self.row(app, ("task", self.task.id))
-                self.assertTrue(plain.startswith("◐ "))
+                self.assertTrue(plain.endswith("◐"))
                 for emoji in ("📝", "🔨", "🔍", "🚧", "✅"):
                     self.assertNotIn(emoji, plain)
 

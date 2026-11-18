@@ -110,8 +110,10 @@ newer releases through the installed one, oldest first; `--all` lists every
 bundled release newest first. A successful `lpui upgrade` prints the range it
 skipped, and the TUI opens the same notes once after an upgrade. Press `W` or
 choose Release notes in the palette to reopen the installed version's notes.
-The last version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing
-marker means a first install and stays quiet.
+The overlay renders the notes as Markdown, and clicking a link opens it in the
+browser. `lpui notes` still prints raw Markdown so it can be piped. The last
+version shown is recorded in `~/.lazyplan/notes-seen.json`; a missing marker
+means a first install and stays quiet.
 
 Upgrading from 0.30.1 or earlier is not supported in place: the package layout
 and console scripts changed. Force a reinstall in the environment that owns

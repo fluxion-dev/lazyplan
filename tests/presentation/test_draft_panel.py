@@ -105,6 +105,19 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(self.store.get_draft(draft.id).status, "review")
             self.assertEqual(len(app.screen_stack), 1)
 
+    async def test_draft_panel_stays_visible_in_the_narrow_layout(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(90, 40)) as pilot:
+            await pilot.pause()
+            self.assertTrue(app.query_one("#plans-drafts").display)
+            self.assertFalse(app.query_one("#side").display)
+            tree = app.query_one("#tree-drafts")
+            self.assertEqual(len(tree.root.children), 1)
+            app.select_row("draft", draft.id)
+            await pilot.pause()
+            self.assertEqual(app.selected, ("draft", draft.id))
+
     async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:

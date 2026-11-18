@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,7 +18,13 @@ def _load() -> Any:
     )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Dataclasses resolve ``sys.modules[cls.__module__]`` on Python 3.11, so the
+    # module must be registered while its body executes.
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(spec.name, None)
     return module
 
 

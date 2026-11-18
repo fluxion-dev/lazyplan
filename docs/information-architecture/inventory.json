@@ -75,6 +75,44 @@
         ]
       },
       {
+        "name": "choose",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--manifest"
+          ],
+          [
+            "--out"
+          ],
+          [
+            "--port"
+          ],
+          [
+            "--open"
+          ],
+          [
+            "--force"
+          ]
+        ]
+      },
+      {
         "name": "claim",
         "options": [
           [
@@ -1583,10 +1621,10 @@
         ]
       }
     ],
-    "count": 51
+    "count": 52
   },
   "counts": {
-    "cli_commands": 51,
+    "cli_commands": 52,
     "doc_files": 9,
     "doc_headings": 101,
     "env_names": 11,

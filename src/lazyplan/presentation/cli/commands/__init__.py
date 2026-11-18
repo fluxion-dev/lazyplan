@@ -112,13 +112,14 @@ from .system import (
     _cmd_brief as _cmd_brief,
 )
 from .system import (
-    _cmd_context as _cmd_context,
-)
-from .system import (
+    _cmd_choose,
     _cmd_lint,
     _cmd_notes,
     _cmd_stats,
     _cmd_trace,
+)
+from .system import (
+    _cmd_context as _cmd_context,
 )
 from .system import (
     _cmd_review as _cmd_review,
@@ -281,6 +282,7 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "feed": _cmd_feed,
     "completion": _cmd_completion,
     "notes": _cmd_notes,
+    "choose": _cmd_choose,
     "ui": _cmd_ui,
     "maint-report": _cmd_maint_report,
     "maint-archive": _cmd_maint_archive,

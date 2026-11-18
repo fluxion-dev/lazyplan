@@ -14,7 +14,7 @@ python3 tools/ia_inventory.py --check
 
 | Surface | Count |
 | --- | ---: |
-| cli_commands | 51 |
+| cli_commands | 52 |
 | palette_commands | 54 |
 | mcp_tools | 68 |
 | mcp_resources | 3 |
@@ -35,6 +35,7 @@ python3 tools/ia_inventory.py --check
 | --- | --- |
 | `audit` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --since, --strict, --min-coverage, --max-lag, --max-gaps, --min-trace, --min-evidence |
 | `brief` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan |
+| `choose` | --json, --porcelain, --version, --actor, --heal, --no-heal, --manifest, --out, --port, --open, --force |
 | `claim` | --json, --porcelain, --version, --actor, --heal, --no-heal, --id, --ttl, --note, --force, --worktree, --repo, --reason |
 | `claims` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --all |
 | `comment` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --comment, --text, --mentions |

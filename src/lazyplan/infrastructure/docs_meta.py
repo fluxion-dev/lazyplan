@@ -22,6 +22,10 @@ ENVIRONMENT: tuple[tuple[str, str], ...] = (
         "LAZYPLAN_THEME",
         "TUI palette: mocha, void, or latte (aliases dark, oled, light).",
     ),
+    (
+        "LAZYPLAN_ICONS",
+        "Icon palette: classic, orbit, blocks, marks, or ascii.",
+    ),
     ("LAZYPLAN_NO_COLOR", "Disable setup wizard color."),
     ("NO_COLOR, CLICOLOR=0, TERM=dumb", "Plain setup output."),
     ("USER, USERNAME", "Used for --actor when you do not give one (USERNAME on Windows)."),

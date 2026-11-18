@@ -234,6 +234,46 @@ def add_notes(
     )
 
 
+def add_choose(
+    sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
+) -> None:
+
+    choose = sub.add_parser(
+        "choose",
+        help="serve a local page of image choices and record the pick",
+        parents=[common],
+    )
+    choose.add_argument(
+        "--manifest",
+        required=True,
+        metavar="PATH",
+        help="choices JSON file with 2-12 image options",
+    )
+    choose.add_argument(
+        "--out",
+        default="",
+        metavar="PATH",
+        help="selection file (default: selection.json beside the manifest)",
+    )
+    choose.add_argument(
+        "--port",
+        type=int,
+        default=0,
+        metavar="PORT",
+        help="loopback port (0 picks a free one)",
+    )
+    choose.add_argument(
+        "--open",
+        action="store_true",
+        help="open the page in the browser",
+    )
+    choose.add_argument(
+        "--force",
+        action="store_true",
+        help="replace an existing selection file",
+    )
+
+
 def add_help(
     sub: argparse._SubParsersAction[argparse.ArgumentParser], common: argparse.ArgumentParser
 ) -> None:

@@ -75,6 +75,44 @@
         ]
       },
       {
+        "name": "choose",
+        "options": [
+          [
+            "--json"
+          ],
+          [
+            "--porcelain"
+          ],
+          [
+            "--version"
+          ],
+          [
+            "--actor"
+          ],
+          [
+            "--heal"
+          ],
+          [
+            "--no-heal"
+          ],
+          [
+            "--manifest"
+          ],
+          [
+            "--out"
+          ],
+          [
+            "--port"
+          ],
+          [
+            "--open"
+          ],
+          [
+            "--force"
+          ]
+        ]
+      },
+      {
         "name": "claim",
         "options": [
           [
@@ -1583,12 +1621,12 @@
         ]
       }
     ],
-    "count": 51
+    "count": 52
   },
   "counts": {
-    "cli_commands": 51,
+    "cli_commands": 52,
     "doc_files": 9,
-    "doc_headings": 101,
+    "doc_headings": 102,
     "env_names": 11,
     "file_paths": 12,
     "hook_events": 35,
@@ -1676,6 +1714,7 @@
           "Agent profiles",
           "Porcelain output",
           "Plan documents and recipes",
+          "Visual choices",
           "Context and claims",
           "Progress and rollups",
           "Tracking guarantees",

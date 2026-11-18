@@ -421,6 +421,13 @@ CORE_ACTIONS: tuple[Action, ...] = (
         ("notification-log",),
     ),
     _action(
+        "app.choose",
+        "Choose from visual previews",
+        surfaces=("cli",),
+        route=("tree", "choose"),
+        cli_paths=("choose",),
+    ),
+    _action(
         "app.health",
         "Health check",
         surfaces=("tui", "cli"),

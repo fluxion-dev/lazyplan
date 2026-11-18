@@ -8,7 +8,7 @@ import uuid
 from .migrate_lanes import migrate_lanes
 from .migrate_worktrees import migrate_worktree_lanes
 
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 19
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS plans (
@@ -92,6 +92,54 @@ CREATE TABLE IF NOT EXISTS plan_questions (
 );
 CREATE INDEX IF NOT EXISTS idx_plan_questions_plan
     ON plan_questions(plan_id, status, id);
+CREATE TABLE IF NOT EXISTS plan_drafts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL CHECK (trim(title) <> ''),
+    status TEXT NOT NULL DEFAULT 'review'
+        CHECK (status IN ('review', 'revising', 'promoted')),
+    document TEXT NOT NULL CHECK (trim(document) <> ''),
+    revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
+    actor TEXT NOT NULL DEFAULT 'human',
+    created_at REAL NOT NULL,
+    updated_at REAL NOT NULL,
+    plan_id INTEGER REFERENCES plans(id) ON DELETE SET NULL,
+    promoted_at REAL NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_plan_drafts_status ON plan_drafts(status, id);
+CREATE TABLE IF NOT EXISTS plan_draft_revisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    draft_id INTEGER NOT NULL REFERENCES plan_drafts(id) ON DELETE CASCADE,
+    revision INTEGER NOT NULL CHECK (revision > 0),
+    document TEXT NOT NULL CHECK (trim(document) <> ''),
+    actor TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    UNIQUE (draft_id, revision)
+);
+CREATE INDEX IF NOT EXISTS idx_plan_draft_revisions_draft
+    ON plan_draft_revisions(draft_id, revision DESC);
+CREATE TABLE IF NOT EXISTS draft_annotations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    draft_id INTEGER NOT NULL REFERENCES plan_drafts(id) ON DELETE CASCADE,
+    block_key TEXT NOT NULL CHECK (trim(block_key) <> ''),
+    quote TEXT NOT NULL DEFAULT '',
+    start_offset INTEGER NOT NULL DEFAULT 0 CHECK (start_offset >= 0),
+    end_offset INTEGER NOT NULL DEFAULT 0 CHECK (end_offset >= start_offset),
+    kind TEXT NOT NULL CHECK (kind IN ('comment', 'question', 'change')),
+    body TEXT NOT NULL CHECK (trim(body) <> ''),
+    status TEXT NOT NULL DEFAULT 'open'
+        CHECK (status IN ('open', 'addressed', 'dismissed')),
+    author TEXT NOT NULL DEFAULT 'human',
+    ts REAL NOT NULL,
+    revision INTEGER NOT NULL CHECK (revision > 0),
+    response TEXT NOT NULL DEFAULT '',
+    responded_by TEXT NOT NULL DEFAULT '',
+    responded_at REAL NOT NULL DEFAULT 0,
+    anchor_state TEXT NOT NULL DEFAULT 'ok'
+        CHECK (anchor_state IN ('ok', 'moved', 'orphaned'))
+);
+CREATE INDEX IF NOT EXISTS idx_draft_annotations_draft
+    ON draft_annotations(draft_id, status, id);
 CREATE TABLE IF NOT EXISTS external_refs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     plan_id INTEGER NOT NULL REFERENCES plans(id) ON DELETE CASCADE,

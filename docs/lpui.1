@@ -1,4 +1,4 @@
-.TH LPUI 1 "2026-11-15" "lazyplan-tui 0.48.0" "User Commands"
+.TH LPUI 1 "2026-11-18" "lazyplan-tui 0.48.0" "User Commands"
 .SH NAME
 lpui \- local plan journal for you and your coding agent
 .SH SYNOPSIS
@@ -1521,6 +1521,44 @@ report drift without automatic repair for this command
 .TP
 .B  ACTION
 what to do with a pr Choices: auth, status, list, show, link, unlink, refresh\. Required\.
+.RE
+.TP
+.B lpui draft
+create, review, annotate, revise, or promote a plan draft
+.RS
+.TP
+.B \-\-json
+print output as JSON so scripts and agents can read it
+.RE
+.RS
+.TP
+.B \-\-porcelain
+print terse tab\-separated rows for active agents (\-\-json still wins)
+.RE
+.RS
+.TP
+.B \-\-version
+print the installed version and exit
+.RE
+.RS
+.TP
+.B \-\-actor NAME
+who made this change (you see it in feed)
+.RE
+.RS
+.TP
+.B \-\-heal
+repair parent statuses and leases automatically (default)
+.RE
+.RS
+.TP
+.B \-\-no\-heal
+report drift without automatic repair for this command
+.RE
+.RS
+.TP
+.B  ACTION
+what to do with a plan draft Choices: list, show, annotations, add, revise, submit, ready, promote, delete, annotate, respond, resolve, dismiss\. Required\.
 .RE
 .TP
 .B lpui question

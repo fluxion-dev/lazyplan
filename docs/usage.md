@@ -362,14 +362,15 @@ with one word: `doing`, `blocked`, or `review`. Completed plans live in the
 reveals milestones, and tasks appear when you open their milestone.
 
 The main screen puts the work in one left column and the overview on the right.
-The left column stacks the plan queue, the agents card, plan review, and the git
-card. A card with no rows is hidden, so an empty journal shows only the plan
-queue. The plan queue holds every plan that is not done; plan review holds
-completed plans. The agents card shows who is working on what: one line per
-live claim with the holder, the task, its plan, and how long it has been held.
-It repaints within a quarter second of any claim, renewal, or release, and hides
-when nobody holds a task; the card is read-only. The git card carries linked
-checkouts and pull requests.
+The left column stacks plan drafts, the plan queue, and plan review. A panel
+with no rows is hidden, so an empty journal shows only the plan queue. The plan
+queue holds every plan that is not done; plan review holds completed plans, and
+plan drafts holds every draft that has not been promoted. The right column
+stacks the overview, the agents card, and the git card. The agents card shows
+who is working on what: one line per live claim with the holder, the task, its
+plan, and how long it has been held. It repaints within a quarter second of any
+claim, renewal, or release, and hides when nobody holds a task; the card is
+read-only. The git card carries linked checkouts and pull requests.
 
 The overview follows the selection and reveals one level at a time. Under the
 title and one context line with ids and counts, the full details always come
@@ -390,8 +391,8 @@ immediate children.
 
 Both plan panels keep the full milestone and task tree, and the text filter
 applies inside each panel. On terminals narrower than 100 columns the overview
-column is hidden, and the plan queue, agents, plan review, and git cards keep
-their order in the stacked left column. The footer names only `?`, `c`, and
+column is hidden, and the three plan panels keep their order in the stacked
+left column. The footer names only `?`, `c`, and
 `/`; the full key list is under `?`.
 
 The bottom bar also pins the running version at its right edge, for example
@@ -450,6 +451,39 @@ height. One-line prompts for filter, comment, note, and approve stay compact.
 The palette carries questions, approvals, claims, agents, comments, pull
 requests, and activity; it disables actions the current selection cannot run
 and says why.
+
+### Plan drafts
+
+A draft is one validated plan document that stays out of the plan queue until
+you promote it. The agent writes the document; you review it in the `plan
+drafts` panel. Select a draft and press `e` or `enter` to open the review
+screen.
+
+The review screen puts the document on the left and its annotations on the
+right. Every constituent part is a selectable block: the plan title, why, what,
+settings, and criteria; each milestone title, description, settings, and
+criteria; and each task title, description, role, and criteria.
+
+| key | action |
+|---|---|
+| `j` / `k` | move block focus |
+| `a` | annotate the selected text, or the focused block |
+| `s` | submit open annotations for revision |
+| `P` | promote a clean draft into the plan queue |
+| `enter` | view the focused annotation |
+| `x` / `d` | dismiss · delete an open annotation |
+| `r` / `escape` | refresh · back |
+
+Mouse selection anchors to the block and the exact quote. Press `a` to record
+a comment, question, or change. Submit moves the draft to `revising`; the agent
+revises the document and answers each annotation. When no open annotations
+remain, the draft returns to `review`. Promotion refuses open annotations,
+invalid or stale documents, and a plan key that already belongs to a plan; it
+then creates the whole plan tree atomically and selects the new plan.
+
+On terminals narrower than 80 columns the annotation panel stacks under the
+document. The draft stays out of the plan queue and consumes no plan id until
+promotion.
 
 ### Trust hubs
 
@@ -741,6 +775,37 @@ validates the document and prints the intended tree without writing.
 
 `feature`, `bugfix`, and `refactor` recipes are packaged skeletons with QA,
 refactoring, and documentation tasks. Edit the words, then apply the document.
+
+### Drafts
+
+A draft is the review step before `plan apply`. It stores the same validated
+document, but stays out of the plan queue until you promote it.
+
+```bash
+lpui --actor NAME draft add --file plan.json
+lpui draft list
+lpui draft show --id 4
+lpui --actor NAME draft annotate --id 4 --block plan:why --kind change \
+  --text "Sharpen this" --quote "the promise"
+lpui --actor NAME draft submit --id 4
+lpui --actor NAME draft annotations --id 4
+lpui --actor NAME draft respond --id 8 --response "Rewrote the promise"
+lpui --actor NAME draft revise --id 4 --file plan.json --base-revision 2 --note "Addressed"
+lpui --actor NAME draft ready --id 4
+lpui --actor NAME draft promote --id 4
+```
+
+`draft add` and `draft revise` validate and normalize the document, so review
+and promotion see the same values. A revision must name the current base
+revision. Annotations anchor to one block and an optional exact quote; all
+three kinds use the same one-response loop. `ready` returns a revised draft to
+review only when no open annotations remain. `promote` is the only path into
+the plan queue: it refuses open annotations, invalid or stale documents, and a
+plan key that already belongs to a plan, then creates the whole tree atomically.
+The promoted draft keeps its plan id for audit.
+
+`draft show` returns the document, blocks, and annotations as JSON. Porcelain
+rows are `draft`, `block`, and `annotation`.
 
 ### Context and claims
 

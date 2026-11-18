@@ -9,7 +9,9 @@ from __future__ import annotations
 import json
 
 from ...services import context, insights
+from ...services import drafts as draft_services
 from .base import McpBase
+from .draft_payloads import detail_payload, drafts_payload
 
 
 class ResourcesMixin(McpBase):
@@ -33,6 +35,11 @@ class ResourcesMixin(McpBase):
                 payload = store.get_full("plan", plan_id)
                 if payload is None:
                     raise KeyError(f"plan {plan_id} not found")
+            elif uri == "lazyplan://drafts":
+                payload = drafts_payload(store)
+            elif uri.startswith("lazyplan://draft/"):
+                draft_id = int(uri.rsplit("/", 1)[-1])
+                payload = detail_payload(draft_services.detail(store, draft_id))
             else:
                 return self._error(request_id, -32002, f"resource not found: {uri}")
         except (KeyError, ValueError, RuntimeError) as exc:
@@ -66,6 +73,16 @@ class ResourcesMixin(McpBase):
             {
                 "uri": "lazyplan://plan/1",
                 "name": "Plan document",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "lazyplan://drafts",
+                "name": "Draft queue",
+                "mimeType": "application/json",
+            },
+            {
+                "uri": "lazyplan://draft/1",
+                "name": "Draft document",
                 "mimeType": "application/json",
             },
         ]

@@ -129,8 +129,8 @@ class TestSiteSEO(unittest.TestCase):
             )
         ]
         visible = dict(zip(questions, answers, strict=True))
-        self.assertEqual(len(faq["mainEntity"]), 8)
-        self.assertEqual(len(visible), 8)
+        self.assertEqual(len(faq["mainEntity"]), 10)
+        self.assertEqual(len(visible), 10)
         for item in faq["mainEntity"]:
             name = item["name"]
             self.assertIn(name, visible)
@@ -156,9 +156,9 @@ class TestSiteSEO(unittest.TestCase):
         text = html.unescape(
             re.sub(r"<[^>]+>", " ", re.sub(r"<script.*?</script>", "", page, flags=re.S))
         )
-        self.assertLessEqual(len(text.split()), 1900)
+        self.assertLessEqual(len(text.split()), 2100)
         self.assertLessEqual(page.count("<code"), 8)
-        self.assertEqual(page.count("<figure"), 12)
+        self.assertEqual(page.count("<figure"), 15)
         self.assertIn('id="ways-to-work"', page)
 
 

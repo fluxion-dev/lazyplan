@@ -21,11 +21,11 @@ class TestScreenshotZoom(unittest.TestCase):
         self.frame = FRAME.read_text(encoding="utf-8")
 
     def test_every_screenshot_is_a_zoom_trigger(self):
-        self.assertEqual(len(TRIGGERS.findall(self.page)), 8)
+        self.assertEqual(len(TRIGGERS.findall(self.page)), 11)
 
     def test_every_trigger_targets_a_published_png(self):
         triggers = re.findall(r"<button[^>]*data-zoom[^>]*>(.*?)</button>", self.page, re.S)
-        self.assertEqual(len(triggers), 8)
+        self.assertEqual(len(triggers), 11)
         for block in triggers:
             img = re.search(r'src="(\./screens/[^"]+\.png)"', block)
             self.assertIsNotNone(img)

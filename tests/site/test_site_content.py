@@ -24,10 +24,12 @@ SUPPORT_IDS = {
     "claims",
     "handoffs",
     "control-room",
+    "drafts",
     "trust-hubs",
     "evidence",
     "source-trail",
     "updates",
+    "notifications",
     "local-first",
     "keyboard",
     "themes",
@@ -54,11 +56,14 @@ GALLERY_KEYS = [
     "setup-review",
     "update",
     "detail",
+    "drafts",
     "worktrees",
     "git-pane",
     "source-trail",
     "trace",
     "timeline",
+    "notification-log",
+    "icons",
 ]
 
 
@@ -178,7 +183,7 @@ class TestPublishedCaptures(unittest.TestCase):
         )
         assert block is not None
         entries = self._entries(block.group(1))
-        self.assertEqual(len(entries), 11)
+        self.assertEqual(len(entries), 14)
         for file, width, height in entries:
             with self.subTest(file=file):
                 self.assertEqual(self._size(f"{file}.png"), (int(width), int(height)))

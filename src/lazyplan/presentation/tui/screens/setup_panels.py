@@ -30,7 +30,12 @@ from ...setup.steps import (
     WELCOME,
     Step,
 )
-from ...shared.design import escape_markup
+from ...shared.design import (
+    ICON_NAMES,
+    ICON_PALETTES,
+    active_icons,
+    escape_markup,
+)
 from .setup_support import (
     HOOK_MODES,
     INHERIT,
@@ -359,8 +364,9 @@ if _TEXTUAL_OK:
             return widgets
 
         def _appearance_panel(self) -> list[Any]:
-            """Theme preview plus read-only tool and GitHub login checks."""
+            """Theme and icon previews plus read-only tool and GitHub login checks."""
             theme = self._theme_value()
+            icons = self._icons_value()
             widgets: list[Any] = [
                 Label("Theme", classes="setup-label"),
                 Select(
@@ -375,9 +381,17 @@ if _TEXTUAL_OK:
                     allow_blank=False,
                     id="setup-theme",
                 ),
+                Label("Icons", classes="setup-label"),
+                Select(
+                    [(palette.label, palette.name) for palette in ICON_PALETTES],
+                    value=icons,
+                    allow_blank=False,
+                    id="setup-icons",
+                ),
                 note(
-                    "The preview applies immediately and is remembered when you"
-                    " apply. LAZYPLAN_THEME still wins over the remembered choice."
+                    "Both previews apply immediately and are remembered when you"
+                    " apply. LAZYPLAN_THEME and LAZYPLAN_ICONS still win over the"
+                    " remembered choices."
                 ),
                 Label("Checks", classes="setup-label"),
                 Static(self._checks_text(), id="setup-checks-body", classes="setup-checks"),
@@ -397,6 +411,14 @@ if _TEXTUAL_OK:
                 return draft.theme
             live = str(getattr(self.app, "theme", ""))
             return live if live in THEME_NAMES else THEME_NAMES[0]
+
+        def _icons_value(self) -> str:
+            """The palette the picker shows: remembered, else the live choice."""
+            draft = self.session.draft
+            if draft.icons in ICON_NAMES:
+                return draft.icons
+            live = active_icons()
+            return live if live in ICON_NAMES else ICON_NAMES[0]
 
         def _checks_text(self) -> str:
             """One line per tool, with the fix for anything missing."""

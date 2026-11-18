@@ -50,6 +50,7 @@ class SetupState:
     decisions: dict[str, dict[str, Any]] = field(default_factory=dict)
     integration_choices: dict[str, dict[str, Any]] = field(default_factory=dict)
     theme: str = ""
+    icons: str = ""
     wizard_pending: str = ""
     wizard_version: str = ""
     wizard_completed: str = ""
@@ -77,6 +78,7 @@ class SetupState:
             "decisions": self.decisions,
             "integration_choices": self.integration_choices,
             "theme": self.theme,
+            "icons": self.icons,
             "wizard_pending": self.wizard_pending,
             "wizard_version": self.wizard_version,
             "wizard_completed": self.wizard_completed,
@@ -109,6 +111,7 @@ class SetupState:
             decisions=decisions if isinstance(decisions, dict) else {},
             integration_choices=_integration_choices(raw.get("integration_choices")),
             theme=_text(raw, "theme"),
+            icons=_text(raw, "icons"),
             wizard_pending=_text(raw, "wizard_pending"),
             wizard_version=_text(raw, "wizard_version"),
             wizard_completed=_text(raw, "wizard_completed"),

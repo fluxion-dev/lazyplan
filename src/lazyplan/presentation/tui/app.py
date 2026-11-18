@@ -40,6 +40,8 @@ from ..shared.design import (
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
     empty_state,
+    remembered_icons,
+    select_icons,
 )
 from .actions import ActionMixin
 from .base import AppBase
@@ -87,6 +89,7 @@ if _TEXTUAL_OK:
             *NAV_BINDINGS,
             Binding("escape", "clear_filter", "Back", show=False),
             Binding("t", "cycle_theme", "Theme"),
+            Binding("i", "cycle_icons", "Icons"),
             Binding("T", "toggle_timeline", "Timeline"),
             Binding("S", "open_setup", "Setup"),
             Binding("n", "new_context", "New"),
@@ -150,6 +153,7 @@ if _TEXTUAL_OK:
         def __init__(self, store: Store) -> None:
             super().__init__()
             register_themes(self, remembered_theme())
+            select_icons(remembered_icons())
             self.store = store
             self.heal = settings.heal_enabled(settings.heal_mode())
             self.state = AppState()

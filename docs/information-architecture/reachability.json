@@ -305,6 +305,13 @@
     },
     {
       "depth": 0,
+      "id": "theme.icons",
+      "route": [
+        "tree"
+      ]
+    },
+    {
+      "depth": 0,
       "id": "palette.open",
       "route": [
         "any"

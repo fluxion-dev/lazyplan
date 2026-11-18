@@ -183,9 +183,9 @@ palette command lists every gap with Install & restart. The check is off with
 Setup writes one layout, and the screen is where you review it. On a terminal,
 `lpui` applies a baseline and then opens a multi-step setup wizard before normal
 use: placement, agents and their skills, hooks and the `AGENTS.md` pointer,
-model targets, per-role tier and effort, pending integrations, the theme, and
-read-only tool checks. Nothing more is written until the last step lists the
-exact writes and removals and you apply them.
+model targets, per-role tier and effort, pending integrations, the theme and
+icons, and read-only tool checks. Nothing more is written until the last step
+lists the exact writes and removals and you apply them.
 
 The wizard opens when setup is due: a fresh install, a release that changed
 setup, new skills or hooks a release added, managed agent profiles that are
@@ -301,6 +301,11 @@ detection. The terminal wizard uses the same defaults, so `lpui setup
 Unset or any other value uses the remembered choice from setup, then mocha.
 Press `t` in the TUI to cycle the three palettes without restarting; the cycle
 remembers the choice, and `LAZYPLAN_THEME` still wins at the next launch.
+`LAZYPLAN_ICONS` selects the glyph set: `classic` (the default), `orbit`,
+`blocks`, `marks`, or `ascii` for terminals without Unicode glyphs.
+Unset or any other value uses the remembered choice from setup, then `classic`.
+Press `i` in the TUI to cycle the five icon palettes; the cycle remembers the
+choice, and `LAZYPLAN_ICONS` still wins at the next launch.
 `--placement repo` outside a git checkout falls back to home.
 
 | Variable | Meaning |
@@ -314,6 +319,7 @@ remembers the choice, and `LAZYPLAN_THEME` still wins at the next launch.
 | `LAZYPLAN_HOOKS` | Override the installed hook mode at runtime: `strict`, `advisory`, or `off`. |
 | `LAZYPLAN_NO_HOOKS` | Silence installed hooks at runtime; does not remove them. |
 | `LAZYPLAN_THEME` | TUI palette: mocha (`dark`), void (`oled`), or latte (`light`). |
+| `LAZYPLAN_ICONS` | Icon palette: `classic`, `orbit`, `blocks`, `marks`, or `ascii`. |
 | `LAZYPLAN_NO_COLOR` | Disable setup wizard color. |
 | `NO_COLOR`, `CLICOLOR=0`, `TERM=dumb` | Plain setup output. |
 | `USER`, `USERNAME` | Used for `--actor` when you do not give one (`USERNAME` on Windows). |
@@ -439,6 +445,7 @@ before it.
 | `U` | update screen: version badge and download |
 | `W` | release notes for the installed version |
 | `t` | cycle theme: mocha, void, latte |
+| `i` | cycle icons: classic, orbit, blocks, marks, ASCII |
 | `T` | show or hide the timeline card |
 | `q` | quit, from any screen |
 

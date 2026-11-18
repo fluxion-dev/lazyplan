@@ -5,8 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ....core.entities import Status
+from .icons import DEFAULT_PALETTE
 
-STATUS_GLYPH = {"todo": "○", "doing": "◐", "done": "●"}
+STATUS_GLYPH = dict(DEFAULT_PALETTE.status)
 STATUS_ANSI = {"todo": "90", "doing": "33", "done": "32"}
 STATUS_RICH = {"todo": "dim", "doing": "yellow", "done": "green"}
 

@@ -52,6 +52,7 @@ class SetupDraft:
     tiers_map: dict[str, dict[str, str]] = field(default_factory=dict)
     integrations: dict[str, str] = field(default_factory=dict)
     theme: str = ""
+    icons: str = ""
 
 
 @dataclass
@@ -97,6 +98,7 @@ class SetupSession:
             profiles_map=profile_map,
             tiers_map=tiers,
             theme=state.theme,
+            icons=state.icons,
         )
         finder = discover or host_models.discover_all
         session = cls(
@@ -290,6 +292,8 @@ class SetupSession:
         state = load_state(self.home)
         if self.draft.theme:
             state.theme = self.draft.theme
+        if self.draft.icons:
+            state.icons = self.draft.icons
         clear_pending(state, self.version, self.home)
         return result
 

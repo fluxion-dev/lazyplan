@@ -7,6 +7,7 @@ from pathlib import Path
 from lazyplan.infrastructure.templates import load_template
 
 from ... import services
+from ..shared.design import active_icons, apply_icons, next_icons, remember_icons
 from ..shared.export import display_path
 from ..shared.palette import by_id
 from .approval_actions import ApprovalMixin
@@ -147,6 +148,14 @@ if _TEXTUAL_OK:
             stored = remember_theme(selected)
             self.notify(f"theme: {stored.removeprefix('lazyplan-')}", timeout=2)
             self.call_after_refresh(self.metrics_controller.refresh)
+
+        def action_cycle_icons(self) -> None:
+            """Cycle the icon palettes and redraw every label with the choice."""
+            selected = next_icons(active_icons())
+            apply_icons(selected)
+            stored = remember_icons(selected)
+            self.notify(f"icons: {stored}", timeout=2)
+            self._saved(f"icons: {stored}")
 
         def action_command_palette(self) -> None:
             """Open the modal command palette (c)."""

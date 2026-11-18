@@ -69,6 +69,7 @@ Budget: every action is at most **3** interactions from the tree.
 | `pull_request.open` | tree › provenance | 1 |
 | `source.trail` | tree › source | 1 |
 | `theme.cycle` | tree | 0 |
+| `theme.icons` | tree | 0 |
 | `palette.open` | any | 0 |
 | `plan.export` | tree › export | 1 |
 | `app.update` | tree › update | 1 |

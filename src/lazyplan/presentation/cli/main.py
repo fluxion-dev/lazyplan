@@ -31,6 +31,8 @@ from ..shared import (
 )
 from ..shared.design import (
     msg_error,
+    remembered_icons,
+    select_icons,
 )
 from .commands import (
     _COMMANDS,
@@ -209,6 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         # Before Store(): printing the version must not create a DB.
         print(package_version())
         return 0
+    select_icons(remembered_icons())
     actor = getattr(args, "actor", "human")
     code = _prepare_command(args, actor, used_noun_form)
     if code is not None:

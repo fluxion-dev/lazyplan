@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Icons are a palette you choose.** `LAZYPLAN_ICONS` selects `classic`,
+  `orbit`, `blocks`, `marks`, or `ascii` for status, kind, section, checkout,
+  and wizard glyphs. Press `i` in the TUI to cycle them, and the setup wizard's
+  appearance step previews and remembers the choice.
+
 ## v0.48.0 — 2026-11-15
 
 ### Added

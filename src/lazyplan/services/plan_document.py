@@ -283,6 +283,43 @@ def validate_document(port: PlanningPort, raw: Any) -> PlanDocument:
     )
 
 
+def to_json(document: PlanDocument) -> str:
+    """Serialize a validated document back to the ``plan apply`` schema."""
+    payload = {
+        "plan": {
+            "key": document.key,
+            "title": document.title,
+            "why": document.why,
+            "what": document.what,
+            "criteria": list(document.criteria),
+            "dispatch_mode": document.dispatch_mode,
+            "max_agents": document.max_agents,
+        },
+        "milestones": [
+            {
+                "key": milestone.key,
+                "title": milestone.title,
+                "desc": milestone.description,
+                "criteria": list(milestone.criteria),
+                "lane_group": milestone.lane_group,
+                "agent_role": milestone.agent_role,
+                "tasks": [
+                    {
+                        "key": task.key,
+                        "title": task.title,
+                        "desc": task.description,
+                        "criteria": list(task.criteria),
+                        "role": task.role,
+                    }
+                    for task in milestone.tasks
+                ],
+            }
+            for milestone in document.milestones
+        ],
+    }
+    return json.dumps(payload, indent=2, ensure_ascii=False)
+
+
 def load_document(path: str | Path) -> dict[str, Any]:
     """Read one JSON document from disk."""
     source = Path(path).expanduser()

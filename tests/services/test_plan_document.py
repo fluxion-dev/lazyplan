@@ -13,6 +13,7 @@ from lazyplan.services.plan_document import (
     counts,
     load_document,
     preview,
+    to_json,
     validate_document,
 )
 from lazyplan.store import Store
@@ -66,6 +67,11 @@ class PlanDocumentTest(unittest.TestCase):
         tree = preview(parsed)
         self.assertEqual(tree["plan"]["key"], "demo-plan")
         self.assertEqual(tree["milestones"][0]["tasks"][0]["key"], "impl")
+
+    def test_to_json_round_trips(self):
+        parsed = validate_document(self.store, document())
+        again = validate_document(self.store, json.loads(to_json(parsed)))
+        self.assertEqual(again, parsed)
 
     def test_unknown_top_level_field(self):
         raw = document()

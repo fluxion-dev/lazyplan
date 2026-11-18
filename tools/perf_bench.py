@@ -134,9 +134,11 @@ BUDGETS: dict[str, Budget] = {
     "full_many": Budget(19, 400),
     "export_all": Budget(18, 500),
     "audit_report": Budget(13, 800),
-    "tui_first_paint": Budget(19, 1_000, nodes=88),
+    # The draft panel adds two reads per pass (draft list and annotation
+    # counts), so first paint and reconcile sit at 23 rather than 19.
+    "tui_first_paint": Budget(23, 1_000, nodes=88),
     "tui_expand": Budget(0, 500, nodes=93),
-    "tui_reconcile": Budget(19, 1_000, nodes=88),
+    "tui_reconcile": Budget(23, 1_000, nodes=88),
     "cli_import": Budget(0, 500),
     "cli_version": Budget(0, 600),
     "cli_list": Budget(0, 900),

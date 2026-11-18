@@ -13,6 +13,7 @@ from .base import (
     to_payload,
 )
 from .claims import ClaimsMixin
+from .draft_annotations import DraftAnnotationsMixin
 from .drafts import DraftsMixin
 from .evidence import EvidenceMixin
 from .keys import KeysMixin
@@ -37,6 +38,7 @@ class Store(
     SessionHistoryMixin,
     ClaimsMixin,
     DraftsMixin,
+    DraftAnnotationsMixin,
     EvidenceMixin,
     AnnotationsMixin,
     KeysMixin,

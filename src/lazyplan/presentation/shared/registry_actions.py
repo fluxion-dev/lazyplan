@@ -6,6 +6,7 @@ repository budget. ``registry`` re-exports every name here.
 
 from __future__ import annotations
 
+from .registry_actions_drafts import DRAFT_ACTIONS
 from .registry_actions_provenance import PROVENANCE_ACTIONS
 from .registry_model import ENTITIES as ENTITIES
 from .registry_model import HOOK_EVENTS as HOOK_EVENTS
@@ -72,34 +73,6 @@ CORE_ACTIONS: tuple[Action, ...] = (
         palette_ids=("plan-diff",),
         cli_paths=("plan diff",),
         mcp_tool="plan_diff",
-    ),
-    _action(
-        "draft.open",
-        "Open plan draft",
-        context="selection",
-        surfaces=("tui", "cli", "mcp"),
-        route=("tree", "draft"),
-        palette_ids=("open-draft",),
-        cli_paths=("draft show",),
-        mcp_tool="draft_show",
-    ),
-    _action(
-        "draft.submit",
-        "Submit draft feedback",
-        surfaces=("tui", "cli", "mcp"),
-        route=("draft", "submit"),
-        palette_ids=("submit-draft",),
-        cli_paths=("draft submit",),
-        mcp_tool="draft_submit",
-    ),
-    _action(
-        "draft.promote",
-        "Promote plan draft",
-        surfaces=("tui", "cli", "mcp"),
-        route=("draft", "promote"),
-        palette_ids=("promote-draft",),
-        cli_paths=("draft promote",),
-        mcp_tool="draft_promote",
     ),
     _action(
         "plan.dispatch",
@@ -590,7 +563,7 @@ CORE_ACTIONS: tuple[Action, ...] = (
     ),
 )
 
-ACTIONS: tuple[Action, ...] = CORE_ACTIONS + PROVENANCE_ACTIONS
+ACTIONS: tuple[Action, ...] = CORE_ACTIONS + PROVENANCE_ACTIONS + DRAFT_ACTIONS
 
 PALETTE_TO_ACTION: dict[str, str] = {
     palette_id: action.id for action in ACTIONS for palette_id in action.palette_ids

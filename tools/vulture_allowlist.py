@@ -35,6 +35,8 @@ _.action_unrelate, _.on_click, _.on_key, _.on_markdown_link_clicked, _.on_notifi
 _.on_resize, _.on_tree_node_collapsed
 _.on_tree_node_expanded, _.on_tree_node_highlighted, _.on_tree_node_selected, _.on_unmount
 _.watch_rev
+# HTTP handler hooks called by BaseHTTPRequestHandler.
+_.daemon_threads, _.do_GET, _.do_POST, _.log_message, _.server_version
 # Widget state and class attributes read by the framework.
 _.BINDINGS, _.CSS_PATH, _.ENABLE_COMMAND_PALETTE, _.TITLE
 _.border_subtitle, _.border_title, _.bubble, _.can_focus

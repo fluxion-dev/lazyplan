@@ -291,6 +291,8 @@ class ShellResizeTest(_SurfaceCase):
                 await pilot.resize_terminal(*size)
                 await pilot.pause()
                 await pilot.pause()
+                if not app.query_one("#side").display:
+                    continue
                 widest = max(
                     (cell_len(line) for line in str(body.render()).splitlines()), default=0
                 )

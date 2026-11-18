@@ -259,6 +259,16 @@ class DraftCliTest(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("revision 1, not 0", err)
 
+    def test_invalid_json_and_missing_annotation(self) -> None:
+        bad = os.path.join(self.tmp.name, "bad.json")
+        with open(bad, "w", encoding="utf-8") as handle:
+            handle.write("{")
+        code, _out, err = self._run("--json", "draft", "add", "--file", bad)
+        self.assertEqual(code, 2)
+        self.assertIn("invalid JSON", err)
+        code, _out, err = self._run("--json", "draft", "annotations", "--id", "999999")
+        self.assertEqual(code, 1)
+
     def test_delete_draft_and_refuse_promoted(self) -> None:
         draft_id = self._draft_id()
         code, out, err = self._run("--json", "draft", "delete", "--id", str(draft_id))

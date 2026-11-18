@@ -228,6 +228,13 @@ class DraftMcpTest(unittest.TestCase):
         self.assertEqual(detail["document"]["plan"]["key"], "demo-plan")
         self.assertEqual(detail["annotations"][0]["kind"], "question")
 
+    def test_invalid_document_and_missing_annotation(self) -> None:
+        invalid = self._tool("draft_add", {"document": {"plan": {}}})
+        self.assertTrue(invalid.get("isError"))
+        missing = self._tool("draft_respond", {"id": 999_999, "response": "why"})
+        self.assertTrue(missing.get("isError"))
+        self.assertIn("not found", missing["content"][0]["text"])
+
     def test_errors_are_tool_errors(self) -> None:
         missing = self._tool("draft_show", {"id": 999_999})
         self.assertTrue(missing.get("isError"))

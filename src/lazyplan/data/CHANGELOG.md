@@ -25,9 +25,9 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ### Changed
 
-- The main screen moves plan drafts, plan queue, and plan review into the left
-  column and the overview, agents, and git cards into the right. Narrow
-  terminals keep the three plan panels and hide the right column.
+- **One plan column.** The main screen puts plan drafts, plan queue, and plan
+  review in the left column, with the overview, agents, and git cards on the
+  right. Narrow terminals keep the three plan panels and hide the right column.
 
 ### Fixed
 
@@ -35,6 +35,12 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   target, role tier, role effort, integration, and theme selectors now draw the
   current choice inside the field. A value that wraps sizes its field, and the
   option menu opens attached to the control instead of floating over the copy.
+
+### Carried from 0.49.0
+
+- Status emoji on wide terminals, the session notification log, and the
+  reactive resize pass shipped in 0.49.0. Their documentation and screens are
+  refreshed here, so the 0.50.0 story is complete for anyone coming from 0.48.
 
 
 ## v0.49.0 — 2026-11-17

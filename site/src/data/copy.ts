@@ -3,13 +3,13 @@ export const COPY = {
     badge: "The terminal plan tracker",
     title: ["Plan it.", "Dispatch it.", "Prove it."],
     intro:
-      "One local plan you and your agents share. First run sets it up, lanes carry it out, and every criterion keeps its proof.",
+      "One local plan you and your agents share. Review the draft, dispatch the lanes, and every criterion keeps its proof.",
   },
   story: {
     eyebrow: "The loop",
     title: "One plan. Many lanes. Proof attached.",
     intro:
-      "You and your agent share the same rows: plans, milestones, tasks, and acceptance criteria. Dispatch turns milestones into lanes, and every lane ends with evidence on the criterion it proves.",
+      "You and your agent share the same rows: plans, milestones, tasks, and acceptance criteria. A plan can start as a draft you annotate before it becomes the plan of record. Dispatch turns milestones into lanes, and every lane ends with evidence on the criterion it proves.",
   },
   features: {
     eyebrow: "What you get",
@@ -89,7 +89,7 @@ export const COPY = {
     eyebrow: "See the loop",
     title: "The app, in use.",
     intro:
-      "Deterministic captures from fixture plans: first run, the shell, dispatch, and the proof trail.",
+      "Deterministic captures from fixture plans: first run, the shell, draft review, dispatch, and the proof trail.",
   },
   workflow: {
     eyebrow: "How it works",
@@ -99,7 +99,7 @@ export const COPY = {
         number: "01",
         title: "Plan with an agent",
         description:
-          "Interview the work in words: why, scope, acceptance criteria, and the ordered slices. Your agent writes the rows; you edit them.",
+          "Interview the work in words: why, scope, acceptance criteria, and the ordered slices. Your agent writes the rows; annotate the draft and promote it when the notes close.",
       },
       {
         number: "02",

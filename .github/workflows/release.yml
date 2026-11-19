@@ -58,10 +58,23 @@ jobs:
           lazyplan --help
           lpui list --help
           test -f /usr/share/man/man1/lpui.1
-      - name: GitHub Release (auto-generated notes)
+      - name: GitHub Release (notes from the changelog)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes dist/* install.sh
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          NOTES="$(mktemp -d)/release-notes.md"
+          awk -v prefix="## v${VERSION} — " '
+            index($0, prefix) == 1 { capture = 1; next }
+            capture && /^## v[0-9]/ { exit }
+            capture { print }
+          ' CHANGELOG.md > "$NOTES"
+          if ! grep -q "[^[:space:]]" "$NOTES"; then
+            echo "no changelog section for v$VERSION; using generated notes" >&2
+            gh release create "$GITHUB_REF_NAME" --generate-notes dist/* install.sh
+          else
+            gh release create "$GITHUB_REF_NAME" --notes-file "$NOTES" dist/* install.sh
+          fi
 
   # PyPI publishing via Trusted Publishing (OIDC — no API tokens stored).
   # One-time setup (account owner, on pypi.org):

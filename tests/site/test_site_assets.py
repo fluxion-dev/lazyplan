@@ -23,6 +23,9 @@ else:
 EXPECTED = {
     "lpui-control-room",
     "lpui-detail",
+    "lpui-drafts",
+    "lpui-icons",
+    "lpui-notification-log",
     "lpui-source-trail",
     "lpui-git-pane",
     "lpui-export",

@@ -26,6 +26,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Awaitable, Callable, Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import redirect_stderr, redirect_stdout
@@ -37,7 +38,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
-from textual.widgets import DirectoryTree, Static, Tree  # noqa: E402
+from textual.widgets import DirectoryTree, OptionList, Static, Tree  # noqa: E402
 
 from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
@@ -52,12 +53,18 @@ from lazyplan.presentation.setup.session import (  # noqa: E402
 )
 from lazyplan.presentation.setup.state import SetupState  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
+from lazyplan.presentation.tui.controllers.notifications import (  # noqa: E402
+    NotificationLog,
+)
 from lazyplan.presentation.tui.screens import (  # noqa: E402
+    DraftScreen,
+    NotificationLogScreen,
     SetupWizardScreen,
     UpdateScreen,
 )
 from lazyplan.presentation.tui.screens.export import ExportScreen  # noqa: E402
 from lazyplan.presentation.tui.screens.source import SourceScreen  # noqa: E402
+from lazyplan.services import drafts as draft_services  # noqa: E402
 from lazyplan.services import metrics  # noqa: E402
 from lazyplan.store import Store  # noqa: E402
 
@@ -74,7 +81,10 @@ SITE_SCENES = frozenset(
         "lpui-control-room",
         "lpui-detail",
         "lpui-dispatch",
+        "lpui-drafts",
         "lpui-git-pane",
+        "lpui-icons",
+        "lpui-notification-log",
         "lpui-setup",
         "lpui-setup-review",
         "lpui-source-trail",
@@ -209,6 +219,76 @@ def build_source_fixture(tmp: Path) -> Store:
 def build_empty_fixture(tmp: Path) -> Store:
     """A fresh journal for the setup and update screens."""
     return Store(str(tmp / "plan.db"))
+
+
+DRAFT_DOCUMENT = {
+    "plan": {
+        "key": "draft-review",
+        "title": "Review a plan before it ships",
+        "why": "Reviews land as anchored notes on the draft, so feedback is resolved before the plan joins the queue.",
+        "what": "## Scope\n\n- In scope: draft blocks, anchored notes, and promotion.\n- Out of scope: editing a promoted plan.",
+        "criteria": [
+            "A draft takes anchored notes.",
+            "Promotion waits for every open note.",
+        ],
+        "dispatch_mode": "serial",
+        "max_agents": 1,
+    },
+    "milestones": [
+        {
+            "key": "review",
+            "title": "Review the draft",
+            "desc": "As a reviewer, I want to leave anchored feedback, so that the plan improves before it ships.\n\nInputs: one submitted draft.\n\nCommit slices: the screen, the notes, and promotion.",
+            "criteria": [
+                "Given a submitted draft, when a quote is selected, then the note anchors to that block."
+            ],
+            "lane_group": 1,
+            "agent_role": "implementer",
+            "tasks": [
+                {
+                    "key": "annotate",
+                    "title": "Annotate a block",
+                    "desc": "Approach: select the block or quote and leave one comment, question, or change.\n\nInputs: the draft review screen.\n\nCommit slice: the annotation slice.\n\nVerify: the note lands on the chosen block.",
+                    "criteria": ["A note names its block and quote."],
+                    "role": "implementer",
+                }
+            ],
+        }
+    ],
+}
+
+
+def build_draft_fixture(tmp: Path) -> Store:
+    """A draft with anchored notes, ready for the review screen."""
+    store = Store(str(tmp / "plan.db"))
+    draft = draft_services.create(store, DRAFT_DOCUMENT, actor="agent")
+    draft_services.annotate(
+        store,
+        draft.id,
+        "plan:why",
+        "comment",
+        "Say why review lives before the queue, not after it.",
+        author="reviewer",
+    )
+    draft_services.annotate(
+        store,
+        draft.id,
+        "task:annotate:desc",
+        "question",
+        "Which block owns a selection that spans two tasks?",
+        quote="select the block or quote",
+        author="reviewer",
+    )
+    draft_services.annotate(
+        store,
+        draft.id,
+        "plan:criterion:1",
+        "change",
+        "Name the promotion rule exactly: open notes block it.",
+        quote="every open note",
+        author="reviewer",
+    )
+    return store
 
 
 def build_dispatch_fixture(tmp: Path) -> Store:
@@ -741,6 +821,59 @@ async def capture_update(store: Store, target: Path) -> None:
         app.save_screenshot(str(target))
 
 
+def _local_stamp(clock: str) -> float:
+    """A fixed wall-clock time that renders the same in every timezone."""
+    return time.mktime(time.strptime(f"2026-01-01 {clock}", "%Y-%m-%d %H:%M:%S"))
+
+
+LOG_ENTRIES = (
+    ("information", "Setup applied: home placement, one agent.", "setup"),
+    ("information", "Draft D4 submitted for revision.", "drafts"),
+    ("warning", "Claim on T12 expires in ten minutes.", "claims"),
+    ("information", "Icons: orbit remembered.", "appearance"),
+    ("warning", "Task T9 is blocked: waiting for CI.", "tasks"),
+    ("error", "Pull request #42 has a failing check.", "pull requests"),
+)
+
+
+async def capture_draft(store: Store, target: Path) -> None:
+    """The draft review screen with a block selected and notes beside it."""
+    draft = draft_services.list_drafts(store)[0]
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        app.push_screen(DraftScreen(store, draft.id))
+        await pilot.pause(0.6)
+        annotations = app.screen.query_one("#draft-annotations", OptionList)
+        if annotations.option_count:
+            annotations.highlighted = 0
+        await pilot.pause(0.2)
+        app.save_screenshot(str(target))
+
+
+async def capture_notification_log(store: Store, target: Path) -> None:
+    """The session log with fixed clocks, at the newest entry."""
+    clocks = iter(
+        _local_stamp(clock)
+        for clock in ("09:12:30", "09:13:02", "09:13:40", "09:14:05", "09:14:31", "09:15:10")
+    )
+    log = NotificationLog(clock=lambda: next(clocks))
+    for severity, message, source in LOG_ENTRIES:
+        log.append(message, severity=severity, source=source)
+    app = create_app(str(store.path))
+    async with app.run_test(size=SIZE) as pilot:
+        await pilot.pause()
+        app.push_screen(NotificationLogScreen(log))
+        await pilot.pause(0.4)
+        app.save_screenshot(str(target))
+
+
+async def capture_icons_orbit(store: Store, target: Path) -> None:
+    """The shell on the orbit icon palette."""
+    with mock.patch.dict(os.environ, {"LAZYPLAN_ICONS": "orbit"}):
+        await _capture_task_shell(store, target)
+
+
 def _dispatch_text() -> Text:
     return transcript(
         ("$ lpui dispatch --plan 7", "bold #22d3ee"),
@@ -984,6 +1117,24 @@ SCENES: dict[str, Scene] = {
         build_source_fixture,
         capture_plan_detail,
         "Plan overview showing the reason, scope, acceptance criteria, milestones, and linked source.",
+    ),
+    "lpui-drafts": Scene(
+        SIZE,
+        build_draft_fixture,
+        capture_draft,
+        "Draft review screen with the plan document on the left, a selected task block, and three anchored annotations with their kinds beside it.",
+    ),
+    "lpui-notification-log": Scene(
+        SIZE,
+        build_empty_fixture,
+        capture_notification_log,
+        "Notification log overlay listing six timestamped entries with severities and sources, newest at the bottom.",
+    ),
+    "lpui-icons": Scene(
+        SIZE,
+        build_source_fixture,
+        capture_icons_orbit,
+        "Main shell on the orbit icon palette: circular status marks, kind icons, and section glyphs across the plan tree, preview, and git pane.",
     ),
     "lpui-setup": Scene(
         SIZE,

@@ -49,7 +49,6 @@ from lazyplan import services  # noqa: E402
 from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.infrastructure.environment import InstallInfo  # noqa: E402
 from lazyplan.infrastructure.skills import AgentHost  # noqa: E402
-from lazyplan.presentation.cli.parser import package_version  # noqa: E402
 from lazyplan.presentation.tui import create_app  # noqa: E402
 from lazyplan.presentation.tui.screens import (  # noqa: E402
     ConfirmScreen,
@@ -85,7 +84,7 @@ SIZE = cs.SIZE
 TRANSCRIPT_SIZE = (120, 30)
 DEFAULT_OUT = ROOT / "site" / "public" / "ux"
 FIXTURE_ROOT = cs.FIXTURE_ROOT / "ux"
-VERSION = package_version()
+VERSION = cs.repo_version()
 
 
 @dataclass(frozen=True)
@@ -1830,6 +1829,10 @@ def run(out_dir: Path, only: list[str]) -> None:
     with (
         cs.mock.patch("lazyplan.store.base.time.time", return_value=cs.STAMP),
         cs.mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot),
+        cs.mock.patch(
+            "lazyplan.presentation.cli.parser.package_version", return_value=VERSION
+        ),
+        cs.mock.patch("lazyplan.presentation.tui.app.package_version", return_value=VERSION),
     ):
         shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
         FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)

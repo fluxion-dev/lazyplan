@@ -21,6 +21,7 @@ import argparse
 import asyncio
 import io
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -35,6 +36,19 @@ from pathlib import Path
 from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def repo_version() -> str:
+    """The version pyproject declares, not whatever install is active."""
+    text = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "([^"]+)"$', text, re.M)
+    if match is None:
+        raise SystemExit("error: cannot read the version from pyproject.toml")
+    return match.group(1)
+
+
+VERSION = repo_version()
+
 sys.path.insert(0, str(ROOT / "src"))
 from rich.text import Text  # noqa: E402
 from textual.app import App, ComposeResult  # noqa: E402
@@ -45,7 +59,6 @@ from lazyplan.core.entities import Status  # noqa: E402
 from lazyplan.core.policies.agents import DEFAULT_MODELS, HOSTS, TIERS  # noqa: E402
 from lazyplan.infrastructure.environment import InstallInfo  # noqa: E402
 from lazyplan.infrastructure.host_models import HostCatalog  # noqa: E402
-from lazyplan.presentation.cli.parser import package_version  # noqa: E402
 from lazyplan.presentation.setup.constants import REPO as PLACEMENT_REPO  # noqa: E402
 from lazyplan.presentation.setup.session import (  # noqa: E402
     SetupDraft,
@@ -435,7 +448,7 @@ def build_setup_session() -> SetupSession:
     return SetupSession(
         cwd=repo,
         home=home,
-        version=package_version(),
+        version=repo_version(),
         root=repo,
         state=SetupState(
             placement=PLACEMENT_REPO,
@@ -806,7 +819,7 @@ async def capture_setup_review(store: Store, target: Path) -> None:
 
 async def capture_update(store: Store, target: Path) -> None:
     """The update dialog for a newer release, from a pipx install."""
-    installed = package_version()
+    installed = repo_version()
     app = create_app(str(store.path))
     async with app.run_test(size=SIZE) as pilot:
         await pilot.pause()
@@ -1447,6 +1460,10 @@ def run(out_dir: Path, only: list[str], keep_svg: Path | None, make_og: bool) ->
     with (
         mock.patch("lazyplan.store.base.time.time", return_value=STAMP),
         mock.patch("lazyplan.services.metrics.snapshot", side_effect=frozen_snapshot),
+        mock.patch(
+            "lazyplan.presentation.cli.parser.package_version", return_value=VERSION
+        ),
+        mock.patch("lazyplan.presentation.tui.app.package_version", return_value=VERSION),
     ):
         shutil.rmtree(FIXTURE_ROOT, ignore_errors=True)
         FIXTURE_ROOT.mkdir(parents=True, exist_ok=True)

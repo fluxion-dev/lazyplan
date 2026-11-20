@@ -312,7 +312,7 @@ def annotate(
     end_offset: int = 0,
     author: str = "human",
 ) -> DraftAnnotation:
-    """Attach one comment, question, or change to a draft block."""
+    """Attach feedback to a draft block and hand the draft to its agent for revision."""
     draft = _require_draft(port, draft_id)
     if draft.status == "promoted":
         raise ValueError(f"draft #{draft_id} is promoted; annotations are read-only")
@@ -321,17 +321,21 @@ def annotate(
     if block is None:
         raise ValueError(f"block {block_key!r} not found in draft #{draft_id}")
     start, end = _quote_offsets(block.text, quote, start_offset, end_offset)
-    return port.add_draft_annotation(
-        draft.id,
-        block.key,
-        kind,
-        body,
-        quote=quote,
-        start_offset=start,
-        end_offset=end,
-        revision=draft.revision,
-        author=author,
-    )
+    with port.transaction():
+        annotation = port.add_draft_annotation(
+            draft.id,
+            block.key,
+            kind,
+            body,
+            quote=quote,
+            start_offset=start,
+            end_offset=end,
+            revision=draft.revision,
+            author=author,
+        )
+        if draft.status == "review":
+            port.set_draft_status(draft.id, "revising", actor=author)
+    return annotation
 
 
 def _annotation_draft(port: DraftsPort, annotation: DraftAnnotation) -> PlanDraft:
@@ -448,11 +452,11 @@ def promote(port: DraftsPort, draft_id: int, actor: str = "human") -> DraftPromo
         if plan is None:
             raise ValueError(f"draft #{draft_id} points at missing plan #{draft.plan_id}")
         return DraftPromotion(draft, plan, False, _plan_counts(port, plan.id))
-    if draft.status != "review":
-        raise ValueError(f"draft #{draft_id} is {draft.status}; revise it before promoting")
     open_annotations = port.list_draft_annotations(draft.id, status="open")
     if open_annotations:
         raise ValueError(f"draft #{draft_id} has {len(open_annotations)} open annotation(s)")
+    if draft.status != "review":
+        raise ValueError(f"draft #{draft_id} is {draft.status}; revise it before promoting")
     document = _document(draft)
     _ensure_plan_key_free(port, document.key)
     with port.transaction():

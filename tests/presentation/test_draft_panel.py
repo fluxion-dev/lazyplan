@@ -339,18 +339,13 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(row.status, "dismissed")
             self.assertEqual(row.response, "not needed")
 
-    async def test_submit_feedback_moves_the_draft_to_revising(self) -> None:
+    async def test_saved_annotation_moves_the_draft_to_revising(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
             app.open_draft(draft.id)
-            await pilot.pause()
-            app.screen.action_submit_feedback()
-            await pilot.pause()
-            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
-            app.screen.query_one("#ok", Button).press()
             await pilot.pause()
             updated = self.store.get_draft(draft.id)
             assert updated is not None

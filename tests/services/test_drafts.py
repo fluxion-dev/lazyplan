@@ -347,10 +347,9 @@ class DraftsServiceTest(unittest.TestCase):
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
         with self.assertRaisesRegex(ValueError, "open annotation"):
             drafts.promote(self.store, draft.id)
-        drafts.submit(self.store, draft.id)
+        drafts.resolve(self.store, annotation.id, "Done", actor="agent")
         with self.assertRaisesRegex(ValueError, "revising"):
             drafts.promote(self.store, draft.id)
-        drafts.resolve(self.store, annotation.id, "Done", actor="agent")
         drafts.ready(self.store, draft.id)
         promotion = drafts.promote(self.store, draft.id, actor="agent")
         self.assertTrue(promotion.created)
@@ -377,6 +376,7 @@ class DraftsServiceTest(unittest.TestCase):
         draft = drafts.create(self.store, document())
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "comment", "Body")
         drafts.resolve(self.store, annotation.id, "Done")
+        drafts.ready(self.store, draft.id)
         drafts.promote(self.store, draft.id)
         with self.assertRaisesRegex(ValueError, "read-only"):
             drafts.annotate(self.store, draft.id, "plan:why", "comment", "Late")

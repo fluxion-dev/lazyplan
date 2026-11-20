@@ -218,6 +218,32 @@ def _cmd_draft_submit(store: AppPort, args: argparse.Namespace, actor: str) -> i
     return emit_draft(store, args, draft, f"submitted D{draft.id} for revision")
 
 
+WAIT_PROMOTED = 3
+WAIT_TIMED_OUT = 4
+
+
+def _cmd_draft_wait(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+    del actor
+    try:
+        wake = draft_services.wait_for_feedback(store, args.id, timeout=args.timeout)
+    except KeyError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    if wake is None:
+        print(f"no open feedback on D{args.id} within {args.timeout:g}s", file=sys.stderr)
+        return WAIT_TIMED_OUT
+    if not wake.annotations:
+        emit_draft(store, args, wake.draft, f"D{wake.draft.id} is promoted; stop waiting")
+        return WAIT_PROMOTED
+    rows = wake.annotations
+    return _emit_read(
+        args,
+        [to_payload(vars(row)) for row in rows],
+        [_annotation_row(row) for row in rows],
+        "\n".join(_annotation_text(row) for row in rows),
+    )
+
+
 def _cmd_draft_ready(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     try:
         draft = draft_services.ready(store, args.id, actor=actor)

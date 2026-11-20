@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
@@ -277,6 +278,41 @@ def ready(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:
     if updated is None:
         raise KeyError(f"draft #{draft_id} not found")
     return updated
+
+
+@dataclass(frozen=True)
+class DraftWake:
+    """Why a wait ended: open feedback to act on, or a promoted draft."""
+
+    draft: PlanDraft
+    annotations: tuple[DraftAnnotation, ...]
+
+
+def wait_for_feedback(
+    port: DraftsPort,
+    draft_id: int,
+    *,
+    timeout: float | None = None,
+    interval: float = 0.5,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> DraftWake | None:
+    """Block until the draft has open annotations or is promoted; None on timeout.
+
+    Open annotations already present end the wait at once; only responding,
+    resolving, or dismissing them lets the next wait block.
+    """
+    deadline = None if timeout is None else clock() + timeout
+    while True:
+        draft = _require_draft(port, draft_id)
+        if draft.status == "promoted":
+            return DraftWake(draft, ())
+        rows = port.list_draft_annotations(draft.id, status="open")
+        if rows:
+            return DraftWake(draft, tuple(rows))
+        if deadline is not None and clock() >= deadline:
+            return None
+        sleep(interval)
 
 
 def _quote_offsets(

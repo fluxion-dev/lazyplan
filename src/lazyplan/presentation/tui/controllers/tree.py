@@ -175,9 +175,8 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         self.reconcile_children(tree.root, tree, self.desired_drafts(drafts, counts))
         if not tree.root.is_expanded:
             tree.root.expand()
-        visible = bool(drafts)
-        tree.display = visible
-        app.query_one("#plans-drafts").display = visible
+        tree.display = bool(drafts)
+        app.query_one("#tree-drafts-empty", Static).display = not drafts
 
     def desired_drafts(
         self,
@@ -201,7 +200,7 @@ class TreeController(ExpansionMixin, LazyBranchMixin, ReconcileMixin, PollMixin)
         active_tree.display = not active_empty
         finished_tree.display = not finished_empty
         app.query_one("#tree-empty", Static).display = active_empty
-        app.query_one("#plans-finished").display = not finished_empty
+        app.query_one("#tree-finished-empty", Static).display = finished_empty
         flipped = active_tree.display or finished_tree.display
         if not flipped:
             drafts = self.drafts_tree()

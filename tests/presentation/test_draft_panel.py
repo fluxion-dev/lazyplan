@@ -100,7 +100,8 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
-            self.assertFalse(app.query_one("#plans-drafts").display)
+            self.assertTrue(app.query_one("#plans-drafts").display)
+            self.assertTrue(app.query_one("#tree-drafts-empty").display)
             self.assertEqual(len(app.query_one("#tree-drafts").root.children), 0)
 
     async def test_plan_actions_are_refused_on_a_draft(self) -> None:
@@ -466,11 +467,13 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(annotations[0].quote, "")
             self.assertEqual((annotations[0].start_offset, annotations[0].end_offset), (0, 0))
 
-    async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
+    async def test_empty_journal_shows_the_drafts_empty_state(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
-            self.assertFalse(app.query_one("#plans-drafts").display)
+            self.assertTrue(app.query_one("#plans-drafts").display)
+            self.assertFalse(app.query_one("#tree-drafts").display)
+            self.assertTrue(app.query_one("#tree-drafts-empty").display)
 
     async def test_e_opens_the_draft_screen(self) -> None:
         draft = drafts.create(self.store, document())

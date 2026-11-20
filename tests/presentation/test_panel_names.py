@@ -21,7 +21,15 @@ class TestPanelCopy(unittest.TestCase):
         self.assertEqual(design.PANEL_PLAN_REVIEW_TITLE, "plan review")
         self.assertEqual(
             design.empty_state(design.EMPTY_PLAN_QUEUE_TITLE, design.EMPTY_PLAN_QUEUE_HINT),
-            "[bold]No plans in the plan queue[/]\n[dim]press n to create one[/]",
+            "[bold]No plans in the plan queue[/]\n[dim]promote a reviewed draft to queue it[/]",
+        )
+        self.assertEqual(
+            design.empty_state(design.EMPTY_PLAN_DRAFTS_TITLE, design.EMPTY_PLAN_DRAFTS_HINT),
+            "[bold]No plan drafts[/]\n[dim]press n to draft a plan[/]",
+        )
+        self.assertEqual(
+            design.empty_state(design.EMPTY_PLAN_REVIEW_TITLE, design.EMPTY_PLAN_REVIEW_HINT),
+            "[bold]No finished plans[/]\n[dim]done plans show here[/]",
         )
 
     def test_cli_empty_state_keeps_its_wording(self) -> None:
@@ -31,7 +39,7 @@ class TestPanelCopy(unittest.TestCase):
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class TestMountedPanelCopy(unittest.IsolatedAsyncioTestCase):
-    async def test_empty_journal_shows_only_the_plan_queue(self) -> None:
+    async def test_empty_journal_shows_three_empty_plan_panes(self) -> None:
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             app = create_app(os.path.join(tmp, "panel.db"))
             async with app.run_test(size=(120, 35)) as pilot:
@@ -52,9 +60,12 @@ class TestMountedPanelCopy(unittest.IsolatedAsyncioTestCase):
                     "No plans in the plan queue",
                     str(app.query_one("#tree-empty").render()),
                 )
-                self.assertTrue(app.query_one("#plans-active").display)
-                self.assertFalse(app.query_one("#plans-finished").display)
-                self.assertFalse(app.query_one("#plans-drafts").display)
+                for pane in ("#plans-drafts", "#plans-active", "#plans-finished"):
+                    self.assertTrue(app.query_one(pane).display, pane)
+                self.assertIn("No plan drafts", str(app.query_one("#tree-drafts-empty").render()))
+                self.assertIn(
+                    "No finished plans", str(app.query_one("#tree-finished-empty").render())
+                )
                 self.assertFalse(app.query_one("#agents").display)
                 self.assertFalse(app.query_one("#git").display)
 

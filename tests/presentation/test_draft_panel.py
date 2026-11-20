@@ -254,6 +254,8 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(annotations[0].body, "Sharpen this")
             self.assertEqual(annotations[0].quote, "Why")
             self.assertEqual((annotations[0].start_offset, annotations[0].end_offset), (0, 3))
+            self.assertEqual(self.store.get_draft(draft.id).status, "revising")
+            self.assertIn("revising", str(app.screen.query_one("#draft-head").render()))
 
     async def test_annotation_form_requires_text(self) -> None:
         draft = drafts.create(self.store, document())

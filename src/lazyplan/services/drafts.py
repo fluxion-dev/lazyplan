@@ -102,16 +102,23 @@ def create(port: DraftsPort, raw: Any, actor: str = "human") -> PlanDraft:
     return port.add_draft(document.title, to_json(document), actor=actor)
 
 
+def _open_draft_keys(port: DraftsPort) -> dict[str, int]:
+    """Plan key -> draft id for every unpromoted draft."""
+    return {
+        _document(draft).key: draft.id for draft in port.list_drafts() if draft.status != "promoted"
+    }
+
+
 def _ensure_no_open_draft(port: DraftsPort, key: str) -> None:
     """Refuse a plan key that an unpromoted draft already carries."""
-    for draft in port.list_drafts():
-        if draft.status != "promoted" and _document(draft).key == key:
-            raise ValueError(f"plan key {key!r} is already in draft #{draft.id}")
+    holder = _open_draft_keys(port).get(key)
+    if holder is not None:
+        raise ValueError(f"plan key {key!r} is already in draft #{holder}")
 
 
 def _free_plan_key(port: DraftsPort, title: str) -> str:
     """A plan key slugged from the title, suffixed until no plan or open draft owns it."""
-    drafted = {_document(draft).key for draft in port.list_drafts() if draft.status != "promoted"}
+    drafted = _open_draft_keys(port)
     base = slugify(title)
     key, suffix = base, 2
     while key in drafted or port.get_entity_key("plan", key) is not None:

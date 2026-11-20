@@ -118,7 +118,19 @@ class TestWriteRows(unittest.TestCase):
 
     def test_plan_milestone_and_task_lifecycle(self):
         self.assertEqual(
-            self._row("plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site"),
+            self._row(
+                "plan",
+                "add",
+                "--direct",
+                "--reason",
+                "fixture",
+                "--title",
+                "Website",
+                "--why",
+                "Convert",
+                "--what",
+                "Site",
+            ),
             ["plan", "1", "todo", "Website", "-", "0/0"],
         )
         self.assertEqual(
@@ -145,7 +157,19 @@ class TestWriteRows(unittest.TestCase):
         )
 
     def test_criteria_rows(self):
-        self._row("plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site")
+        self._row(
+            "plan",
+            "add",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--title",
+            "Website",
+            "--why",
+            "Convert",
+            "--what",
+            "Site",
+        )
         self.assertEqual(
             self._row("criterion", "add", "--kind", "plan", "--id", "1", "--text", "Loads fast"),
             ["criterion", "1", "open", "Loads fast", "plan:1", "-"],
@@ -168,7 +192,18 @@ class TestWriteRows(unittest.TestCase):
 
     def test_flag_after_the_verb(self):
         code, out = self._run(
-            "plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site", "--porcelain"
+            "plan",
+            "add",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--title",
+            "Website",
+            "--why",
+            "Convert",
+            "--what",
+            "Site",
+            "--porcelain",
         )
         self.assertEqual(code, 0)
         self.assertEqual(out, "plan\t1\ttodo\tWebsite\t-\t0/0\n")
@@ -176,7 +211,17 @@ class TestWriteRows(unittest.TestCase):
     def test_environment_switch_enables(self):
         with mock.patch.dict(os.environ, {porcelain.ENV: "1"}):
             code, out = self._run(
-                "plan", "add", "--title", "Website", "--why", "Convert", "--what", "Site"
+                "plan",
+                "add",
+                "--direct",
+                "--reason",
+                "fixture",
+                "--title",
+                "Website",
+                "--why",
+                "Convert",
+                "--what",
+                "Site",
             )
         self.assertEqual(code, 0)
         self.assertEqual(out, "plan\t1\ttodo\tWebsite\t-\t0/0\n")
@@ -187,6 +232,9 @@ class TestWriteRows(unittest.TestCase):
             "--json",
             "plan",
             "add",
+            "--direct",
+            "--reason",
+            "fixture",
             "--title",
             "Website",
             "--why",

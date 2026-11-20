@@ -9,6 +9,8 @@ from typing import Any
 
 from ..core.entities import DraftAnnotation, Plan, PlanDraft
 from ..core.kinds import ANCHOR_ORPHANED
+from ..core.policies.lanes import DEFAULT_DISPATCH_MODE, DEFAULT_MAX_AGENTS
+from ..core.policies.worktrees import slugify
 from ..core.ports.drafts import DraftsPort
 from . import plan_apply
 from .draft_content import (
@@ -95,7 +97,50 @@ def create(port: DraftsPort, raw: Any, actor: str = "human") -> PlanDraft:
     """Validate a plan document and store it as a new draft."""
     document = validate_document(port, raw)
     _ensure_plan_key_free(port, document.key)
+    _ensure_no_open_draft(port, document.key)
     return port.add_draft(document.title, to_json(document), actor=actor)
+
+
+def _ensure_no_open_draft(port: DraftsPort, key: str) -> None:
+    """Refuse a plan key that an unpromoted draft already carries."""
+    for draft in port.list_drafts():
+        if draft.status != "promoted" and _document(draft).key == key:
+            raise ValueError(f"plan key {key!r} is already in draft #{draft.id}")
+
+
+def _free_plan_key(port: DraftsPort, title: str) -> str:
+    """A plan key slugged from the title, suffixed until no plan or open draft owns it."""
+    drafted = {_document(draft).key for draft in port.list_drafts() if draft.status != "promoted"}
+    base = slugify(title)
+    key, suffix = base, 2
+    while key in drafted or port.get_entity_key("plan", key) is not None:
+        key, suffix = f"{base}-{suffix}", suffix + 1
+    return key
+
+
+def create_from_fields(
+    port: DraftsPort,
+    title: str,
+    why: str,
+    what: str,
+    *,
+    dispatch_mode: str = DEFAULT_DISPATCH_MODE,
+    max_agents: int = DEFAULT_MAX_AGENTS,
+    actor: str = "human",
+) -> PlanDraft:
+    """Store a milestone-free plan definition as a new draft."""
+    raw = {
+        "plan": {
+            "key": _free_plan_key(port, title),
+            "title": title,
+            "why": why,
+            "what": what,
+            "dispatch_mode": dispatch_mode,
+            "max_agents": max_agents,
+        },
+        "milestones": [],
+    }
+    return create(port, raw, actor=actor)
 
 
 def list_drafts(port: DraftsPort, status: str = "all") -> list[PlanDraft]:

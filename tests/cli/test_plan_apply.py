@@ -79,7 +79,9 @@ class PlanApplyCliTest(unittest.TestCase):
 
     def test_apply_creates_the_whole_tree(self):
         self._write(document())
-        code, out, err = self._run("--json", "plan", "apply", "--file", str(self.path))
+        code, out, err = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
         self.assertEqual(code, 0, err)
         payload = json.loads(out)
         self.assertTrue(payload["created"])
@@ -93,7 +95,17 @@ class PlanApplyCliTest(unittest.TestCase):
 
     def test_dry_run_writes_nothing(self):
         self._write(document())
-        code, out, err = self._run("--json", "plan", "apply", "--file", str(self.path), "--dry-run")
+        code, out, err = self._run(
+            "--json",
+            "plan",
+            "apply",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--file",
+            str(self.path),
+            "--dry-run",
+        )
         self.assertEqual(code, 0, err)
         payload = json.loads(out)
         self.assertTrue(payload["dry_run"])
@@ -103,8 +115,12 @@ class PlanApplyCliTest(unittest.TestCase):
 
     def test_retry_is_a_no_op(self):
         self._write(document())
-        first = self._run("--json", "plan", "apply", "--file", str(self.path))
-        second = self._run("--json", "plan", "apply", "--file", str(self.path))
+        first = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
+        second = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
         self.assertEqual(first[0], 0)
         self.assertEqual(second[0], 0)
         payload = json.loads(second[1])
@@ -117,7 +133,9 @@ class PlanApplyCliTest(unittest.TestCase):
         payload = document()
         del payload["milestones"][0]["tasks"][0]["title"]
         self._write(payload)
-        code, _out, err = self._run("--json", "plan", "apply", "--file", str(self.path))
+        code, _out, err = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
         self.assertEqual(code, 2)
         self.assertIn("title", err)
         self.assertEqual(Store(self.db).counts()["plans"], 0)
@@ -126,16 +144,32 @@ class PlanApplyCliTest(unittest.TestCase):
         payload = document()
         payload["plan"]["owner"] = "someone"
         self._write(payload)
-        code, _out, err = self._run("--json", "plan", "apply", "--file", str(self.path))
+        code, _out, err = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
         self.assertEqual(code, 2)
         self.assertIn("unknown field", err)
         self.assertEqual(Store(self.db).counts()["plans"], 0)
 
     def test_key_conflict_rolls_back_the_new_plan(self):
         self._write(document())
-        self.assertEqual(self._run("--json", "plan", "apply", "--file", str(self.path))[0], 0)
+        self.assertEqual(
+            self._run(
+                "--json",
+                "plan",
+                "apply",
+                "--direct",
+                "--reason",
+                "fixture",
+                "--file",
+                str(self.path),
+            )[0],
+            0,
+        )
         self._write(document(key="other", milestone_key="build"))
-        code, _out, err = self._run("--json", "plan", "apply", "--file", str(self.path))
+        code, _out, err = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
         self.assertEqual(code, 2)
         self.assertIn("already belongs", err)
         store = Store(self.db)
@@ -145,16 +179,35 @@ class PlanApplyCliTest(unittest.TestCase):
     def test_porcelain_rows(self):
         self._write(document())
         code, out, err = self._run(
-            "--porcelain", "plan", "apply", "--file", str(self.path), "--dry-run"
+            "--porcelain",
+            "plan",
+            "apply",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--file",
+            str(self.path),
+            "--dry-run",
         )
         self.assertEqual(code, 0, err)
         self.assertTrue(out.startswith("plan\t-\tdry-run\tDemo plan\t-\t2/3"))
-        code, out, err = self._run("--porcelain", "plan", "apply", "--file", str(self.path))
+        code, out, err = self._run(
+            "--porcelain",
+            "plan",
+            "apply",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--file",
+            str(self.path),
+        )
         self.assertEqual(code, 0, err)
         self.assertTrue(out.startswith("plan\t"))
 
     def test_missing_file(self):
-        code, _out, err = self._run("--json", "plan", "apply", "--file", str(self.path))
+        code, _out, err = self._run(
+            "--json", "plan", "apply", "--direct", "--reason", "fixture", "--file", str(self.path)
+        )
         self.assertEqual(code, 2)
         self.assertIn("cannot read", err)
 

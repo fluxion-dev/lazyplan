@@ -39,6 +39,9 @@ class LaneCliTest(unittest.TestCase):
             [
                 "plan",
                 "add",
+                "--direct",
+                "--reason",
+                "fixture",
                 "--title",
                 "Lanes",
                 "--why",

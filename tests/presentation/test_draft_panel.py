@@ -493,6 +493,21 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), 1)
 
+    async def test_new_plan_form_creates_a_draft_and_opens_it(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.action_new_plan()
+            await pilot.pause()
+            app.screen.query_one("#f-title", Input).value = "API v2"
+            app.screen.query_one("#f-why", TextArea).text = "Clients need it."
+            app.screen.query_one("#f-what", TextArea).text = "New endpoints."
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+        self.assertEqual(self.store.list_plans(), [])
+        self.assertEqual([draft.title for draft in self.store.list_drafts()], ["API v2"])
+
     async def test_enter_opens_the_draft_screen(self) -> None:
         draft = drafts.create(self.store, document())
         app = create_app(str(self.store.path))

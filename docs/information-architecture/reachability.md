@@ -110,7 +110,6 @@ Budget: every action is at most **3** interactions from the tree.
 | `event.list` | tree › activity | 1 |
 | `event.open` | tree › activity | 1 |
 | `draft.open` | tree › draft | 1 |
-| `draft.submit` | draft › submit | 2 |
 | `draft.promote` | draft › promote | 2 |
 
 ## Over budget

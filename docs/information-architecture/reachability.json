@@ -615,14 +615,6 @@
     },
     {
       "depth": 2,
-      "id": "draft.submit",
-      "route": [
-        "draft",
-        "submit"
-      ]
-    },
-    {
-      "depth": 2,
       "id": "draft.promote",
       "route": [
         "draft",

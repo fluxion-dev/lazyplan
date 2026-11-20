@@ -1655,11 +1655,11 @@
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 5,
-    "mcp_tools": 81,
-    "palette_commands": 58,
+    "mcp_tools": 80,
+    "palette_commands": 57,
     "setup_steps": 5,
     "stale_claims": 0,
-    "tui_bindings": 88,
+    "tui_bindings": 87,
     "tui_key_conflicts": 17,
     "tui_screens": 22
   },
@@ -2174,10 +2174,6 @@
       {
         "description": "One draft document with its blocks and annotations.",
         "name": "draft_show"
-      },
-      {
-        "description": "Submit open annotations for revision.",
-        "name": "draft_submit"
       },
       {
         "description": "Edit a plan, milestone, or task.",
@@ -2890,14 +2886,6 @@
         "section": "View"
       },
       {
-        "handler": "submit_draft",
-        "help_group": "CHANGE",
-        "id": "submit-draft",
-        "key": "",
-        "label": "Submit draft feedback",
-        "section": "Edit"
-      },
-      {
         "handler": "toggle_timeline",
         "help_group": "APP",
         "id": "toggle-timeline",
@@ -2938,7 +2926,7 @@
         "section": "App"
       }
     ],
-    "count": 58
+    "count": 57
   },
   "setup": {
     "steps": [
@@ -3195,7 +3183,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "P",
         "label": "Promote",
-        "line": "48",
+        "line": "47",
         "screen": "draft"
       },
       {
@@ -3203,7 +3191,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "U",
         "label": "Update",
-        "line": "52",
+        "line": "51",
         "screen": "draft"
       },
       {
@@ -3219,7 +3207,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "d",
         "label": "Delete",
-        "line": "50",
+        "line": "49",
         "screen": "draft"
       },
       {
@@ -3251,15 +3239,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "r",
         "label": "Refresh",
-        "line": "51",
-        "screen": "draft"
-      },
-      {
-        "action": "submit_feedback",
-        "file": "src/lazyplan/presentation/tui/screens/draft.py",
-        "key": "s",
-        "label": "Submit",
-        "line": "47",
+        "line": "50",
         "screen": "draft"
       },
       {
@@ -3267,7 +3247,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "x",
         "label": "Dismiss",
-        "line": "49",
+        "line": "48",
         "screen": "draft"
       },
       {
@@ -3706,7 +3686,7 @@
           {
             "action": "update_prompt",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "52"
+            "line": "51"
           },
           {
             "action": "update_prompt",
@@ -3766,7 +3746,7 @@
           {
             "action": "delete_annotation",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "50"
+            "line": "49"
           },
           {
             "action": "delete",
@@ -3971,7 +3951,7 @@
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "51"
+            "line": "50"
           },
           {
             "action": "refresh",
@@ -3997,11 +3977,6 @@
             "action": "toggle_status",
             "file": "src/lazyplan/presentation/tui/app.py",
             "line": "107"
-          },
-          {
-            "action": "submit_feedback",
-            "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "47"
           },
           {
             "action": "toggle_split",
@@ -4046,7 +4021,7 @@
           {
             "action": "dismiss_annotation",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "49"
+            "line": "48"
           },
           {
             "action": "hub_toggle",

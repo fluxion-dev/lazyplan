@@ -248,22 +248,6 @@ def revise(
     return updated
 
 
-def submit(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:
-    """Submit open feedback and move the draft to revising."""
-    draft = _require_draft(port, draft_id)
-    if draft.status == "promoted":
-        raise ValueError(f"draft #{draft_id} is promoted; it cannot be submitted")
-    if draft.status == "revising":
-        return draft
-    open_annotations = port.list_draft_annotations(draft.id, status="open")
-    if not open_annotations:
-        raise ValueError(f"draft #{draft_id} has no open annotations to submit")
-    updated = port.set_draft_status(draft.id, "revising", actor=actor)
-    if updated is None:
-        raise KeyError(f"draft #{draft_id} not found")
-    return updated
-
-
 def ready(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:
     """Return a revised draft to review once no annotations are open."""
     draft = _require_draft(port, draft_id)

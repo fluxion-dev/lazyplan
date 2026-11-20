@@ -206,18 +206,6 @@ def _cmd_draft_revise(store: AppPort, args: argparse.Namespace, actor: str) -> i
     )
 
 
-def _cmd_draft_submit(store: AppPort, args: argparse.Namespace, actor: str) -> int:
-    try:
-        draft = draft_services.submit(store, args.id, actor=actor)
-    except KeyError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 1
-    except ValueError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 2
-    return emit_draft(store, args, draft, f"submitted D{draft.id} for revision")
-
-
 WAIT_PROMOTED = 3
 WAIT_TIMED_OUT = 4
 

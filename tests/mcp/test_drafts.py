@@ -88,7 +88,6 @@ class DraftMcpTest(unittest.TestCase):
                 "draft_annotations",
                 "draft_add",
                 "draft_revise",
-                "draft_submit",
                 "draft_ready",
                 "draft_annotate",
                 "draft_respond",
@@ -157,9 +156,9 @@ class DraftMcpTest(unittest.TestCase):
         annotation_id = annotation["annotation"]["id"]
         self.assertEqual(annotation["annotation"]["quote"], "Why")
 
-        submitted = self._payload("draft_submit", {"id": draft_id})
-        assert isinstance(submitted, dict)
-        self.assertEqual(submitted["draft"]["status"], "revising")
+        shown = self._payload("draft_show", {"id": draft_id})
+        assert isinstance(shown, dict)
+        self.assertEqual(shown["draft"]["status"], "revising")
 
         revised = self._payload(
             "draft_revise",

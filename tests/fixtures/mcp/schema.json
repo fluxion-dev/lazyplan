@@ -1290,24 +1290,6 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Submit open annotations for revision.",
-      "inputSchema": {
-        "properties": {
-          "id": {
-            "type": "integer"
-          }
-        },
-        "required": [
-          "id"
-        ],
-        "type": "object"
-      },
-      "name": "draft_submit"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false
-      },
       "description": "Return a clean revision to review.",
       "inputSchema": {
         "properties": {

@@ -170,7 +170,7 @@ class DraftsServiceTest(unittest.TestCase):
     def test_revise_requires_the_base_and_returns_to_review(self) -> None:
         draft = drafts.create(self.store, document())
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen this")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
         with self.assertRaisesRegex(ValueError, "revision 1, not 0"):
             drafts.revise(self.store, draft.id, document(), base_revision=0)
         revised = drafts.revise(
@@ -204,7 +204,6 @@ class DraftsServiceTest(unittest.TestCase):
         lost = drafts.annotate(
             self.store, draft.id, "plan:what", "change", "Gone", quote="One thing"
         )
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -237,7 +236,6 @@ class DraftsServiceTest(unittest.TestCase):
             end_offset=9,
         )
         self.assertEqual(annotation.anchor_state, "ok")
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -267,7 +265,6 @@ class DraftsServiceTest(unittest.TestCase):
         why_annotation = drafts.annotate(
             self.store, draft.id, "plan:why", "comment", "Keep the why", quote="Why"
         )
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -290,7 +287,6 @@ class DraftsServiceTest(unittest.TestCase):
         )
         drafts.dismiss(self.store, dismissed.id, "no longer relevant")
         drafts.annotate(self.store, draft.id, "plan:what", "comment", "Keep")
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -305,13 +301,11 @@ class DraftsServiceTest(unittest.TestCase):
         self.assertEqual(row.anchor_state, "ok")
         self.assertEqual((row.start_offset, row.end_offset), (9, 16))
 
-    def test_submit_ready_and_resolve(self) -> None:
+    def test_annotate_moves_to_revising_then_ready_and_resolve(self) -> None:
         draft = drafts.create(self.store, document())
-        with self.assertRaisesRegex(ValueError, "no open annotations"):
-            drafts.submit(self.store, draft.id)
+        self.assertEqual(draft.status, "review")
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "question", "Why?")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
         with self.assertRaisesRegex(ValueError, "still has 1 open"):
             drafts.ready(self.store, draft.id)
         resolved = drafts.resolve(self.store, annotation.id, "Because", actor="agent", now=100.0)
@@ -384,8 +378,6 @@ class DraftsServiceTest(unittest.TestCase):
             drafts.delete_annotation(self.store, annotation.id)
         with self.assertRaisesRegex(ValueError, "promoted"):
             drafts.revise(self.store, draft.id, document(), base_revision=1)
-        with self.assertRaisesRegex(ValueError, "promoted"):
-            drafts.submit(self.store, draft.id)
         with self.assertRaisesRegex(ValueError, "promoted"):
             drafts.ready(self.store, draft.id)
         with self.assertRaisesRegex(ValueError, "promoted"):

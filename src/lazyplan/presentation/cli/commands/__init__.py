@@ -46,7 +46,6 @@ from .drafts import (
     _cmd_draft_respond,
     _cmd_draft_revise,
     _cmd_draft_show,
-    _cmd_draft_submit,
     _cmd_draft_wait,
 )
 from .forge import (
@@ -196,7 +195,6 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("draft", "annotations"): "draft-annotations",
     ("draft", "add"): "draft-add",
     ("draft", "revise"): "draft-revise",
-    ("draft", "submit"): "draft-submit",
     ("draft", "ready"): "draft-ready",
     ("draft", "wait"): "draft-wait",
     ("draft", "annotate"): "draft-annotate",
@@ -281,7 +279,6 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "draft-annotations": _cmd_draft_annotations,
     "draft-add": _cmd_draft_add,
     "draft-revise": _cmd_draft_revise,
-    "draft-submit": _cmd_draft_submit,
     "draft-ready": _cmd_draft_ready,
     "draft-wait": _cmd_draft_wait,
     "draft-annotate": _cmd_draft_annotate,

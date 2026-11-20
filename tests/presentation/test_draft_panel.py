@@ -85,7 +85,6 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
     async def test_revising_draft_shows_the_state_and_open_count(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
-        drafts.submit(self.store, draft.id)
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
@@ -402,17 +401,16 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(app.screen_stack), 2)
             self.assertEqual(type(app.screen).__name__, "DraftScreen")
 
-    async def test_palette_offers_submit_and_promote_on_the_draft_screen(self) -> None:
+    async def test_palette_offers_promote_on_the_draft_screen(self) -> None:
         context = registry.Context(screen="draft", selected_kind="draft")
         availability = registry.palette_context(context)
-        self.assertIsNone(availability["submit-draft"])
+        self.assertNotIn("submit-draft", availability)
         self.assertIsNone(availability["promote-draft"])
         self.assertIsNotNone(availability["open-draft"])
 
     async def test_sidebar_shows_a_moved_anchor_after_revision(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen", quote="Why")
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,

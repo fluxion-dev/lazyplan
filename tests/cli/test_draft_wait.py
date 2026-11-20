@@ -50,8 +50,8 @@ class DraftWaitCliTest(unittest.TestCase):
             env=env,
         )
         self.addCleanup(waiter.kill)
-        time.sleep(1.5)
-        self.assertIsNone(waiter.poll(), "wait exited before any feedback was saved")
+        with self.assertRaises(subprocess.TimeoutExpired, msg="wait exited before feedback"):
+            waiter.wait(timeout=1.5)
         saved_at = time.monotonic()
         drafts.annotate(self.store, self.draft.id, "plan:why", "change", "Sharpen")
         out, err = waiter.communicate(timeout=10)

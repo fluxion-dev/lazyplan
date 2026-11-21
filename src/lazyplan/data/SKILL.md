@@ -228,21 +228,21 @@ done. Do not defer commits to the end of the plan.
 ## Review gate: plan is truth
 
 Present the draft — the sketch when there is one — for check-off before
-formalizing or implementing anything:
+formalizing or implementing anything. For a document draft, present the plan for check-off before implementing anything:
 
 ```bash
 lpui --porcelain list --tree --status all
 lpui --porcelain draft show --id D
 ```
 
-Walk the human through every block, make last edits on the sketch, and start
+Walk the human through every block, make last edits on the spot, and start
 only on explicit check-off. Then formalize and promote, relate every plan
 criterion to at least one proving task
 (`lpui criterion relate --id C --task T`), and run `lpui lint --plan P` before
 implementation. Ensure the formal document names its commit strategy and that
 every task desc names its expected commit slice and verification; reject a plan
-that batches a whole milestone or plan into one commit. During execution the
-plan stays the truth: fold new findings into the plan before changing code,
+that batches a whole milestone or plan into one commit. During execution,
+the plan stays the truth: fold new findings into the plan before changing code,
 never around it.
 
 ## Plan documents and recipes

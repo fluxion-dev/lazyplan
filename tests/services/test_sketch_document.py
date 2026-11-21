@@ -100,6 +100,14 @@ class SketchDocumentTest(unittest.TestCase):
             document.criteria, ("The sketch round-trips.", "The parser refuses a missing title.")
         )
 
+    def test_title_keeps_a_trailing_hash_in_the_name(self) -> None:
+        document = parse_sketch("# Learn C#\n\n## Why\n\nWhy.\n\n## What\n\nWhat.\n")
+        self.assertEqual(document.title, "Learn C#")
+
+    def test_byte_order_mark_is_ignored(self) -> None:
+        document = parse_sketch("\ufeff" + CANONICAL)
+        self.assertEqual(document.title, "Sketch title")
+
     def test_document_requires_a_definition(self) -> None:
         with self.assertRaisesRegex(SketchDocumentError, "title"):
             SketchDocument(" ", "Why.", "What.")

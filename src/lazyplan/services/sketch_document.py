@@ -15,6 +15,7 @@ _H1 = re.compile(r"^#\s+(.*)$")
 _H2 = re.compile(r"^##\s+(.*)$")
 _BULLET = re.compile(r"^\s*[-*+]\s+(.*)$")
 _CHECKBOX = re.compile(r"^\[[ xX]\]\s*")
+_CLOSING_HASHES = re.compile(r"\s+#+\s*$")
 
 _WHY = frozenset({"why", "vision", "goal", "motivation"})
 _WHAT = frozenset({"what", "scope", "approach", "plan", "deliverables"})
@@ -52,7 +53,7 @@ class SketchDocument:
 
 def _heading_text(text: str) -> str:
     """Strip an ATX heading's optional closing hashes."""
-    return text.strip().rstrip("#").strip()
+    return _CLOSING_HASHES.sub("", text.strip()).strip()
 
 
 def _section_key(text: str) -> str | None:
@@ -116,7 +117,7 @@ def parse_sketch(text: str) -> SketchDocument:
     Unknown H2 sections are kept in ``what`` so no prose is lost. The canonical
     headings are Why, What, and Done; common aliases are accepted.
     """
-    lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    lines = text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n").split("\n")
     title = ""
     sections: dict[str, list[str]] = {"why": [], "what": [], "done": []}
     present: set[str] = set()

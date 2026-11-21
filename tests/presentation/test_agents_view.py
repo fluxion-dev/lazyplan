@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import unittest
 
 try:
@@ -19,7 +20,7 @@ except ImportError:  # pragma: no cover - rich not installed
 
 
 def plain(markup: str) -> str:
-    console = Console(record=True, width=400, force_terminal=False)
+    console = Console(record=True, width=400, force_terminal=False, file=io.StringIO())
     console.print(markup, end="")
     return console.export_text()
 

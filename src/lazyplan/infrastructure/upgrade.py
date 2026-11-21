@@ -34,12 +34,16 @@ from ..core.policies.environment import (
 from ..core.policies.environment import (
     version_text as _version_text,
 )
+from .upgrade_exec import (
+    upgrade_pipx,
+    upgrade_uv,
+    upgrade_venv,
+)
 
 REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
 RESOLVE_TIMEOUT = 10.0
-UPGRADE_TIMEOUT = 300.0
 UPDATE_CACHE_NAME = "update.json"
 UPDATE_CACHE_TTL = 24 * 3600
 NO_UPDATE_ENV = "LAZYPLAN_NO_UPDATE_CHECK"
@@ -237,35 +241,6 @@ def diagnostics(
         "log_dir": str(update_log.logs_dir(home)),
         "repair": repair,
     }
-
-
-def _text(value: object) -> str:
-    return value if isinstance(value, str) else ""
-
-
-def _command_log(
-    kind: str,
-    method: str,
-    command: list[str],
-    returncode: int | None,
-    stdout: str = "",
-    stderr: str = "",
-) -> str:
-    """Write one command log; return the log suffix for an error message."""
-    try:
-        path = update_log.record_update(
-            kind,
-            method=method,
-            command=command,
-            cwd=os.getcwd(),
-            exe=sys.executable,
-            returncode=returncode,
-            stdout=_text(stdout),
-            stderr=_text(stderr),
-        )
-    except OSError:
-        return ""
-    return f"; log: {path}"
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -558,99 +533,3 @@ def run_upgrade(
         upgrade_uv(version, installed=installed)
     else:
         upgrade_venv(version, exe or sys.executable, installed=installed)
-
-
-def upgrade_uv(
-    version: str,
-    timeout: float = UPGRADE_TIMEOUT,
-    installed: str | None = None,
-) -> None:
-    """Reinstall the pinned uv tool, falling back to a plain upgrade."""
-    require_newer(version, installed)
-    if shutil.which("uv") is None:
-        raise UpgradeError("uv is not on PATH")
-    cmds = [
-        ["uv", "tool", "install", f"{PYPI_PKG}=={version}", "--force"],
-        ["uv", "tool", "upgrade", PYPI_PKG],
-    ]
-    last_lines: list[str] = []
-    last_log = ""
-    for cmd in cmds:
-        try:
-            out = subprocess.run(
-                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
-            )
-        except OSError as exc:
-            log = _command_log("upgrade", UV, cmd, None, stderr=str(exc))
-            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
-        last_log = _command_log(
-            "upgrade",
-            UV,
-            cmd,
-            out.returncode,
-            out.stdout or "",
-            out.stderr or "",
-        )
-        if out.returncode == 0:
-            return
-        last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
-    raise UpgradeError(f"uv tool install failed: {'; '.join(last_lines)}{last_log}")
-
-
-def upgrade_pipx(
-    version: str,
-    timeout: float = UPGRADE_TIMEOUT,
-    installed: str | None = None,
-) -> None:
-    """Mirror install.sh do_pipx: upgrade, falling back to a forced install."""
-    require_newer(version, installed)
-    if shutil.which("pipx") is None:
-        raise UpgradeError("pipx is not on PATH")
-    cmds = [
-        ["pipx", "upgrade", PYPI_PKG, "--pip-args", f"=={version}"],
-        ["pipx", "install", f"{PYPI_PKG}=={version}", "--force"],
-    ]
-    last_lines: list[str] = []
-    last_log = ""
-    for cmd in cmds:
-        try:
-            out = subprocess.run(
-                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
-            )
-        except OSError as exc:
-            log = _command_log("upgrade", PIPX, cmd, None, stderr=str(exc))
-            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
-        last_log = _command_log(
-            "upgrade",
-            PIPX,
-            cmd,
-            out.returncode,
-            out.stdout or "",
-            out.stderr or "",
-        )
-        if out.returncode == 0:
-            return
-        last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
-    raise UpgradeError(f"pipx upgrade failed: {'; '.join(last_lines)}{last_log}")
-
-
-def upgrade_venv(
-    version: str,
-    exe: str,
-    timeout: float = UPGRADE_TIMEOUT,
-    installed: str | None = None,
-) -> None:
-    """Reinstall the running venv from PyPI (the install.sh do_venv layout)."""
-    require_newer(version, installed)
-    cmd = [exe, "-m", "pip", "install", f"{PYPI_PKG}=={version}"]
-    try:
-        out = subprocess.run(
-            cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
-        )
-    except OSError as exc:
-        log = _command_log("upgrade", VENV, cmd, None, stderr=str(exc))
-        raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
-    log = _command_log("upgrade", VENV, cmd, out.returncode, out.stdout or "", out.stderr or "")
-    if out.returncode != 0:
-        detail = "; ".join((out.stderr or out.stdout or "").strip().splitlines()[:3])
-        raise UpgradeError(f"venv reinstall failed: {detail}{log}")

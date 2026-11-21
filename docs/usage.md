@@ -10,13 +10,13 @@ Install with uv or pipx — both are isolated and update themselves:
 
 ```bash
 uv tool install lazyplan-tui
-# or
 pipx install lazyplan-tui
 
 lpui
 ```
 
-The first `lpui` run finishes setup and, on a terminal, opens the wizard;
+Run one of the two installs; both are isolated and update themselves. The
+first `lpui` run finishes setup and, on a terminal, opens the wizard;
 [Start](#start) covers the first plan. If `lpui` is not on PATH, run
 `uv tool update-shell` after a uv install or `pipx ensurepath` after a pipx
 install, then open a new terminal. `uvx --from lazyplan-tui lpui` runs the

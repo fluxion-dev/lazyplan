@@ -23,7 +23,7 @@ python3 tools/ia_inventory.py --check
 | setup_steps | 5 |
 | hook_events | 35 |
 | doc_files | 9 |
-| doc_headings | 114 |
+| doc_headings | 115 |
 | tui_key_conflicts | 17 |
 | stale_claims | 0 |
 | env_names | 12 |
@@ -481,7 +481,7 @@ python3 tools/ia_inventory.py --check
 | `README.md` | lazyplan (`lpui`) — v0.51.1 · Install · First run · Why it differs · Everyday commands · For your agent · Learn more |
 | `CONTRIBUTING.md` | Contributing to lazyplan · Set up · Before you push · Performance · Screenshots and the UX review board · Tests · Core suite policy · Resize behavior · Flaky tests · Landing changes · edit, then commit in small green slices · Release |
 | `AGENTS.md` | Agent instructions · Documentation · Plan drafts |
-| `docs/usage.md` | lazyplan usage · Install · Linux packages · Fedora / RHEL / openSUSE · Debian / Ubuntu · One-line installer · From source · Upgrade · Release notes · pipx · pip, including the install.sh venv · Uninstall |
+| `docs/usage.md` | lazyplan usage · Install · Linux packages · Fedora / RHEL / openSUSE · Debian / Ubuntu · One-line installer · From source · Upgrade · Release notes · uv · pipx · pip, including the install.sh venv |
 | `docs/lpui.1` | NAME · SYNOPSIS · DESCRIPTION · GLOBAL OPTIONS · COMMANDS · EXAMPLES · ENVIRONMENT · FILES · EXIT STATUS · SEE ALSO |
 | `docs/lazyplan.1` |  |
 | `src/lazyplan/data/AGENTS.md` | lazyplan (`lpui`) |

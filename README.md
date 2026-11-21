@@ -18,15 +18,14 @@ draft, take anchored review notes, and only then join the queue.
 
 ```bash
 uv tool install lazyplan-tui
-# or
 pipx install lazyplan-tui
 
 lpui --help
 ```
 
-Both installs are isolated and self-update with `lpui upgrade`. If `lpui` is
-not on PATH, run `uv tool update-shell` after a uv install or `pipx ensurepath`
-after a pipx install, then open a new terminal.
+Run one of the two installs; both are isolated and self-update with
+`lpui upgrade`. If `lpui` is not on PATH, run `uv tool update-shell` after a uv
+install or `pipx ensurepath` after a pipx install, then open a new terminal.
 
 On Windows, use the pip backend for pipx:
 

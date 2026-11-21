@@ -56,6 +56,7 @@ UPDATE_GATE_NAME = "update-gate.json"
 UPDATE_GATE_STALE = 120.0
 
 PIPX = "pipx"
+UV = "uv"
 VENV = "venv"
 RPM = "rpm"
 DEB = "deb"
@@ -84,6 +85,20 @@ def _looks_like_pipx(exe: str) -> str | None:
     for parent in path.parents:
         if parent.name == PYPI_PKG:
             return parent.as_posix()
+    return None
+
+
+def _looks_like_uv_tool(prefix: str) -> str | None:
+    """The uv tool venv dir for this package, else None."""
+    venv = Path(prefix)
+    try:
+        text = textfile.read(venv / "uv-receipt.toml")
+    except OSError:
+        text = ""
+    if f'name="{PYPI_PKG}"' in text.replace(" ", ""):
+        return venv.as_posix()
+    if not text and venv.name == PYPI_PKG and "tools" in venv.parent.parts:
+        return venv.as_posix()
     return None
 
 
@@ -157,6 +172,9 @@ def detect(
     base_prefix = base_prefix if base_prefix is not None else sys.base_prefix
     cwd = cwd if cwd is not None else os.getcwd()
 
+    uv_dir = _looks_like_uv_tool(prefix)
+    if uv_dir is not None:
+        return InstallInfo(UV, True, uv_dir)
     pipx_dir = _looks_like_pipx(exe)
     if pipx_dir is not None:
         return InstallInfo(PIPX, True, pipx_dir)

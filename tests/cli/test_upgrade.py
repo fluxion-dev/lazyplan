@@ -29,6 +29,76 @@ class TestDetect(unittest.TestCase):
             upgrade._looks_like_pipx(exe).lower(), "c:/users/u/pipx/venvs/lazyplan-tui"
         )
 
+    def test_uv_tool_venv_is_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / "uv" / "tools" / "lazyplan-tui"
+            venv.mkdir(parents=True)
+            (venv / "uv-receipt.toml").write_text(
+                '[tool]\nrequirements = [{ name = "lazyplan-tui" }]\n', encoding="utf-8"
+            )
+            info = upgrade.detect(
+                exe=str(venv / "bin" / "python"),
+                prefix=str(venv),
+                base_prefix="/usr",
+                cwd=tmp,
+            )
+        self.assertEqual(info.method, upgrade.UV)
+        self.assertTrue(info.upgradeable)
+        self.assertEqual(info.detail, venv.as_posix())
+
+    def test_uv_tool_venv_wins_over_a_source_checkout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / "uv" / "tools" / "lazyplan-tui"
+            venv.mkdir(parents=True)
+            (venv / "uv-receipt.toml").write_text(
+                '[tool]\nrequirements = [{ name = "lazyplan-tui" }]\n', encoding="utf-8"
+            )
+            (Path(tmp) / "pyproject.toml").write_text(
+                '[project]\nname = "lazyplan-tui"\n', encoding="utf-8"
+            )
+            info = upgrade.detect(
+                exe=str(venv / "bin" / "python"),
+                prefix=str(venv),
+                base_prefix="/usr",
+                cwd=tmp,
+            )
+        self.assertEqual(info.method, upgrade.UV)
+
+    def test_uv_receipt_for_another_package_is_not_uv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = Path(tmp) / "venv"
+            venv.mkdir()
+            (venv / "uv-receipt.toml").write_text(
+                '[tool]\nrequirements = [{ name = "other-tool" }]\n', encoding="utf-8"
+            )
+            with (
+                mock.patch.object(upgrade, "_is_editable_install", return_value=False),
+                mock.patch.object(upgrade, "_looks_like_source", return_value=False),
+            ):
+                info = upgrade.detect(
+                    exe=str(venv / "bin" / "python"),
+                    prefix=str(venv),
+                    base_prefix="/usr",
+                    cwd=tmp,
+                )
+        self.assertEqual(info.method, upgrade.VENV)
+
+    def test_uv_tool_venv_path_on_windows_keeps_the_drive(self):
+        with mock.patch.object(
+            upgrade.textfile, "read", return_value='requirements = [{ name = "lazyplan-tui" }]'
+        ):
+            prefix = "C:/Users/u/AppData/Local/uv/tools/lazyplan-tui"
+            self.assertEqual(upgrade._looks_like_uv_tool(prefix), prefix)
+
+    def test_uv_tool_dir_without_a_receipt_still_matches(self):
+        with mock.patch.object(upgrade.textfile, "read", side_effect=OSError):
+            prefix = "/home/u/.local/share/uv/tools/lazyplan-tui"
+            self.assertEqual(upgrade._looks_like_uv_tool(prefix), prefix)
+
+    def test_uv_tool_dir_outside_tools_is_not_uv(self):
+        with mock.patch.object(upgrade.textfile, "read", side_effect=OSError):
+            self.assertIsNone(upgrade._looks_like_uv_tool("/home/u/venvs/lazyplan-tui"))
+
     def test_plain_venv_is_upgradeable(self):
         with (
             mock.patch.object(upgrade, "_is_editable_install", return_value=False),

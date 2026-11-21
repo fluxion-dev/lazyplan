@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 import random
 import tempfile
@@ -25,34 +24,7 @@ except ImportError:  # pragma: no cover - textual not installed
     CriteriaHub = None  # type: ignore[assignment]
     Text = cell_len = Tree = None  # type: ignore[assignment,misc]
 
-
-async def settle_reflow(app: object, pilot: object, timeout: float = 2.0) -> None:
-    """Wait for the reflow a layout change queues, then settle the rows."""
-    await pilot.pause()  # type: ignore[attr-defined]
-    await pilot.pause()  # type: ignore[attr-defined]
-    loop = asyncio.get_running_loop()
-    deadline = loop.time() + timeout
-    controller = app.tree_controller  # type: ignore[attr-defined]
-    while controller._reflow_pending:  # type: ignore[attr-defined]
-        if loop.time() >= deadline:
-            raise AssertionError("the tree reflow did not land")
-        await pilot.pause(0.01)  # type: ignore[attr-defined]
-    controller.reflow()  # type: ignore[attr-defined]
-    await pilot.pause()  # type: ignore[attr-defined]
-
-
-async def wait_for_tree_resize(
-    app: object, pilot: object, before: int, timeout: float = 2.0
-) -> None:
-    """Wait for a layout change to give the tree a new width."""
-    tree = app.query_one("#tree", Tree)  # type: ignore[attr-defined]
-    loop = asyncio.get_running_loop()
-    deadline = loop.time() + timeout
-    while tree.size.width == before:  # type: ignore[attr-defined]
-        if loop.time() >= deadline:
-            raise AssertionError("the tree did not resize")
-        await pilot.pause(0.01)  # type: ignore[attr-defined]
-    await settle_reflow(app, pilot)
+from tests.support.tui import settle_reflow, wait_for_tree_resize
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")

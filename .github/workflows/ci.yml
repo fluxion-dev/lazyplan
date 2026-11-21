@@ -35,7 +35,7 @@ jobs:
       - name: Install site dependencies
         run: npm ci
         working-directory: site
-      - name: Gates (ruff + mypy + unittest x2)
+      - name: Gates (ruff + mypy + unittest + stdlib smoke)
         run: ./tools/check.sh
 
   # The ruleset requires one check named `gates`; it passes only when Ubuntu

@@ -14,7 +14,7 @@ export const FAQ: readonly FaqItem[] = [
   {
     question: "How does draft review work?",
     answer:
-      "An agent can add a plan as a draft instead of writing straight into the queue. You select a block or a quote, leave a comment, question, or change request, and submit. The agent revises against the notes and answers each one; promotion creates the plan tree only when no annotation is open.",
+      "An agent can add a plan as a draft instead of writing straight into the queue. You select a block or a quote and leave a comment, question, or change request. Saving it wakes the agent, which revises against the notes and answers each one; promotion creates the plan tree only when no annotation is open.",
   },
   {
     question: "Where did the toasts go?",

@@ -99,7 +99,7 @@ export const COPY = {
         number: "01",
         title: "Plan with an agent",
         description:
-          "Interview the work in words: why, scope, acceptance criteria, and the ordered slices. Your agent writes the rows; annotate the draft and promote it when the notes close.",
+          "Interview the work in words: why, scope, acceptance criteria, and the ordered slices. Your agent writes the rows; annotate the draft and save your notes. The agent wakes to revise, and promotion waits until the notes close.",
       },
       {
         number: "02",

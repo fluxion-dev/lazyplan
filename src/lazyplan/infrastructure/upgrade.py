@@ -63,7 +63,7 @@ DEB = "deb"
 SOURCE = "source"
 UNKNOWN = "unknown"
 
-UPGRADEABLE = {PIPX, VENV}
+UPGRADEABLE = {PIPX, UV, VENV}
 
 
 class UpgradeError(Exception):
@@ -211,6 +211,8 @@ def diagnostics(
     root = shared_home(home)
     if info.method == PIPX:
         repair = f"pipx install --force --backend pip {PYPI_PKG}"
+    elif info.method == UV:
+        repair = f"{UV_INSTALL} --force"
     elif info.method == VENV:
         repair = f"{executable} -m pip install --force-reinstall {PYPI_PKG}"
     else:
@@ -228,6 +230,8 @@ def diagnostics(
         "scripts": str(Path(executable).parent),
         "pipx": shutil.which("pipx") or "",
         "pipx_venv": info.detail if info.method == PIPX else "",
+        "uv": shutil.which("uv") or "",
+        "uv_tool": info.detail if info.method == UV else "",
         "home": str(root),
         "update_dir": str(root / "updates"),
         "log_dir": str(update_log.logs_dir(home)),
@@ -469,10 +473,13 @@ INSTALL_SH = (
     "curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh"
 )
 PIPX_INSTALL = f"pipx install --backend pip {PYPI_PKG}"
+UV_INSTALL = f"uv tool install {PYPI_PKG}"
 
 
 def reinstall_hint() -> str:
     """The supported fresh-install command for this platform."""
+    if shutil.which("uv") is not None:
+        return UV_INSTALL
     return PIPX_INSTALL if os.name == "nt" else INSTALL_SH
 
 
@@ -547,8 +554,47 @@ def run_upgrade(
     require_newer(version, installed)
     if info.method == PIPX:
         upgrade_pipx(version, installed=installed)
+    elif info.method == UV:
+        upgrade_uv(version, installed=installed)
     else:
         upgrade_venv(version, exe or sys.executable, installed=installed)
+
+
+def upgrade_uv(
+    version: str,
+    timeout: float = UPGRADE_TIMEOUT,
+    installed: str | None = None,
+) -> None:
+    """Upgrade the uv tool, falling back to a pinned forced install."""
+    require_newer(version, installed)
+    if shutil.which("uv") is None:
+        raise UpgradeError("uv is not on PATH")
+    cmds = [
+        ["uv", "tool", "upgrade", PYPI_PKG],
+        ["uv", "tool", "install", f"{PYPI_PKG}=={version}", "--force"],
+    ]
+    last_lines: list[str] = []
+    last_log = ""
+    for cmd in cmds:
+        try:
+            out = subprocess.run(
+                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
+            )
+        except OSError as exc:
+            log = _command_log("upgrade", UV, cmd, None, stderr=str(exc))
+            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
+        last_log = _command_log(
+            "upgrade",
+            UV,
+            cmd,
+            out.returncode,
+            out.stdout or "",
+            out.stderr or "",
+        )
+        if out.returncode == 0:
+            return
+        last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
+    raise UpgradeError(f"uv tool upgrade failed: {'; '.join(last_lines)}{last_log}")
 
 
 def upgrade_pipx(

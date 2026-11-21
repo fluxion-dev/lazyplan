@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan.infrastructure import update_log, update_stage
-from lazyplan.infrastructure.upgrade import PIPX, VENV
+from lazyplan.infrastructure.upgrade import PIPX, UV, VENV
 
 WHEEL = b"fake wheel bytes"
 VERSION = "0.28.0"
@@ -215,6 +215,29 @@ class TestApply(unittest.TestCase):
             venv, self.home, exe="/venv/bin/python", runner=venv_runner, installed="0.27.0"
         )
         self.assertEqual(venv_runner.call_args[0][0][0], "/venv/bin/python")
+
+    def test_uv_command_installs_into_the_tool_venv_with_uv_pip(self):
+        update = update_stage.StagedUpdate(VERSION, UV, FILENAME, URL, SHA, len(WHEEL), 1000.0)
+        uv_runner = runner()
+        with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/uv"):
+            update_stage.apply_update(
+                update,
+                self.home,
+                exe="/tools/lazyplan-tui/bin/python",
+                runner=uv_runner,
+                installed="0.27.0",
+            )
+        self.assertEqual(
+            uv_runner.call_args[0][0],
+            [
+                "/usr/bin/uv",
+                "pip",
+                "install",
+                "--python",
+                "/tools/lazyplan-tui/bin/python",
+                str(update_stage.wheel_path(update, self.home)),
+            ],
+        )
 
     def test_install_failure_raises(self):
         update = self._stage()

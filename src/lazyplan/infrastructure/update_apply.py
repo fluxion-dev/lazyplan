@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from . import textfile, update_log
 from .update_stage import StagedUpdate, StageError, wheel_path
-from .upgrade import PIPX, VENV, InstallInfo, detect
+from .upgrade import PIPX, UV, VENV, InstallInfo, detect
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -65,6 +65,13 @@ def _windows_pipx_command(info: InstallInfo, python: str, wheel: Path) -> tuple[
     return (uv, "pip", "install", "--python", python, str(wheel))
 
 
+def _uv_python(info: InstallInfo, executable: str, windows: bool) -> str:
+    """The tool venv python for this uv install, else the running interpreter."""
+    if not info.detail:
+        return executable
+    return str(Path(info.detail) / ("Scripts/python.exe" if windows else "bin/python"))
+
+
 def _restart_command(
     *,
     python: str,
@@ -96,7 +103,7 @@ def build_apply_plan(
     now: float | None = None,
     pid: int | None = None,
 ) -> ApplyPlan:
-    """Build the pipx/venv command and detached-helper metadata."""
+    """Build the pipx, uv, or venv command and detached-helper metadata."""
     is_windows = os.name == "nt" if windows is None else windows
     install = info or detect(exe=exe)
     executable = exe or sys.executable
@@ -112,6 +119,13 @@ def build_apply_plan(
             command = _windows_pipx_command(install, python, wheel)
         else:
             command = (pipx, "install", str(wheel), "--force")
+    elif update.method == UV:
+        uv = shutil.which("uv") or ""
+        if not uv:
+            raise StageError("uv is not on PATH")
+        python = _uv_python(install, executable, is_windows)
+        scripts = Path(python).parent
+        command = (uv, "pip", "install", "--python", python, str(wheel))
     elif update.method == VENV:
         python = executable
         scripts = Path(python).parent
@@ -126,7 +140,7 @@ def build_apply_plan(
             python=python,
             scripts=scripts,
             argv=argv,
-            use_path=update.method == PIPX,
+            use_path=update.method in (PIPX, UV),
         )
         if restart
         else ()

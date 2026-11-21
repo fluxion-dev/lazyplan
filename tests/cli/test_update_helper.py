@@ -12,7 +12,7 @@ from unittest import mock
 from lazyplan import _update_helper
 from lazyplan.infrastructure import update_apply, update_stage
 from lazyplan.infrastructure.update_apply import ApplyPlan, build_apply_plan
-from lazyplan.infrastructure.upgrade import PIPX, VENV, InstallInfo
+from lazyplan.infrastructure.upgrade import PIPX, UV, VENV, InstallInfo
 
 URL = "https://files.pythonhosted.org/packages/x/w.whl"
 
@@ -98,6 +98,48 @@ class TestApplyPlan(unittest.TestCase):
         with mock.patch.object(update_apply.shutil, "which", side_effect=tools.get):
             plan = build_apply_plan(staged(PIPX), home=self.home, info=info, windows=True)
         self.assertEqual(plan.command[1:4], ("-m", "pip", "install"))
+
+    def _uv_tool_venv(self) -> InstallInfo:
+        venv = Path(self.tmp.name) / "uv" / "tools" / "lazyplan-tui"
+        venv.mkdir(parents=True)
+        (venv / "uv-receipt.toml").write_text(
+            '[tool]\nrequirements = [{ name = "lazyplan-tui" }]\n', encoding="utf-8"
+        )
+        return InstallInfo(UV, True, venv.as_posix())
+
+    def test_uv_windows_plan_installs_with_uv_pip_and_restarts_from_path(self) -> None:
+        update = staged(UV)
+        info = self._uv_tool_venv()
+        tools = {"uv": "C:/tools/uv.exe", "lpui": "C:/bin/lpui.exe"}
+        with mock.patch.object(update_apply.shutil, "which", side_effect=tools.get):
+            plan = build_apply_plan(update, home=self.home, info=info, windows=True, argv=("ui",))
+        python = str(Path(info.detail) / "Scripts/python.exe")
+        wheel = str(update_stage.wheel_path(update, self.home))
+        self.assertEqual(
+            plan.command, ("C:/tools/uv.exe", "pip", "install", "--python", python, wheel)
+        )
+        self.assertEqual(Path(plan.restart[0]), Path("C:/bin/lpui.exe"))
+        self.assertEqual(plan.restart[1:], ("ui",))
+
+    def test_uv_windows_plan_without_uv_names_the_repair(self) -> None:
+        info = self._uv_tool_venv()
+        with (
+            mock.patch.object(update_apply.shutil, "which", return_value=None),
+            self.assertRaises(update_stage.StageError) as caught,
+        ):
+            build_apply_plan(staged(UV), home=self.home, info=info, windows=True)
+        self.assertIn("uv is not on PATH", str(caught.exception))
+
+    def test_uv_posix_plan_falls_back_to_the_tool_python(self) -> None:
+        update = staged(UV)
+        info = self._uv_tool_venv()
+        tools = {"uv": "/usr/bin/uv"}
+        with mock.patch.object(update_apply.shutil, "which", side_effect=tools.get):
+            plan = build_apply_plan(update, home=self.home, info=info, windows=False)
+        python = str(Path(info.detail) / "bin/python")
+        wheel = str(update_stage.wheel_path(update, self.home))
+        self.assertEqual(plan.command, ("/usr/bin/uv", "pip", "install", "--python", python, wheel))
+        self.assertEqual(plan.restart, (python, "-m", "lazyplan"))
 
     def test_venv_windows_plan_uses_the_owning_pip(self) -> None:
         update = staged(VENV)

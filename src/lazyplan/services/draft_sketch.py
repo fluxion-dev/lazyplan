@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import Any
 
 from ..core.entities import PlanDraft
@@ -35,6 +36,20 @@ def create_sketch(port: DraftsPort, text: str, actor: str = "human") -> PlanDraf
         actor=actor,
         format=DRAFT_FORMAT_SKETCH,
     )
+
+
+def create_sketch_file(
+    port: DraftsPort,
+    path: str | Path,
+    actor: str = "human",
+) -> PlanDraft:
+    """Read one Markdown sketch from disk and store it as a draft."""
+    source = Path(path).expanduser()
+    try:
+        text = source.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise ValueError(f"cannot read {source}: {exc}") from exc
+    return create_sketch(port, text, actor=actor)
 
 
 def create_from_fields(

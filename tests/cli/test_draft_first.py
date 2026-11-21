@@ -45,7 +45,27 @@ class DraftFirstCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         draft = json.loads(out)["draft"]
         self.assertEqual(draft["status"], "review")
+        self.assertEqual(draft["format"], "sketch")
         self.assertEqual(self.store.list_plans(), [])
+
+    def test_plan_add_refuses_lane_settings_before_formalizing(self) -> None:
+        code, _out, err = self._run(
+            "plan",
+            "add",
+            "--title",
+            "API v2",
+            "--why",
+            "w",
+            "--what",
+            "x",
+            "--dispatch",
+            "parallel",
+            "--max-agents",
+            "2",
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("formalized", err)
+        self.assertEqual(self.store.list_drafts(), [])
 
     def test_plan_add_creates_independent_sketches(self) -> None:
         self._add()

@@ -17,20 +17,31 @@ draft, take anchored review notes, and only then join the queue.
 ## Install
 
 ```bash
+uv tool install lazyplan-tui
+# or
 pipx install lazyplan-tui
+
 lpui --help
 ```
 
-On Windows, use the pip backend:
+Both installs are isolated and self-update with `lpui upgrade`. If `lpui` is
+not on PATH, run `uv tool update-shell` after a uv install or `pipx ensurepath`
+after a pipx install, then open a new terminal.
+
+On Windows, use the pip backend for pipx:
 
 ```powershell
 pipx install --backend pip lazyplan-tui
 lpui --version
 ```
 
+`uvx --from lazyplan-tui lpui` runs the latest release without installing it.
+The PyPI project is `lazyplan-tui`; the commands are `lpui` and `lazyplan`.
+
 Upgrading from 0.30.1 or earlier? Reinstall with force, because the package
-layout changed: `pipx install --force lazyplan-tui` (or
-`python -m pip install --force-reinstall lazyplan-tui`). See the
+layout changed: `uv tool install --force lazyplan-tui`,
+`pipx install --force lazyplan-tui`, or
+`python -m pip install --force-reinstall lazyplan-tui`. See the
 [upgrade notes](docs/usage.md#upgrade).
 
 For system packages, the one-line installer, or installs from source, see

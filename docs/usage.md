@@ -6,15 +6,23 @@ provenance, and data.
 
 ## Install
 
-The recommended path is pipx:
+Install with uv or pipx — both are isolated and update themselves:
 
 ```bash
+uv tool install lazyplan-tui
+# or
 pipx install lazyplan-tui
+
 lpui
 ```
 
 The first `lpui` run finishes setup and, on a terminal, opens the wizard;
-[Start](#start) covers the first plan. On Windows, use the pip backend:
+[Start](#start) covers the first plan. If `lpui` is not on PATH, run
+`uv tool update-shell` after a uv install or `pipx ensurepath` after a pipx
+install, then open a new terminal. `uvx --from lazyplan-tui lpui` runs the
+latest release without installing it.
+
+On Windows, use the pip backend for pipx:
 
 ```powershell
 pipx install --backend pip lazyplan-tui
@@ -51,7 +59,7 @@ The installer ends with the next step: run `lpui` to finish setup. Pin a
 version or choose a method:
 
 ```bash
-sh install.sh --version X.Y.Z --method rpm|deb|pipx|venv
+sh install.sh --version X.Y.Z --method rpm|deb|uv|pipx|venv
 sh install.sh --method venv --prefix ~/.local
 sh install.sh --uninstall
 ```
@@ -75,23 +83,24 @@ lpui upgrade
 lpui upgrade --check
 ```
 
-`lpui upgrade` manages pipx and venv installs. System packages upgrade through
-`dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions; stdout
-stays clean for `--json`. A successful upgrade re-runs setup with the new
-binary and refreshes installed skills and hooks silently. [Upgrades and
+`lpui upgrade` manages pipx, uv, and venv installs. System packages upgrade
+through `dnf` or `apt`. The TUI notifies and CLI stderr mentions new versions;
+stdout stays clean for `--json`. A successful upgrade re-runs setup with the
+new binary and refreshes installed skills and hooks silently. [Upgrades and
 migration](#upgrades-and-migration) covers when the wizard reopens and which
 runs never prompt.
 
 On Windows the command and the TUI Update screen use a detached helper. lpui
-closes first, then the helper waits for the process to exit, updates the
-existing pipx venv with that venv's own `python -m pip`, or with `uv pip` when
-pipx built the venv with uv (or a plain venv's pip), needs no network for a
-downloaded update, writes the full command and output under
-`%LOCALAPPDATA%\lazyplan\logs\`, runs the post-upgrade setup review, and
+closes first, then the helper waits for the process to exit, updates a uv tool
+venv with `uv pip`, the existing pipx venv with that venv's own `python -m pip`
+(or with `uv pip` when pipx built the venv with uv), or a plain venv's pip,
+needs no network for a downloaded update, writes the full command and output
+under `%LOCALAPPDATA%\lazyplan\logs\`, runs the post-upgrade setup review, and
 relaunches the TUI. A failed install leaves the old version runnable and the
 next launch shows the log path. `lpui upgrade --diagnose` prints the detected
-method, owning Python, pipx and shim paths, and log directory without changing
+method, owning Python, pipx and uv paths, and log directory without changing
 anything. If the helper cannot start, close lpui and repair with
+`uv tool install --force lazyplan-tui` or
 `pipx install --force --backend pip lazyplan-tui`. A source checkout updates
 with `git pull`.
 
@@ -120,6 +129,9 @@ and console scripts changed. Force a reinstall in the environment that owns
 `lpui`:
 
 ```bash
+# uv
+uv tool install --force lazyplan-tui
+
 # pipx
 pipx install --force lazyplan-tui
 
@@ -127,17 +139,19 @@ pipx install --force lazyplan-tui
 python -m pip install --force-reinstall lazyplan-tui
 ```
 
-On Windows, add `--backend pip` to the pipx command. Do not use `lpui upgrade`
-or a plain `pipx upgrade` for this jump. The reinstall replaces only the program
-files; your database, templates, skills, hooks, and `~/.lazyplan` state stay.
+On Windows, add `--backend pip` to the pipx command. Do not use `lpui upgrade`,
+`uv tool upgrade`, or a plain `pipx upgrade` for this jump. The reinstall
+replaces only the program files; your database, templates, skills, hooks, and
+`~/.lazyplan` state stay.
 
 ### Uninstall
 
-Remove the program with `pipx uninstall lazyplan-tui` or your package manager.
-Your plans live in `~/.lazyplan/` (or `.agents/lazyplan/` in a repo); export
-them before deleting that folder. `lpui setup --no-skills --no-hooks` removes
-installed agent integrations, and `lpui setup --no-agents-pointer` removes the
-marked `AGENTS.md` section.
+Remove the program with `uv tool uninstall lazyplan-tui`,
+`pipx uninstall lazyplan-tui`, or your package manager. Your plans live in
+`~/.lazyplan/` (or `.agents/lazyplan/` in a repo); export them before deleting
+that folder. `lpui setup --no-skills --no-hooks` removes installed agent
+integrations, and `lpui setup --no-agents-pointer` removes the marked
+`AGENTS.md` section.
 
 ## Start
 

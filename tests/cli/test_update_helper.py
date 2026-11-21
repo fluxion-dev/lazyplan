@@ -13,6 +13,7 @@ from lazyplan import _update_helper
 from lazyplan.infrastructure import update_apply, update_stage
 from lazyplan.infrastructure.update_apply import ApplyPlan, build_apply_plan
 from lazyplan.infrastructure.upgrade import PIPX, UV, VENV, InstallInfo
+from tests.support.installs import pipx_venv, uv_tool_venv
 
 URL = "https://files.pythonhosted.org/packages/x/w.whl"
 
@@ -62,9 +63,7 @@ class TestApplyPlan(unittest.TestCase):
         self.assertEqual(plan.log_path.parent, update_apply.update_log.logs_dir(self.home))
 
     def _uv_pipx_venv(self) -> InstallInfo:
-        venv = Path(self.tmp.name) / "pipx" / "venvs" / "lazyplan-tui"
-        venv.mkdir(parents=True)
-        (venv / "pipx_metadata.json").write_text(json.dumps({"backend": "uv"}), encoding="utf-8")
+        venv = pipx_venv(self.tmp.name, backend="uv")
         return InstallInfo(PIPX, True, venv.as_posix())
 
     def test_pipx_windows_plan_installs_a_uv_venv_with_uv(self) -> None:
@@ -90,9 +89,7 @@ class TestApplyPlan(unittest.TestCase):
         self.assertIn("--backend pip", str(caught.exception))
 
     def test_pipx_windows_plan_with_pip_backend_metadata_uses_pip(self) -> None:
-        venv = Path(self.tmp.name) / "pipvenv"
-        venv.mkdir()
-        (venv / "pipx_metadata.json").write_text(json.dumps({"backend": "pip"}), encoding="utf-8")
+        venv = pipx_venv(self.tmp.name, backend="pip")
         info = InstallInfo(PIPX, True, venv.as_posix())
         tools = {"pipx": "C:/tools/pipx.exe", "uv": "C:/tools/uv.exe"}
         with mock.patch.object(update_apply.shutil, "which", side_effect=tools.get):
@@ -100,11 +97,7 @@ class TestApplyPlan(unittest.TestCase):
         self.assertEqual(plan.command[1:4], ("-m", "pip", "install"))
 
     def _uv_tool_venv(self) -> InstallInfo:
-        venv = Path(self.tmp.name) / "uv" / "tools" / "lazyplan-tui"
-        venv.mkdir(parents=True)
-        (venv / "uv-receipt.toml").write_text(
-            '[tool]\nrequirements = [{ name = "lazyplan-tui" }]\n', encoding="utf-8"
-        )
+        venv = uv_tool_venv(self.tmp.name)
         return InstallInfo(UV, True, venv.as_posix())
 
     def test_uv_windows_plan_installs_with_uv_pip_and_restarts_from_path(self) -> None:

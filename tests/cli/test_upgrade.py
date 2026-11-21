@@ -15,6 +15,7 @@ from lazyplan.infrastructure import update_log, update_stage, upgrade
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.commands import admin as cli_mod
 from tests.support.home import sandbox_home
+from tests.support.installs import source_checkout, uv_tool_venv
 
 
 class TestDetect(unittest.TestCase):
@@ -31,11 +32,7 @@ class TestDetect(unittest.TestCase):
 
     def test_uv_tool_venv_is_detected(self):
         with tempfile.TemporaryDirectory() as tmp:
-            venv = Path(tmp) / "uv" / "tools" / "lazyplan-tui"
-            venv.mkdir(parents=True)
-            (venv / "uv-receipt.toml").write_text(
-                '[tool]\nrequirements = [{ name = "lazyplan-tui" }]\n', encoding="utf-8"
-            )
+            venv = uv_tool_venv(tmp)
             info = upgrade.detect(
                 exe=str(venv / "bin" / "python"),
                 prefix=str(venv),
@@ -48,14 +45,8 @@ class TestDetect(unittest.TestCase):
 
     def test_uv_tool_venv_wins_over_a_source_checkout(self):
         with tempfile.TemporaryDirectory() as tmp:
-            venv = Path(tmp) / "uv" / "tools" / "lazyplan-tui"
-            venv.mkdir(parents=True)
-            (venv / "uv-receipt.toml").write_text(
-                '[tool]\nrequirements = [{ name = "lazyplan-tui" }]\n', encoding="utf-8"
-            )
-            (Path(tmp) / "pyproject.toml").write_text(
-                '[project]\nname = "lazyplan-tui"\n', encoding="utf-8"
-            )
+            venv = uv_tool_venv(tmp)
+            source_checkout(tmp)
             info = upgrade.detect(
                 exe=str(venv / "bin" / "python"),
                 prefix=str(venv),
@@ -66,11 +57,7 @@ class TestDetect(unittest.TestCase):
 
     def test_uv_receipt_for_another_package_is_not_uv(self):
         with tempfile.TemporaryDirectory() as tmp:
-            venv = Path(tmp) / "venv"
-            venv.mkdir()
-            (venv / "uv-receipt.toml").write_text(
-                '[tool]\nrequirements = [{ name = "other-tool" }]\n', encoding="utf-8"
-            )
+            venv = uv_tool_venv(tmp, package="other-tool")
             with (
                 mock.patch.object(upgrade, "_is_editable_install", return_value=False),
                 mock.patch.object(upgrade, "_looks_like_source", return_value=False),
@@ -133,12 +120,8 @@ class TestDetect(unittest.TestCase):
                 self.assertFalse(info.upgradeable)
 
     def test_source_checkout_layout(self):
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "pyproject.toml").write_text(
-                '[project]\nname = "lazyplan-tui"\n', encoding="utf-8"
-            )
+            source_checkout(tmp)
             exe = str(Path(tmp) / "bin" / "python")
             with mock.patch.object(upgrade, "_probe", return_value=False):
                 info = upgrade.detect(exe=exe, prefix="/usr", base_prefix="/usr", cwd=tmp)

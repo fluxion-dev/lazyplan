@@ -32,7 +32,19 @@ class TestNounFirstCli(unittest.TestCase):
         return json.loads(out)
 
     def test_plan_lifecycle(self):
-        plan = self._json("plan", "add", "--title", "P", "--why", "why", "--what", "what")
+        plan = self._json(
+            "plan",
+            "add",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--title",
+            "P",
+            "--why",
+            "why",
+            "--what",
+            "what",
+        )
         assert isinstance(plan, dict)
         pid = plan["plan"]["id"]
         summary = self._run("plan", "list")[1]

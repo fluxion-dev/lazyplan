@@ -97,16 +97,6 @@ class DraftToolsMixin(McpBase):
             ),
             (
                 _tool(
-                    "draft_submit",
-                    "Submit open annotations for revision.",
-                    {"id": _id()},
-                    ["id"],
-                    False,
-                ),
-                self._tool_draft_submit,
-            ),
-            (
-                _tool(
                     "draft_ready",
                     "Return a clean revision to review.",
                     {"id": _id()},
@@ -222,11 +212,6 @@ class DraftToolsMixin(McpBase):
         """Run one draft state transition and return the changed draft."""
         store = self._need_store()
         draft = run(store, int(args["id"]), actor=self.actor)
-        return self._draft_result(store, draft)
-
-    def _tool_draft_submit(self, args: dict) -> object:
-        store = self._need_store()
-        draft = services.drafts.submit(store, int(args["id"]), actor=self.actor)
         return self._draft_result(store, draft)
 
     def _tool_draft_ready(self, args: dict) -> object:

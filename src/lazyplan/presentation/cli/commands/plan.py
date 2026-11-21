@@ -13,6 +13,7 @@ from lazyplan.services import evidence as evidence_service
 from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
+from ....core.ports.app import AppPort
 from ....core.ports.coordination import CoordinationPort
 from ....core.ports.insights import InsightsPort
 from ....core.ports.planning import PlanningPort
@@ -46,6 +47,8 @@ from ..rows import (
     _porcelain_list_lines,
     _porcelain_show_lines,
 )
+from .direct import record_direct, refuse_unreasoned
+from .drafts import emit_draft
 from .worktree import _guard_plan_start, guard_plan_done, record_worktree_override
 
 
@@ -58,13 +61,30 @@ def _resolve_title(args: argparse.Namespace) -> str:
     return ""
 
 
-def _cmd_add_plan(store: PlanningPort, args: argparse.Namespace, actor: str) -> int:
+def _cmd_add_plan(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     title = _resolve_title(args)
     if not title.strip():
         print("error: plan add needs --title", file=sys.stderr)
         return 2
+    if refuse_unreasoned(args):
+        return 2
     desc = args.desc if args.desc is not None else (args.what or "")
     goal = args.goal if args.goal is not None else (args.why or "")
+    if not args.direct:
+        try:
+            draft = services.drafts.create_from_fields(
+                store,
+                title,
+                goal,
+                desc,
+                dispatch_mode=args.dispatch,
+                max_agents=args.max_agents,
+                actor=actor,
+            )
+        except ValueError as exc:
+            print(msg_error(exc), file=sys.stderr)
+            return 2
+        return emit_draft(store, args, draft, f"drafted D{draft.id} {draft.title!r} for review")
     p = services.create_plan(
         store,
         title,
@@ -74,6 +94,7 @@ def _cmd_add_plan(store: PlanningPort, args: argparse.Namespace, actor: str) -> 
         dispatch_mode=args.dispatch,
         max_agents=args.max_agents,
     )
+    record_direct(store, p.id, actor, args.reason)
     return _emit_record(args, _porcelain_row(store, p), {"plan": to_payload(vars(p))})
 
 

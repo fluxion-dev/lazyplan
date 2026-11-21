@@ -23,16 +23,10 @@
     border-title-align: left;
 }
 
-#plans-drafts {
-    height: 2fr;
-}
-
-#plans-active {
-    height: 3fr;
-}
-
+#plans-drafts,
+#plans-active,
 #plans-finished {
-    height: 2fr;
+    height: 1fr;
 }
 
 #side {

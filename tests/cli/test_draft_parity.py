@@ -217,7 +217,6 @@ class DraftParityTest(unittest.TestCase):
         )
         assert isinstance(annotation, dict)
         annotation_id = int(annotation["annotation"]["id"])
-        self._cli_json("draft", "submit", "--id", str(cli_id))
         self._cli_json(
             "draft",
             "revise",
@@ -257,7 +256,6 @@ class DraftParityTest(unittest.TestCase):
         )
         assert isinstance(annotation, dict)
         mcp_annotation_id = int(annotation["annotation"]["id"])
-        self._tool_json("draft_submit", {"id": mcp_id})
         self._tool_json(
             "draft_revise",
             {

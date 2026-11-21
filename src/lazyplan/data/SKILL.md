@@ -207,6 +207,11 @@ lpui criterion list --kind plan --id P
 lpui criterion edit --id C --done / --open
 ```
 
+`plan add` and `plan apply` create a draft in review, never a queued plan; the
+plan id exists only after the human promotes it (see Plan drafts). Pass
+`--direct --reason TEXT` only for bulk or fixture work the human has waived
+review for; the reason is noted on the plan.
+
 Only once the definition is agreed, cut the work — milestones from the plan,
 then tasks from each milestone, shaped as below plus the default QA, refactor,
 and documentation tasks.
@@ -238,7 +243,7 @@ changing code, never around it.
 
 ## Plan documents and recipes
 
-Create the whole tree in one atomic write:
+Draft the whole tree in one write; promotion creates it atomically:
 
 ```bash
 lpui --porcelain plan recipe feature > plan.json   # feature | bugfix | refactor
@@ -254,9 +259,9 @@ the words, add criteria, then apply.
 
 ## Plan drafts
 
-A draft is a plan document under review; it stays out of the queue until the
-human promotes it. Use the draft loop when the definition needs review before
-it becomes the plan of record:
+Every new plan starts as a draft: a plan document under review that stays out
+of the queue until the human promotes it. `plan add`, `plan apply`, the TUI `n`
+form, and `draft add` all create one:
 
 ```bash
 lpui --actor NAME --porcelain draft add --file plan.json
@@ -264,7 +269,7 @@ lpui --porcelain draft list [--status review|revising|promoted|all]
 lpui --porcelain draft show --id D
 lpui --porcelain draft annotations --id D [--status open|addressed|dismissed|all]
 lpui --actor NAME --porcelain draft annotate --id D --block KEY --kind comment|question|change --text TEXT [--quote Q]
-lpui --actor NAME --porcelain draft submit --id D
+lpui --porcelain draft wait --id D [--timeout SECONDS]
 lpui --actor NAME --porcelain draft respond --id A --response TEXT
 lpui --actor NAME --porcelain draft resolve --id A [--response TEXT]
 lpui --actor NAME --porcelain draft revise --id D --file plan.json --base-revision N --note TEXT
@@ -272,6 +277,13 @@ lpui --actor NAME --porcelain draft ready --id D
 lpui --actor NAME --porcelain draft promote --id D
 ```
 
+- Right after creating a draft, and after every `draft revise`, run
+  `lpui --porcelain draft wait --id D` in the background. Saving an annotation
+  moves the draft to revising and ends the wait at once with the open
+  annotations (exit 0): answer each with `respond` or `resolve`, revise, run
+  `ready` once none are open, and re-arm. Exit 3 means promoted, so stop; exit 4
+  is `--timeout`, so re-arm. Open annotations end the wait immediately, so
+  nothing saved between two waits is missed.
 - The draft uses the same JSON document as `plan apply`; review and promotion
   see normalized values.
 - Annotations anchor to one block and an optional exact quote. A revision that

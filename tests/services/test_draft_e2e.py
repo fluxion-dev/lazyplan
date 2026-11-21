@@ -29,7 +29,7 @@ class DraftEndToEndTest(unittest.TestCase):
         raw["milestones"][0]["tasks"][0]["criteria"] = ["Implementation lands."]
         return raw
 
-    def test_add_annotate_submit_revise_respond_promote(self) -> None:
+    def test_add_annotate_revise_respond_promote(self) -> None:
         raw = self._document()
         draft = drafts.create(self.store, raw, actor="agent")
         self.assertEqual(draft.title, "Draft review end to end")
@@ -47,7 +47,7 @@ class DraftEndToEndTest(unittest.TestCase):
             author="human",
         )
         self.assertEqual(annotation.quote, "draft")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
 
         revised = self._document()
         revised["plan"]["why"] = "A sharper proof of the draft loop."

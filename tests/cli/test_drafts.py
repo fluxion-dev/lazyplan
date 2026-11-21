@@ -1,4 +1,4 @@
-"""Draft CLI: add, annotate, submit, revise, ready, promote, and delete."""
+"""Draft CLI: add, annotate, wait, revise, ready, promote, and delete."""
 
 from __future__ import annotations
 
@@ -123,7 +123,7 @@ class DraftCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("D1", out)
 
-    def test_annotate_submit_revise_resolve_promote(self) -> None:
+    def test_annotate_revise_resolve_promote(self) -> None:
         draft_id = self._draft_id()
         code, out, err = self._annotate(draft_id, quote="Why", text="Sharpen the why")
         self.assertEqual(code, 0, err)
@@ -131,7 +131,7 @@ class DraftCliTest(unittest.TestCase):
         self.assertEqual(annotation["quote"], "Why")
         self.assertEqual(annotation["status"], "open")
 
-        code, out, err = self._run("--json", "draft", "submit", "--id", str(draft_id))
+        code, out, err = self._run("--json", "draft", "show", "--id", str(draft_id))
         self.assertEqual(code, 0, err)
         self.assertEqual(json.loads(out)["draft"]["status"], "revising")
 
@@ -202,7 +202,6 @@ class DraftCliTest(unittest.TestCase):
     def test_ready_refuses_open_annotations(self) -> None:
         draft_id = self._draft_id()
         self._annotate(draft_id)
-        self._run("--json", "draft", "submit", "--id", str(draft_id))
         code, _out, err = self._run("--json", "draft", "ready", "--id", str(draft_id))
         self.assertEqual(code, 2)
         self.assertIn("still has 1 open", err)

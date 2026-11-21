@@ -256,17 +256,14 @@ if _TEXTUAL_OK:
                 if not data:
                     return
                 try:
-                    services.create_plan(
-                        self.store,
-                        data["title"],
-                        data["what"],
-                        goal=data["why"],
-                        actor="tui",
+                    draft = services.drafts.create_from_fields(
+                        self.store, data["title"], data["why"], data["what"], actor="tui"
                     )
                 except ValueError as exc:
                     self.notify(f"error: {exc}")
                     return
-                self._saved("plan created")
+                self._saved(f"drafted D{draft.id} for review")
+                self.open_draft(draft.id)
 
             self.push_screen(
                 NewPlanScreen(defaults=load_template("plan", self.store.path).defaults), cb

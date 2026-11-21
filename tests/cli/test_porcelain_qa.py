@@ -183,7 +183,19 @@ class TestPorcelainAgentLoop(unittest.TestCase):
 
     def test_full_loop_from_porcelain_stdout(self):
         self.assertEqual(
-            self._run("plan", "add", "--title", "Agent loop", "--why", "Ship", "--what", "Rows")[0],
+            self._run(
+                "plan",
+                "add",
+                "--direct",
+                "--reason",
+                "fixture",
+                "--title",
+                "Agent loop",
+                "--why",
+                "Ship",
+                "--what",
+                "Rows",
+            )[0],
             ["plan", "1", "todo", "Agent loop", "-", "0/0"],
         )
         self.assertEqual(
@@ -244,7 +256,19 @@ class TestPorcelainAgentLoop(unittest.TestCase):
         self.assertIn("task 999 not found", err)
 
     def test_open_criteria_warning_stays_on_stderr(self):
-        self._run("plan", "add", "--title", "Agent loop", "--why", "Ship", "--what", "Rows")
+        self._run(
+            "plan",
+            "add",
+            "--direct",
+            "--reason",
+            "fixture",
+            "--title",
+            "Agent loop",
+            "--why",
+            "Ship",
+            "--what",
+            "Rows",
+        )
         self._run("milestone", "add", "--plan", "1", "--title", "Slice", "--desc", "Value")
         self._run("task", "add", "--milestone", "1", "--title", "Build row", "--desc", "Approach")
         self._run("criterion", "add", "--kind", "task", "--id", "1", "--text", "Works")

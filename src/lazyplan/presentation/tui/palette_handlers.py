@@ -43,7 +43,6 @@ def palette_handlers(app: Any) -> dict[str, Callable[[], None]]:
         "open_pr": app.action_open_pr,
         "source_trail": app.action_source_trail,
         "open_draft": app.action_open_draft,
-        "submit_draft": lambda: app.screen.action_submit_feedback(),
         "promote_draft": lambda: app.screen.action_promote(),
         "open_criteria_hub": app.action_open_criteria_hub,
         "open_evidence_hub": app.action_open_evidence_hub,

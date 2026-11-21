@@ -35,8 +35,12 @@ from ...infrastructure import settings
 from ...store import Store
 from ..cli.parser import package_version
 from ..shared.design import (
+    EMPTY_PLAN_DRAFTS_HINT,
+    EMPTY_PLAN_DRAFTS_TITLE,
     EMPTY_PLAN_QUEUE_HINT,
     EMPTY_PLAN_QUEUE_TITLE,
+    EMPTY_PLAN_REVIEW_HINT,
+    EMPTY_PLAN_REVIEW_TITLE,
     PANEL_PLAN_DRAFTS_TITLE,
     PANEL_PLAN_QUEUE_TITLE,
     PANEL_PLAN_REVIEW_TITLE,
@@ -230,6 +234,11 @@ if _TEXTUAL_OK:
                     with Vertical(id="left"):
                         with Vertical(id="plans-drafts", classes="plan-panel"):
                             yield FoldTree("drafts", id="tree-drafts", classes="plan-tree")
+                            yield Static(
+                                empty_state(EMPTY_PLAN_DRAFTS_TITLE, EMPTY_PLAN_DRAFTS_HINT),
+                                id="tree-drafts-empty",
+                                classes="pane-empty",
+                            )
                         with Vertical(id="plans-active", classes="plan-panel"):
                             yield FoldTree("active", id="tree", classes="plan-tree")
                             yield Static(
@@ -239,6 +248,11 @@ if _TEXTUAL_OK:
                             )
                         with Vertical(id="plans-finished", classes="plan-panel"):
                             yield FoldTree("finished", id="tree-finished", classes="plan-tree")
+                            yield Static(
+                                empty_state(EMPTY_PLAN_REVIEW_TITLE, EMPTY_PLAN_REVIEW_HINT),
+                                id="tree-finished-empty",
+                                classes="pane-empty",
+                            )
                     with Vertical(id="side"):
                         yield PreviewPanel()
                         yield AgentsPanel()
@@ -291,7 +305,6 @@ if _TEXTUAL_OK:
             self.query_one("#plans-active").border_title = f" {PANEL_PLAN_QUEUE_TITLE} "
             self.query_one("#plans-drafts").border_title = f" {PANEL_PLAN_DRAFTS_TITLE} "
             self.query_one("#plans-finished").border_title = f" {PANEL_PLAN_REVIEW_TITLE} "
-            self.query_one("#plans-drafts").display = False
             if self._startup_notice:
                 self.notify_toast(self._startup_notice, timeout=10, source="startup")
             if self._startup_notes:

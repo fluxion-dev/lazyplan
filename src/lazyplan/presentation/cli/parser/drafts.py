@@ -48,6 +48,19 @@ def add_draft_group(
         default="all",
         help="show only this annotation state (default: all)",
     )
+    wait = actions.add_parser(
+        "wait",
+        help="block until a draft has open feedback (exit 0), is promoted (3), or times out (4)",
+        parents=[common],
+    )
+    wait.add_argument("--id", type=int, required=True, metavar="ID", help="draft id")
+    wait.add_argument(
+        "--timeout",
+        type=float,
+        default=None,
+        metavar="SECONDS",
+        help="give up after this many seconds (default: wait forever)",
+    )
     add = actions.add_parser(
         "add", help="store a validated plan document as a draft", parents=[common]
     )
@@ -66,7 +79,6 @@ def add_draft_group(
     )
     revise.add_argument("--note", default="", metavar="TEXT", help="what this revision changed")
     for verb, blurb in (
-        ("submit", "submit open annotations for revision"),
         ("ready", "return a clean revision to review"),
         ("promote", "create the plan from a clean draft"),
         ("delete", "delete a draft"),

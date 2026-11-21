@@ -94,6 +94,7 @@ class DraftsServiceTest(unittest.TestCase):
         self.assertEqual(detail.draft, draft)
         self.assertEqual(detail.blocks[0].key, "plan:title")
         self.assertIn("plan:why", {block.key for block in detail.blocks})
+        self.assertIsNone(detail.sketch)
         self.assertEqual((detail.open_annotations, detail.total_annotations), (0, 0))
         with self.assertRaises(KeyError):
             drafts.detail(self.store, 999_999)
@@ -119,6 +120,19 @@ class DraftsServiceTest(unittest.TestCase):
         )
         self.assertEqual((annotation.start_offset, annotation.end_offset), (8, 14))
         self.assertEqual(self.store.get_draft(draft.id).status, "revising")
+
+    def test_sketch_criterion_annotation(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:criterion:0",
+            "question",
+            "How is this proven?",
+            quote="Works",
+        )
+        self.assertEqual((annotation.start_offset, annotation.end_offset), (0, 5))
+        self.assertEqual(drafts.annotation_counts(self.store, draft.id), (1, 1))
 
     def test_sketch_does_not_reserve_a_plan_key(self) -> None:
         self.store.add_draft("Sketch title", SKETCH, format="sketch")

@@ -117,6 +117,14 @@ class DraftContentTest(unittest.TestCase):
         self.assertEqual(blocks[3].text, "Works.")
         self.assertEqual(len(blocks), len({block.key for block in blocks}))
 
+    def test_sketch_without_criteria_has_no_criterion_blocks(self) -> None:
+        sketch = SketchDocument("Sketch title", "Because review.", "## Scope\n\n- One.")
+        blocks = build_sketch_blocks(sketch)
+        self.assertEqual(
+            [block.key for block in blocks],
+            ["sketch:title", "sketch:why", "sketch:what"],
+        )
+
     def test_blocks_by_key_refuses_duplicates(self) -> None:
         block = DraftBlock("plan:why", "Why", "Text")
         with self.assertRaises(DraftContentError):

@@ -491,6 +491,8 @@ def promote(port: DraftsPort, draft_id: int, actor: str = "human") -> DraftPromo
         if plan is None:
             raise ValueError(f"draft #{draft_id} points at missing plan #{draft.plan_id}")
         return DraftPromotion(draft, plan, False, _plan_counts(port, plan.id))
+    if draft.format != DRAFT_FORMAT_DOCUMENT:
+        raise ValueError(f"draft #{draft_id} is a sketch; formalize it before promoting")
     open_annotations = port.list_draft_annotations(draft.id, status="open")
     if open_annotations:
         raise ValueError(f"draft #{draft_id} has {len(open_annotations)} open annotation(s)")

@@ -577,6 +577,17 @@ class DraftsServiceTest(unittest.TestCase):
         self.assertFalse(retry.created)
         self.assertEqual(retry.plan.id, promotion.plan.id)
 
+    def test_promote_refuses_a_sketch(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        with self.assertRaisesRegex(ValueError, "formalize it before promoting"):
+            drafts.promote(self.store, draft.id)
+        self.assertEqual(self.store.list_plans(), [])
+        draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+        promotion = drafts.promote(self.store, draft.id)
+        self.assertTrue(promotion.created)
+        self.assertEqual(promotion.plan.name, "Sketch title")
+        self.assertEqual(promotion.draft.format, "document")
+
     def test_promote_refuses_a_taken_plan_key(self) -> None:
         draft = drafts.create(self.store, document())
         existing = self.store.add_plan("Existing")

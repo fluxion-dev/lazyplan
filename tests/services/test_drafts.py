@@ -55,6 +55,12 @@ def minimal_document(why: str = "Why this matters.") -> dict:
     }
 
 
+SKETCH = (
+    "# Sketch title\n\n## Why\n\nBecause review should stay at the definition."
+    "\n\n## What\n\n## Scope\n\n- One thing.\n\n## Done\n\n- Works."
+)
+
+
 class DraftsServiceTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -91,6 +97,40 @@ class DraftsServiceTest(unittest.TestCase):
         self.assertEqual((detail.open_annotations, detail.total_annotations), (0, 0))
         with self.assertRaises(KeyError):
             drafts.detail(self.store, 999_999)
+
+    def test_sketch_detail_blocks_and_annotation(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        detail = drafts.detail(self.store, draft.id)
+        self.assertIsNone(detail.document)
+        assert detail.sketch is not None
+        self.assertEqual(detail.sketch.title, "Sketch title")
+        self.assertEqual(
+            [block.key for block in detail.blocks],
+            ["sketch:title", "sketch:why", "sketch:what", "sketch:criterion:0"],
+        )
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:why",
+            "change",
+            "Sharpen this",
+            quote="review",
+            author="human",
+        )
+        self.assertEqual((annotation.start_offset, annotation.end_offset), (8, 14))
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
+
+    def test_sketch_does_not_reserve_a_plan_key(self) -> None:
+        self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        draft = drafts.create(self.store, document())
+        self.assertEqual(json.loads(draft.document)["plan"]["key"], "demo-plan")
+
+    def test_unreadable_sketch_is_named(self) -> None:
+        draft = self.store.add_draft("Broken", "# No sections", format="sketch")
+        with self.assertRaisesRegex(ValueError, "unreadable sketch"):
+            drafts.detail(self.store, draft.id)
+        with self.assertRaisesRegex(ValueError, "unreadable sketch"):
+            drafts.annotate(self.store, draft.id, "sketch:why", "comment", "No")
 
     def test_annotate_stores_a_quote_and_offsets(self) -> None:
         draft = drafts.create(self.store, document())

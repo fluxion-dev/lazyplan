@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..core.entities import DraftAnnotation, Plan, PlanDraft
-from ..core.kinds import ANCHOR_ORPHANED
+from ..core.kinds import ANCHOR_ORPHANED, DRAFT_FORMAT_DOCUMENT, DRAFT_FORMAT_SKETCH
 from ..core.policies.lanes import DEFAULT_DISPATCH_MODE, DEFAULT_MAX_AGENTS
 from ..core.policies.worktrees import slugify
 from ..core.ports.drafts import DraftsPort
@@ -21,10 +21,12 @@ from .draft_content import (
     DraftBlock,
     blocks_by_key,
     build_blocks,
+    build_sketch_blocks,
     reanchor_quote,
     resolve_quote,
 )
 from .plan_document import PlanDocument, load_normalized, to_json, validate_document
+from .sketch_document import SketchDocument, parse_sketch
 
 
 @dataclass(frozen=True)
@@ -32,11 +34,12 @@ class DraftDetail:
     """One draft with its document, blocks, and annotations."""
 
     draft: PlanDraft
-    document: PlanDocument
+    document: PlanDocument | None
     blocks: tuple[DraftBlock, ...]
     annotations: tuple[DraftAnnotation, ...]
     open_annotations: int
     total_annotations: int
+    sketch: SketchDocument | None = None
 
 
 @dataclass(frozen=True)
@@ -74,6 +77,21 @@ def _document(draft: PlanDraft) -> PlanDocument:
     return load_normalized(raw)
 
 
+def _sketch(draft: PlanDraft) -> SketchDocument:
+    """Parse a stored sketch, naming the draft when it is unreadable."""
+    try:
+        return parse_sketch(draft.document)
+    except ValueError as exc:
+        raise ValueError(f"draft #{draft.id} has an unreadable sketch: {exc}") from exc
+
+
+def _blocks(draft: PlanDraft) -> tuple[DraftBlock, ...]:
+    """The review blocks for a draft, in its stored format."""
+    if draft.format == DRAFT_FORMAT_SKETCH:
+        return build_sketch_blocks(_sketch(draft))
+    return build_blocks(_document(draft))
+
+
 def _ensure_plan_key_free(port: DraftsPort, key: str) -> None:
     """Refuse a plan key that already belongs to a plan."""
     existing = port.get_entity_key("plan", key)
@@ -103,10 +121,13 @@ def create(port: DraftsPort, raw: Any, actor: str = "human") -> PlanDraft:
 
 
 def _open_draft_keys(port: DraftsPort) -> dict[str, int]:
-    """Plan key -> draft id for every unpromoted draft."""
-    return {
-        _document(draft).key: draft.id for draft in port.list_drafts() if draft.status != "promoted"
-    }
+    """Plan key -> draft id for every unpromoted document draft."""
+    keys: dict[str, int] = {}
+    for draft in port.list_drafts():
+        if draft.status == "promoted" or draft.format != DRAFT_FORMAT_DOCUMENT:
+            continue
+        keys[_document(draft).key] = draft.id
+    return keys
 
 
 def _ensure_no_open_draft(port: DraftsPort, key: str) -> None:
@@ -159,16 +180,18 @@ def list_drafts(port: DraftsPort, status: str = "all") -> list[PlanDraft]:
 def detail(port: DraftsPort, draft_id: int) -> DraftDetail:
     """One draft with its blocks and annotations."""
     draft = _require_draft(port, draft_id)
-    document = _document(draft)
+    sketch = _sketch(draft) if draft.format == DRAFT_FORMAT_SKETCH else None
+    document = None if sketch is not None else _document(draft)
     rows = tuple(port.list_draft_annotations(draft.id))
     open_count = sum(1 for annotation in rows if annotation.status == "open")
     return DraftDetail(
         draft=draft,
         document=document,
-        blocks=build_blocks(document),
+        blocks=_blocks(draft),
         annotations=rows,
         open_annotations=open_count,
         total_annotations=len(rows),
+        sketch=sketch,
     )
 
 
@@ -189,13 +212,15 @@ def annotation_counts_map(port: DraftsPort) -> dict[int, tuple[int, int]]:
     return port.draft_annotation_counts_map()
 
 
-def _reanchor(port: DraftsPort, draft: PlanDraft, document: PlanDocument, actor: str) -> None:
-    """Track every live annotation into a revised document."""
-    blocks = blocks_by_key(build_blocks(document))
+def _reanchor(
+    port: DraftsPort, draft: PlanDraft, blocks: tuple[DraftBlock, ...], actor: str
+) -> None:
+    """Track every live annotation into revised blocks."""
+    indexed = blocks_by_key(blocks)
     for annotation in port.list_draft_annotations(draft.id):
         if annotation.status == "dismissed":
             continue
-        block = blocks.get(annotation.block_key)
+        block = indexed.get(annotation.block_key)
         if block is None:
             update = AnchorUpdate(ANCHOR_ORPHANED, annotation.start_offset, annotation.end_offset)
         else:
@@ -240,6 +265,7 @@ def revise(
     document = validate_document(port, raw)
     _ensure_plan_key_free(port, document.key)
     text = to_json(document)
+    blocks = build_blocks(document)
     with port.transaction():
         updated, _snapshot = port.add_draft_revision(
             draft.id,
@@ -249,7 +275,7 @@ def revise(
             title=document.title,
             expected_revision=base_revision,
         )
-        _reanchor(port, updated, document, actor)
+        _reanchor(port, updated, blocks, actor)
         if updated.status != "review":
             updated = port.set_draft_status(draft.id, "review", actor=actor) or updated
     return updated
@@ -343,7 +369,7 @@ def annotate(
     draft = _require_draft(port, draft_id)
     if draft.status == "promoted":
         raise ValueError(f"draft #{draft_id} is promoted; annotations are read-only")
-    blocks = blocks_by_key(build_blocks(_document(draft)))
+    blocks = blocks_by_key(_blocks(draft))
     block = blocks.get(block_key)
     if block is None:
         raise ValueError(f"block {block_key!r} not found in draft #{draft_id}")

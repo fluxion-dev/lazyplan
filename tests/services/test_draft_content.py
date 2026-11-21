@@ -17,11 +17,13 @@ from lazyplan.services.draft_content import (
     DraftContentError,
     blocks_by_key,
     build_blocks,
+    build_sketch_blocks,
     reanchor_quote,
     resolve_anchor,
     resolve_quote,
 )
 from lazyplan.services.plan_document import validate_document
+from lazyplan.services.sketch_document import SketchDocument
 from lazyplan.store import Store
 
 
@@ -100,6 +102,20 @@ class DraftContentTest(unittest.TestCase):
         self.assertEqual(blocks["task:impl:role"].text, "role: implementer")
         self.assertEqual(blocks["plan:criterion:0"].kind, "criterion")
         self.assertIn("criterion 1", blocks["plan:criterion:0"].label)
+
+    def test_sketch_blocks_are_ordered_keyed_and_unique(self) -> None:
+        sketch = SketchDocument(
+            "Sketch title", "Because review.", "## Scope\n\n- One.", ("Works.",)
+        )
+        blocks = build_sketch_blocks(sketch)
+        self.assertEqual(
+            [block.key for block in blocks],
+            ["sketch:title", "sketch:why", "sketch:what", "sketch:criterion:0"],
+        )
+        self.assertEqual(blocks[0].kind, "title")
+        self.assertEqual(blocks[3].kind, "criterion")
+        self.assertEqual(blocks[3].text, "Works.")
+        self.assertEqual(len(blocks), len({block.key for block in blocks}))
 
     def test_blocks_by_key_refuses_duplicates(self) -> None:
         block = DraftBlock("plan:why", "Why", "Text")

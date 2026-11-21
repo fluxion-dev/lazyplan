@@ -6,6 +6,7 @@ from collections.abc import Callable
 from typing import Any
 
 from lazyplan import services
+from lazyplan.services import draft_sketch
 
 from ...core.entities import DraftAnnotation, PlanDraft
 from ...core.ports.app import AppPort
@@ -82,11 +83,36 @@ class DraftToolsMixin(McpBase):
             ),
             (
                 _tool(
-                    "draft_revise",
-                    "Replace a draft document with a revision of the base.",
+                    "draft_sketch",
+                    "Store a definition-only Markdown sketch as a draft.",
+                    {"markdown": _str()},
+                    ["markdown"],
+                    False,
+                ),
+                self._tool_draft_sketch,
+            ),
+            (
+                _tool(
+                    "draft_formalize",
+                    "Replace an approved sketch with its derived plan document.",
                     {
                         "id": _id(),
                         "document": {"type": "object"},
+                        "base_revision": {"type": "integer"},
+                        "note": _str(),
+                    },
+                    ["id", "document", "base_revision"],
+                    False,
+                ),
+                self._tool_draft_formalize,
+            ),
+            (
+                _tool(
+                    "draft_revise",
+                    "Replace a draft with a revision in its stored format.",
+                    {
+                        "id": _id(),
+                        "document": {"type": ["object", "string"]},
                         "base_revision": {"type": "integer"},
                         "note": _str(),
                     },
@@ -194,6 +220,23 @@ class DraftToolsMixin(McpBase):
     def _tool_draft_add(self, args: dict) -> object:
         store = self._need_store()
         draft = services.drafts.create(store, args.get("document"), actor=self.actor)
+        return self._draft_result(store, draft)
+
+    def _tool_draft_sketch(self, args: dict) -> object:
+        store = self._need_store()
+        draft = draft_sketch.create_sketch(store, str(args["markdown"]), actor=self.actor)
+        return self._draft_result(store, draft)
+
+    def _tool_draft_formalize(self, args: dict) -> object:
+        store = self._need_store()
+        draft = draft_sketch.formalize(
+            store,
+            int(args["id"]),
+            args.get("document"),
+            int(args["base_revision"]),
+            actor=self.actor,
+            note=str(args.get("note") or ""),
+        )
         return self._draft_result(store, draft)
 
     def _tool_draft_revise(self, args: dict) -> object:

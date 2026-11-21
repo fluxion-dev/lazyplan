@@ -43,6 +43,17 @@ def document(
     }
 
 
+SKETCH = (
+    "# Sketch title\n\n## Why\n\nWhy review matters."
+    "\n\n## What\n\n## Scope\n\n- One thing.\n\n## Done\n\n- Works."
+)
+
+
+def sketch_document() -> dict:
+    """The structured document matching SKETCH's reviewed definition."""
+    return document(key="sketch-plan", title="Sketch title", why="Why review matters.")
+
+
 class DraftMcpTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -74,6 +85,11 @@ class DraftMcpTest(unittest.TestCase):
         assert isinstance(result, dict)
         return int(result["draft"]["id"])
 
+    def _sketch(self) -> int:
+        result = self._payload("draft_sketch", {"markdown": SKETCH})
+        assert isinstance(result, dict)
+        return int(result["draft"]["id"])
+
     def test_tools_and_resources_are_discoverable(self) -> None:
         names = {
             tool["name"]
@@ -87,6 +103,8 @@ class DraftMcpTest(unittest.TestCase):
                 "draft_show",
                 "draft_annotations",
                 "draft_add",
+                "draft_sketch",
+                "draft_formalize",
                 "draft_revise",
                 "draft_ready",
                 "draft_annotate",
@@ -118,6 +136,8 @@ class DraftMcpTest(unittest.TestCase):
         self.assertIn("draft_list", names)
         self.assertIn("draft_show", names)
         self.assertNotIn("draft_add", names)
+        self.assertNotIn("draft_sketch", names)
+        self.assertNotIn("draft_formalize", names)
         self.assertNotIn("draft_promote", names)
         result = read_only.handle(
             {
@@ -196,6 +216,78 @@ class DraftMcpTest(unittest.TestCase):
         annotations = self._payload("draft_annotations", {"id": draft_id, "status": "addressed"})
         assert isinstance(annotations, list)
         self.assertEqual(annotations[0]["id"], annotation_id)
+
+    def test_sketch_revise_formalize_promote(self) -> None:
+        draft_id = self._sketch()
+        shown = self._payload("draft_show", {"id": draft_id})
+        assert isinstance(shown, dict)
+        self.assertEqual(shown["draft"]["format"], "sketch")
+        self.assertIn("# Sketch title", shown["sketch"])
+        self.assertNotIn("document", shown)
+        self.assertEqual(shown["blocks"][0]["key"], "sketch:title")
+
+        annotation = self._payload(
+            "draft_annotate",
+            {
+                "id": draft_id,
+                "block": "sketch:why",
+                "kind": "change",
+                "text": "Sharpen",
+                "quote": "review",
+            },
+        )
+        assert isinstance(annotation, dict)
+        revised = self._payload(
+            "draft_revise",
+            {
+                "id": draft_id,
+                "document": SKETCH.replace("Why review matters.", "A sharper why."),
+                "base_revision": 1,
+            },
+        )
+        assert isinstance(revised, dict)
+        self.assertEqual(revised["draft"]["format"], "sketch")
+        self.assertEqual(revised["draft"]["revision"], 2)
+        self._payload(
+            "draft_resolve",
+            {"id": annotation["annotation"]["id"], "response": "Sharpened"},
+        )
+
+        formal = sketch_document()
+        formal["plan"]["why"] = "A sharper why."
+        formalized = self._payload(
+            "draft_formalize",
+            {"id": draft_id, "document": formal, "base_revision": 2},
+        )
+        assert isinstance(formalized, dict)
+        self.assertEqual(formalized["draft"]["format"], "document")
+        self.assertEqual(formalized["draft"]["revision"], 3)
+        promoted = self._payload("draft_promote", {"id": draft_id})
+        assert isinstance(promoted, dict)
+        self.assertTrue(promoted["created"])
+        self.assertEqual(promoted["plan"]["name"], "Sketch title")
+
+    def test_sketch_gates(self) -> None:
+        draft_id = self._sketch()
+        refused = self._tool("draft_promote", {"id": draft_id})
+        self.assertTrue(refused.get("isError"))
+        self.assertIn("formalize it before promoting", refused["content"][0]["text"])
+
+        drifted = sketch_document()
+        drifted["plan"]["title"] = "Other title"
+        refused = self._tool(
+            "draft_formalize",
+            {"id": draft_id, "document": drifted, "base_revision": 1},
+        )
+        self.assertTrue(refused.get("isError"))
+        self.assertIn("reviewed title", refused["content"][0]["text"])
+
+        refused = self._tool(
+            "draft_formalize",
+            {"id": draft_id, "document": sketch_document(), "base_revision": 0},
+        )
+        self.assertTrue(refused.get("isError"))
+        self.assertIn("revision 1, not 0", refused["content"][0]["text"])
 
     def test_resources_expose_drafts(self) -> None:
         draft_id = self._add()

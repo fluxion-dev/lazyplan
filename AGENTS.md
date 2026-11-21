@@ -22,5 +22,6 @@ the retained files.
 ## Plan drafts
 
 When the work needs review before it becomes the plan of record, use the draft
-loop in the packaged agent skill: `lpui draft add`, annotate, submit, revise
-with `--base-revision`, and promote only when no annotation is open.
+loop in the packaged agent skill: `lpui draft add`, annotate, and save; the
+agent wakes, revises with `--base-revision`, and promotion waits until no
+annotation is open.

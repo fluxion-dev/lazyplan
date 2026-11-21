@@ -12,7 +12,7 @@ from ..core.ports.drafts import DraftsPort
 from .draft_anchors import reanchor
 from .draft_content import build_sketch_blocks
 from .plan_document import PlanDocument, to_json, validate_document
-from .sketch_document import SketchDocument, parse_sketch, render_sketch
+from .sketch_document import SketchDocument, load_sketch, parse_sketch, render_sketch
 
 
 def _require_sketch(port: DraftsPort, draft_id: int) -> PlanDraft:
@@ -44,12 +44,7 @@ def create_sketch_file(
     actor: str = "human",
 ) -> PlanDraft:
     """Read one Markdown sketch from disk and store it as a draft."""
-    source = Path(path).expanduser()
-    try:
-        text = source.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise ValueError(f"cannot read {source}: {exc}") from exc
-    return create_sketch(port, text, actor=actor)
+    return create_sketch(port, load_sketch(path), actor=actor)
 
 
 def create_from_fields(

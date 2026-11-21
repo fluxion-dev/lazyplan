@@ -204,7 +204,7 @@ class PlanChange:
 
 @dataclass(frozen=True)
 class PlanDraft:
-    """A validated plan document waiting for review before it becomes a plan."""
+    """A draft under review: a definition-only sketch or a plan document."""
 
     id: int
     title: str

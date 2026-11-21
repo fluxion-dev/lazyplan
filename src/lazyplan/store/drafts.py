@@ -12,7 +12,7 @@ from .base import StoreBase
 
 
 class DraftsMixin(StoreBase):
-    """Plan-document drafts kept outside the plan queue."""
+    """Draft documents or sketches kept outside the plan queue."""
 
     @staticmethod
     def _row_to_draft(r: sqlite3.Row) -> PlanDraft:

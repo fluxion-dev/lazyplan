@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 _H1 = re.compile(r"^#\s+(.*)$")
 _H2 = re.compile(r"^##\s+(.*)$")
@@ -98,6 +99,15 @@ def _criteria(lines: list[str]) -> tuple[str, ...]:
             seen.add(criterion)
             deduped.append(criterion)
     return tuple(deduped)
+
+
+def load_sketch(path: str | Path) -> str:
+    """Read one Markdown sketch from disk."""
+    source = Path(path).expanduser()
+    try:
+        return source.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SketchDocumentError(f"cannot read {source}: {exc}") from exc
 
 
 def parse_sketch(text: str) -> SketchDocument:

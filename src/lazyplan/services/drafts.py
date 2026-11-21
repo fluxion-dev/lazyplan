@@ -1,4 +1,4 @@
-"""Draft use cases: create, review, annotate, revise, and promote."""
+"""Draft use cases: create, review, formalize, annotate, revise, and promote."""
 
 from __future__ import annotations
 
@@ -31,12 +31,12 @@ from .plan_document import (
     to_json,
     validate_document,
 )
-from .sketch_document import SketchDocument, parse_sketch
+from .sketch_document import SketchDocument, load_sketch, parse_sketch
 
 
 @dataclass(frozen=True)
 class DraftDetail:
-    """One draft with its document, blocks, and annotations."""
+    """One draft with its content, blocks, and annotations."""
 
     draft: PlanDraft
     document: PlanDocument | None
@@ -166,13 +166,18 @@ def detail(port: DraftsPort, draft_id: int) -> DraftDetail:
     """One draft with its blocks and annotations."""
     draft = _require_draft(port, draft_id)
     sketch = _sketch(draft) if draft.format == DRAFT_FORMAT_SKETCH else None
-    document = None if sketch is not None else _document(draft)
+    if sketch is not None:
+        blocks = build_sketch_blocks(sketch)
+        document = None
+    else:
+        blocks = _blocks(draft)
+        document = _document(draft)
     rows = tuple(port.list_draft_annotations(draft.id))
     open_count = sum(1 for annotation in rows if annotation.status == "open")
     return DraftDetail(
         draft=draft,
         document=document,
-        blocks=_blocks(draft),
+        blocks=blocks,
         annotations=rows,
         open_annotations=open_count,
         total_annotations=len(rows),
@@ -258,12 +263,7 @@ def revise_file(
     """Revise one draft from Markdown or JSON, matching its stored format."""
     draft = _require_draft(port, draft_id)
     if draft.format == DRAFT_FORMAT_SKETCH:
-        source = Path(path).expanduser()
-        try:
-            text = source.read_text(encoding="utf-8")
-        except OSError as exc:
-            raise ValueError(f"cannot read {source}: {exc}") from exc
-        return revise(port, draft_id, text, base_revision, actor=actor, note=note)
+        return revise(port, draft_id, load_sketch(path), base_revision, actor=actor, note=note)
     return revise(port, draft_id, load_document(path), base_revision, actor=actor, note=note)
 
 

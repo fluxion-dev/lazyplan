@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 import tempfile
 import time
@@ -23,6 +24,18 @@ except ImportError:  # pragma: no cover - textual not installed
     create_app = None  # type: ignore[assignment]
 
 COALESCE_PAUSE = 0.35
+FLUSH_TIMEOUT = 2.0
+
+
+async def wait_for_flush(app: object, pilot: object, timeout: float = FLUSH_TIMEOUT) -> None:
+    """Wait for the coalesced flush to land instead of a fixed pause."""
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    controller = app.tree_controller  # type: ignore[attr-defined]
+    while controller._flush_timer is not None:  # type: ignore[attr-defined]
+        if loop.time() >= deadline:
+            raise AssertionError("the coalesced flush did not land")
+        await pilot.pause(0.01)  # type: ignore[attr-defined]
 
 
 class PollHarness:
@@ -198,7 +211,7 @@ class TestPollScheduling(RefreshCase):
                 self.store.update_task(self.task.id, title=f"Task {index}", actor="ana")
                 harness.poll()
             self.assertEqual(harness.rebuilds, before)
-            await pilot.pause(COALESCE_PAUSE)
+            await wait_for_flush(app, pilot)
             self.assertEqual(harness.rebuilds - before, 1)
 
     async def test_an_open_modal_defers_the_refresh_until_it_closes(self) -> None:
@@ -212,7 +225,7 @@ class TestPollScheduling(RefreshCase):
             before = harness.rebuilds
             self.store.update_task(self.task.id, title="While modal", actor="ana")
             harness.poll()
-            await pilot.pause(COALESCE_PAUSE)
+            await wait_for_flush(app, pilot)
             self.assertEqual(harness.rebuilds, before)
             self.assertTrue(app._dirty_external)
             app.pop_screen()

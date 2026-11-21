@@ -83,7 +83,7 @@ def _write(args: argparse.Namespace, line: str, payload: object, text: str) -> i
     return 0
 
 
-def _emit_draft(store: AppPort, args: argparse.Namespace, draft: PlanDraft, text: str) -> int:
+def emit_draft(store: AppPort, args: argparse.Namespace, draft: PlanDraft, text: str) -> int:
     """Emit one changed draft in the requested mode."""
     open_count, total_count = draft_services.annotation_counts(store, draft.id)
     payload = {"draft": _draft_payload(draft, open_count, total_count)}
@@ -178,7 +178,7 @@ def _cmd_draft_add(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     except (OSError, ValueError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
-    return _emit_draft(store, args, draft, f"created D{draft.id} {draft.title!r}")
+    return emit_draft(store, args, draft, f"created D{draft.id} {draft.title!r}")
 
 
 def _cmd_draft_revise(store: AppPort, args: argparse.Namespace, actor: str) -> int:
@@ -198,7 +198,7 @@ def _cmd_draft_revise(store: AppPort, args: argparse.Namespace, actor: str) -> i
     except (OSError, ValueError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
-    return _emit_draft(
+    return emit_draft(
         store,
         args,
         draft,
@@ -206,16 +206,30 @@ def _cmd_draft_revise(store: AppPort, args: argparse.Namespace, actor: str) -> i
     )
 
 
-def _cmd_draft_submit(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+WAIT_PROMOTED = 3
+WAIT_TIMED_OUT = 4
+
+
+def _cmd_draft_wait(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+    del actor
     try:
-        draft = draft_services.submit(store, args.id, actor=actor)
+        wake = draft_services.wait_for_feedback(store, args.id, timeout=args.timeout)
     except KeyError as exc:
         print(msg_error(exc), file=sys.stderr)
         return 1
-    except ValueError as exc:
-        print(msg_error(exc), file=sys.stderr)
-        return 2
-    return _emit_draft(store, args, draft, f"submitted D{draft.id} for revision")
+    if wake is None:
+        print(f"no open feedback on D{args.id} within {args.timeout:g}s", file=sys.stderr)
+        return WAIT_TIMED_OUT
+    if not wake.annotations:
+        emit_draft(store, args, wake.draft, f"D{wake.draft.id} is promoted; stop waiting")
+        return WAIT_PROMOTED
+    rows = wake.annotations
+    return _emit_read(
+        args,
+        [to_payload(vars(row)) for row in rows],
+        [_annotation_row(row) for row in rows],
+        "\n".join(_annotation_text(row) for row in rows),
+    )
 
 
 def _cmd_draft_ready(store: AppPort, args: argparse.Namespace, actor: str) -> int:
@@ -227,7 +241,7 @@ def _cmd_draft_ready(store: AppPort, args: argparse.Namespace, actor: str) -> in
     except ValueError as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
-    return _emit_draft(store, args, draft, f"D{draft.id} is ready for review")
+    return emit_draft(store, args, draft, f"D{draft.id} is ready for review")
 
 
 def _cmd_draft_annotate(store: AppPort, args: argparse.Namespace, actor: str) -> int:

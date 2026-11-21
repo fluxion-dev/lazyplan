@@ -3,6 +3,27 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **Every new plan starts as a draft.** `lpui plan add`, `lpui plan apply`, and
+  the screen's `n` form now create a draft for review instead of a queued plan;
+  promoting the draft is what puts it in the plan queue. `--direct --reason
+  TEXT` on `plan add` and `plan apply` skips review and notes the reason on the
+  plan. A plan key already held by an open draft is refused.
+- **Saved feedback wakes the agent.** Saving an annotation moves its draft to
+  revising straight away, and the new `lpui draft wait --id D` blocks until the
+  draft has open feedback (exit 0), is promoted (3), or times out (4). Agents
+  run it in the background and re-arm after each revision.
+- **Three equal plan panes.** Plan drafts, plan queue, and plan review always
+  show at the same height, each with its own empty state.
+
+### Removed
+
+- **`lpui draft submit`**, the `draft_submit` MCP tool, and the draft screen's
+  `s` binding. Saving an annotation does what submit did.
+
 ## v0.50.0 — 2026-11-19
 
 ### Added

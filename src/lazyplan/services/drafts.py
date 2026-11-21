@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
 from ..core.entities import DraftAnnotation, Plan, PlanDraft
 from ..core.kinds import ANCHOR_ORPHANED
+from ..core.policies.lanes import DEFAULT_DISPATCH_MODE, DEFAULT_MAX_AGENTS
+from ..core.policies.worktrees import slugify
 from ..core.ports.drafts import DraftsPort
 from . import plan_apply
 from .draft_content import (
@@ -95,7 +98,57 @@ def create(port: DraftsPort, raw: Any, actor: str = "human") -> PlanDraft:
     """Validate a plan document and store it as a new draft."""
     document = validate_document(port, raw)
     _ensure_plan_key_free(port, document.key)
+    _ensure_no_open_draft(port, document.key)
     return port.add_draft(document.title, to_json(document), actor=actor)
+
+
+def _open_draft_keys(port: DraftsPort) -> dict[str, int]:
+    """Plan key -> draft id for every unpromoted draft."""
+    return {
+        _document(draft).key: draft.id for draft in port.list_drafts() if draft.status != "promoted"
+    }
+
+
+def _ensure_no_open_draft(port: DraftsPort, key: str) -> None:
+    """Refuse a plan key that an unpromoted draft already carries."""
+    holder = _open_draft_keys(port).get(key)
+    if holder is not None:
+        raise ValueError(f"plan key {key!r} is already in draft #{holder}")
+
+
+def _free_plan_key(port: DraftsPort, title: str) -> str:
+    """A plan key slugged from the title, suffixed until no plan or open draft owns it."""
+    drafted = _open_draft_keys(port)
+    base = slugify(title)
+    key, suffix = base, 2
+    while key in drafted or port.get_entity_key("plan", key) is not None:
+        key, suffix = f"{base}-{suffix}", suffix + 1
+    return key
+
+
+def create_from_fields(
+    port: DraftsPort,
+    title: str,
+    why: str,
+    what: str,
+    *,
+    dispatch_mode: str = DEFAULT_DISPATCH_MODE,
+    max_agents: int = DEFAULT_MAX_AGENTS,
+    actor: str = "human",
+) -> PlanDraft:
+    """Store a milestone-free plan definition as a new draft."""
+    raw = {
+        "plan": {
+            "key": _free_plan_key(port, title),
+            "title": title,
+            "why": why,
+            "what": what,
+            "dispatch_mode": dispatch_mode,
+            "max_agents": max_agents,
+        },
+        "milestones": [],
+    }
+    return create(port, raw, actor=actor)
 
 
 def list_drafts(port: DraftsPort, status: str = "all") -> list[PlanDraft]:
@@ -202,22 +255,6 @@ def revise(
     return updated
 
 
-def submit(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:
-    """Submit open feedback and move the draft to revising."""
-    draft = _require_draft(port, draft_id)
-    if draft.status == "promoted":
-        raise ValueError(f"draft #{draft_id} is promoted; it cannot be submitted")
-    if draft.status == "revising":
-        return draft
-    open_annotations = port.list_draft_annotations(draft.id, status="open")
-    if not open_annotations:
-        raise ValueError(f"draft #{draft_id} has no open annotations to submit")
-    updated = port.set_draft_status(draft.id, "revising", actor=actor)
-    if updated is None:
-        raise KeyError(f"draft #{draft_id} not found")
-    return updated
-
-
 def ready(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:
     """Return a revised draft to review once no annotations are open."""
     draft = _require_draft(port, draft_id)
@@ -232,6 +269,41 @@ def ready(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:
     if updated is None:
         raise KeyError(f"draft #{draft_id} not found")
     return updated
+
+
+@dataclass(frozen=True)
+class DraftWake:
+    """Why a wait ended: open feedback to act on, or a promoted draft."""
+
+    draft: PlanDraft
+    annotations: tuple[DraftAnnotation, ...]
+
+
+def wait_for_feedback(
+    port: DraftsPort,
+    draft_id: int,
+    *,
+    timeout: float | None = None,
+    interval: float = 0.5,
+    clock: Callable[[], float] = time.monotonic,
+    sleep: Callable[[float], None] = time.sleep,
+) -> DraftWake | None:
+    """Block until the draft has open annotations or is promoted; None on timeout.
+
+    Open annotations already present end the wait at once; only responding,
+    resolving, or dismissing them lets the next wait block.
+    """
+    deadline = None if timeout is None else clock() + timeout
+    while True:
+        draft = _require_draft(port, draft_id)
+        if draft.status == "promoted":
+            return DraftWake(draft, ())
+        rows = port.list_draft_annotations(draft.id, status="open")
+        if rows:
+            return DraftWake(draft, tuple(rows))
+        if deadline is not None and clock() >= deadline:
+            return None
+        sleep(interval)
 
 
 def _quote_offsets(
@@ -267,7 +339,7 @@ def annotate(
     end_offset: int = 0,
     author: str = "human",
 ) -> DraftAnnotation:
-    """Attach one comment, question, or change to a draft block."""
+    """Attach feedback to a draft block and hand the draft to its agent for revision."""
     draft = _require_draft(port, draft_id)
     if draft.status == "promoted":
         raise ValueError(f"draft #{draft_id} is promoted; annotations are read-only")
@@ -276,17 +348,21 @@ def annotate(
     if block is None:
         raise ValueError(f"block {block_key!r} not found in draft #{draft_id}")
     start, end = _quote_offsets(block.text, quote, start_offset, end_offset)
-    return port.add_draft_annotation(
-        draft.id,
-        block.key,
-        kind,
-        body,
-        quote=quote,
-        start_offset=start,
-        end_offset=end,
-        revision=draft.revision,
-        author=author,
-    )
+    with port.transaction():
+        annotation = port.add_draft_annotation(
+            draft.id,
+            block.key,
+            kind,
+            body,
+            quote=quote,
+            start_offset=start,
+            end_offset=end,
+            revision=draft.revision,
+            author=author,
+        )
+        if draft.status == "review":
+            port.set_draft_status(draft.id, "revising", actor=author)
+    return annotation
 
 
 def _annotation_draft(port: DraftsPort, annotation: DraftAnnotation) -> PlanDraft:
@@ -403,11 +479,11 @@ def promote(port: DraftsPort, draft_id: int, actor: str = "human") -> DraftPromo
         if plan is None:
             raise ValueError(f"draft #{draft_id} points at missing plan #{draft.plan_id}")
         return DraftPromotion(draft, plan, False, _plan_counts(port, plan.id))
-    if draft.status != "review":
-        raise ValueError(f"draft #{draft_id} is {draft.status}; revise it before promoting")
     open_annotations = port.list_draft_annotations(draft.id, status="open")
     if open_annotations:
         raise ValueError(f"draft #{draft_id} has {len(open_annotations)} open annotation(s)")
+    if draft.status != "review":
+        raise ValueError(f"draft #{draft_id} is {draft.status}; revise it before promoting")
     document = _document(draft)
     _ensure_plan_key_free(port, document.key)
     with port.transaction():

@@ -45,7 +45,19 @@ class LegacyRemovalTest(unittest.TestCase):
                 self.assertEqual(caught.exception.code, 2)
 
     def test_canonical_noun_form_still_works(self) -> None:
-        code, stderr = self._run(["plan", "add", "--title", "Canonical", "--what", "What"])
+        code, stderr = self._run(
+            [
+                "plan",
+                "add",
+                "--direct",
+                "--reason",
+                "fixture",
+                "--title",
+                "Canonical",
+                "--what",
+                "What",
+            ]
+        )
         self.assertEqual(code, 0)
         self.assertNotIn("deprecated", stderr)
 

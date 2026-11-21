@@ -1,4 +1,4 @@
-"""The left column hides empty panes; the overview keeps its height."""
+"""The left column pins three equal plan panes; the side hides empty panes."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ except ImportError:  # pragma: no cover - textual not installed
 
 EXPECTED_LEFT = ("plans-drafts", "plans-active", "plans-finished")
 EXPECTED_RIGHT = ("preview", "agents", "git")
+EMPTY_STATES = ("tree-drafts-empty", "tree-empty", "tree-finished-empty")
 
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
@@ -26,7 +27,22 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.tmp.cleanup)
         return Store(os.path.join(self.tmp.name, "layout.db"))
 
-    async def test_wide_shell_hides_empty_panes_and_fills_the_overview(self) -> None:
+    def _assert_equal_plan_panes(self, app: object) -> None:
+        heights = [app.query_one(f"#{pane}").size.height for pane in EXPECTED_LEFT]  # type: ignore[attr-defined]
+        for pane in EXPECTED_LEFT:
+            self.assertTrue(app.query_one(f"#{pane}").display, pane)  # type: ignore[attr-defined]
+        self.assertGreater(min(heights), 0)
+        self.assertLessEqual(max(heights) - min(heights), 1, heights)
+
+    async def test_empty_database_shows_three_equal_empty_panes(self) -> None:
+        app = create_app(str(self._store().path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            self._assert_equal_plan_panes(app)
+            for empty in EMPTY_STATES:
+                self.assertTrue(app.query_one(f"#{empty}").display, empty)
+
+    async def test_wide_shell_hides_empty_side_panes_and_fills_the_overview(self) -> None:
         store = self._store()
         plan = store.add_plan("Plan", "What", goal="Why")
         milestone = store.add_milestone(plan.id, "Milestone", "Details")
@@ -40,9 +56,10 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(tuple(child.id for child in side.children), EXPECTED_RIGHT)
             self.assertTrue(side.display)
             self.assertLessEqual(abs(left.size.width - side.size.width), 1)
-            self.assertTrue(app.query_one("#plans-active").display)
-            self.assertFalse(app.query_one("#plans-finished").display)
-            self.assertFalse(app.query_one("#plans-drafts").display)
+            self._assert_equal_plan_panes(app)
+            self.assertFalse(app.query_one("#tree-empty").display)
+            self.assertTrue(app.query_one("#tree-drafts-empty").display)
+            self.assertTrue(app.query_one("#tree-finished-empty").display)
             self.assertFalse(app.query_one("#agents").display)
             self.assertFalse(app.query_one("#git").display)
             preview = app.query_one("#preview")
@@ -67,7 +84,8 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             app.select_row("plan", plan.id)
             await pilot.pause()
-            self.assertTrue(app.query_one("#plans-finished").display)
+            self.assertTrue(app.query_one("#tree-finished").display)
+            self.assertFalse(app.query_one("#tree-finished-empty").display)
             self.assertTrue(app.query_one("#agents").display)
             self.assertTrue(app.query_one("#git").display)
 
@@ -80,7 +98,7 @@ class TestShellLayout(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             left = app.query_one("#left")
             self.assertEqual(tuple(child.id for child in left.children), EXPECTED_LEFT)
-            self.assertFalse(app.query_one("#plans-drafts").display)
+            self._assert_equal_plan_panes(app)
             self.assertFalse(app.query_one("#side").display)
             self.assertFalse(app.query_one("#preview").display)
 

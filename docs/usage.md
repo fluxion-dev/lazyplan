@@ -151,11 +151,13 @@ choices in `~/.lazyplan/setup.json` — and then opens the setup wizard before
 normal use. [Setup and scope](#setup-and-scope) covers the steps, the flags, and
 the headless defaults.
 
-Then create your first plan:
+Then draft your first plan:
 
 ```bash
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 ```
+
+It opens in the plan drafts panel; promote it to put it in the plan queue.
 
 `lpui` with no command opens the screen. `lpui ui` does the same.
 
@@ -375,8 +377,8 @@ Plans start collapsed; `right` or `z` reveals milestones, and tasks appear when
 you open their milestone.
 
 The main screen puts the work in one left column and the overview on the right.
-The left column stacks plan drafts, the plan queue, and plan review. A panel
-with no rows is hidden, so an empty journal shows only the plan queue. The plan
+The left column stacks plan drafts, the plan queue, and plan review at equal
+height, and an empty panel shows a short hint. The plan
 queue holds every plan that is not done; plan review holds completed plans, and
 plan drafts holds every draft that has not been promoted. The right column
 stacks the overview, the agents card, and the git card. The agents card shows
@@ -498,15 +500,15 @@ criteria; and each task title, description, role, and criteria.
 |---|---|
 | `j` / `k` | move block focus |
 | `a` | annotate the selected text, or the focused block |
-| `s` | submit open annotations for revision |
 | `P` | promote a clean draft into the plan queue |
 | `enter` | view the focused annotation |
 | `x` / `d` | dismiss · delete an open annotation |
 | `r` / `escape` | refresh · back |
 
 Mouse selection anchors to the block and the exact quote. Press `a` to record
-a comment, question, or change. Submit moves the draft to `revising`; the agent
-revises the document and answers each annotation. When no open annotations
+a comment, question, or change. Saving it moves the draft to `revising` and
+wakes any agent running `lpui draft wait` on it; the agent revises the document
+and answers each annotation. When no open annotations
 remain, the draft returns to `review`. Promotion refuses open annotations,
 invalid or stale documents, and a plan key that already belongs to a plan; it
 then creates the whole plan tree atomically and selects the new plan.
@@ -647,8 +649,9 @@ Your agent is expected to work from the plan, not invent it:
   metadata only and never writes back.
 - Relate every plan criterion to a proving task and run
   `lpui --porcelain lint --plan P` before check-off.
-- Create the whole tree in one JSON write with `plan apply`; start from
+- Draft the whole tree in one JSON write with `plan apply`; start from
   `plan recipe feature|bugfix|refactor` and edit the words before applying.
+  Run `draft wait` in the background so each saved annotation wakes you.
 - Start with `lpui --porcelain next` to claim work, or
   `lpui --porcelain context --max-chars 4000` for the budgeted picture.
   Renew the lease while you work, note handoffs, and release it when you stop.
@@ -790,13 +793,18 @@ commits, and pull requests. Use `--json` when you need those full records.
 
 ### Plan documents and recipes
 
-Create a whole plan tree in one atomic write:
+Draft a whole plan tree from one document:
 
 ```bash
 lpui plan apply --file plan.json
 lpui plan apply --file plan.json --dry-run
+lpui plan apply --file plan.json --direct --reason "bulk import"
 lpui plan recipe feature > plan.json
 ```
+
+`plan apply` and `plan add` create a draft for review. `--direct --reason TEXT`
+skips review, creates the plan in the queue at once, and notes the reason on
+the plan.
 
 The document is JSON with `plan` and `milestones`; each milestone carries
 `tasks`. Every plan, milestone, and task needs a stable `key`. A retry with the
@@ -836,8 +844,9 @@ folds that choice into the plan.
 
 ### Drafts
 
-A draft is the review step before `plan apply`. It stores the same validated
-document, but stays out of the plan queue until you promote it.
+A draft is the review step every new plan goes through. `plan add`, `plan
+apply`, and `draft add` store a validated document that stays out of the plan
+queue until you promote it.
 
 ```bash
 lpui --actor NAME draft add --file plan.json
@@ -845,13 +854,18 @@ lpui draft list
 lpui draft show --id 4
 lpui --actor NAME draft annotate --id 4 --block plan:why --kind change \
   --text "Sharpen this" --quote "the promise"
-lpui --actor NAME draft submit --id 4
+lpui draft wait --id 4 --timeout 600
 lpui --actor NAME draft annotations --id 4
 lpui --actor NAME draft respond --id 8 --response "Rewrote the promise"
 lpui --actor NAME draft revise --id 4 --file plan.json --base-revision 2 --note "Addressed"
 lpui --actor NAME draft ready --id 4
 lpui --actor NAME draft promote --id 4
 ```
+
+Saving an annotation moves the draft to `revising`. `draft wait` blocks until
+the draft has open annotations and prints them (exit 0), and exits 3 once the
+draft is promoted and 4 after `--timeout`. Open annotations end the wait at
+once, so an agent re-arms it after answering each one.
 
 `draft add` and `draft revise` validate and normalize the document, so review
 and promotion see the same values. A revision must name the current base

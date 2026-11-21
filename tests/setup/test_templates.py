@@ -440,7 +440,7 @@ class TestTemplateCli(unittest.TestCase):
         (self.repo / ".agents/lazyplan" / "templates" / "task.md").write_text(
             "---\nrequired:\n  - title\n  - desc\n---\n", encoding="utf-8"
         )
-        rc, _, _ = self._run(["plan", "add", "--title", "P"])
+        rc, _, _ = self._run(["plan", "add", "--direct", "--reason", "fixture", "--title", "P"])
         self.assertEqual(rc, 0)
         rc, _, _ = self._run(["milestone", "add", "--plan", "1", "--title", "S"])
         self.assertEqual(rc, 0)

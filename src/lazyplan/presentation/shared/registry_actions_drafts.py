@@ -20,15 +20,6 @@ DRAFT_ACTIONS: tuple[Action, ...] = (
         mcp_tool="draft_show",
     ),
     action(
-        "draft.submit",
-        "Submit draft feedback",
-        surfaces=("tui", "cli", "mcp"),
-        route=("draft", "submit"),
-        palette_ids=("submit-draft",),
-        cli_paths=("draft submit",),
-        mcp_tool="draft_submit",
-    ),
-    action(
         "draft.promote",
         "Promote plan draft",
         surfaces=("tui", "cli", "mcp"),

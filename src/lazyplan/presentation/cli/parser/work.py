@@ -116,6 +116,19 @@ def add_noun_groups(
             help="why this scope changed (recorded after an approval)",
         )
 
+    def _direct_flags(parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--direct",
+            action="store_true",
+            help="create the plan in the queue instead of a draft (needs --reason)",
+        )
+        parser.add_argument(
+            "--reason",
+            default="",
+            metavar="TEXT",
+            help="why this plan skips draft review",
+        )
+
     def _plan_lane_flags(parser: argparse.ArgumentParser, *, edit: bool) -> None:
         parser.add_argument(
             "--dispatch",
@@ -178,13 +191,14 @@ def add_noun_groups(
         parser.add_argument("--tree", action="store_true", help="show the full tree")
 
     _group, _actions = _noun_group("plan", "")
-    _a = _actions.add_parser("add", help="add a plan", parents=[common])
+    _a = _actions.add_parser("add", help="draft a plan for review", parents=[common])
     _title_flags(_a)
     _a.add_argument("--what", default="", metavar="TEXT", help="what you will build")
     _a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")
     _a.add_argument("--why", default="", metavar="TEXT", help="why this plan exists")
     _a.add_argument("--goal", default=None, metavar="TEXT", help="same as --why")
     _plan_lane_flags(_a, edit=False)
+    _direct_flags(_a)
     _a = _actions.add_parser("edit", help="change a plan", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _title_flags(_a)
@@ -220,7 +234,7 @@ def add_noun_groups(
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="plan id")
     _reason_flag(_a)
     _a = _actions.add_parser(
-        "apply", help="create a plan tree from a JSON document", parents=[common]
+        "apply", help="draft a plan tree from a JSON document", parents=[common]
     )
     _a.add_argument("--file", required=True, metavar="PATH", help="JSON plan document")
     _a.add_argument(
@@ -228,6 +242,7 @@ def add_noun_groups(
         action="store_true",
         help="validate and print the intended tree without writing",
     )
+    _direct_flags(_a)
     _a = _actions.add_parser("recipe", help="print a structural plan recipe", parents=[common])
     _a.add_argument("name", choices=["feature", "bugfix", "refactor"], help="recipe name")
     _a = _actions.add_parser("approve", help="approve the current plan scope", parents=[common])

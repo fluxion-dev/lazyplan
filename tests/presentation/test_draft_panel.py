@@ -85,7 +85,6 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
     async def test_revising_draft_shows_the_state_and_open_count(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
-        drafts.submit(self.store, draft.id)
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
@@ -100,7 +99,8 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
-            self.assertFalse(app.query_one("#plans-drafts").display)
+            self.assertTrue(app.query_one("#plans-drafts").display)
+            self.assertTrue(app.query_one("#tree-drafts-empty").display)
             self.assertEqual(len(app.query_one("#tree-drafts").root.children), 0)
 
     async def test_plan_actions_are_refused_on_a_draft(self) -> None:
@@ -254,6 +254,8 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(annotations[0].body, "Sharpen this")
             self.assertEqual(annotations[0].quote, "Why")
             self.assertEqual((annotations[0].start_offset, annotations[0].end_offset), (0, 3))
+            self.assertEqual(self.store.get_draft(draft.id).status, "revising")
+            self.assertIn("revising", str(app.screen.query_one("#draft-head").render()))
 
     async def test_annotation_form_requires_text(self) -> None:
         draft = drafts.create(self.store, document())
@@ -338,18 +340,13 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(row.status, "dismissed")
             self.assertEqual(row.response, "not needed")
 
-    async def test_submit_feedback_moves_the_draft_to_revising(self) -> None:
+    async def test_saved_annotation_moves_the_draft_to_revising(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
             app.open_draft(draft.id)
-            await pilot.pause()
-            app.screen.action_submit_feedback()
-            await pilot.pause()
-            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
-            app.screen.query_one("#ok", Button).press()
             await pilot.pause()
             updated = self.store.get_draft(draft.id)
             assert updated is not None
@@ -406,17 +403,16 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(len(app.screen_stack), 2)
             self.assertEqual(type(app.screen).__name__, "DraftScreen")
 
-    async def test_palette_offers_submit_and_promote_on_the_draft_screen(self) -> None:
+    async def test_palette_offers_promote_on_the_draft_screen(self) -> None:
         context = registry.Context(screen="draft", selected_kind="draft")
         availability = registry.palette_context(context)
-        self.assertIsNone(availability["submit-draft"])
+        self.assertNotIn("submit-draft", availability)
         self.assertIsNone(availability["promote-draft"])
         self.assertIsNotNone(availability["open-draft"])
 
     async def test_sidebar_shows_a_moved_anchor_after_revision(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen", quote="Why")
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -466,11 +462,13 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(annotations[0].quote, "")
             self.assertEqual((annotations[0].start_offset, annotations[0].end_offset), (0, 0))
 
-    async def test_empty_journal_keeps_the_drafts_panel_hidden(self) -> None:
+    async def test_empty_journal_shows_the_drafts_empty_state(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
             await pilot.pause()
-            self.assertFalse(app.query_one("#plans-drafts").display)
+            self.assertTrue(app.query_one("#plans-drafts").display)
+            self.assertFalse(app.query_one("#tree-drafts").display)
+            self.assertTrue(app.query_one("#tree-drafts-empty").display)
 
     async def test_e_opens_the_draft_screen(self) -> None:
         draft = drafts.create(self.store, document())
@@ -492,6 +490,21 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             await pilot.press("escape")
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), 1)
+
+    async def test_new_plan_form_creates_a_draft_and_opens_it(self) -> None:
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.action_new_plan()
+            await pilot.pause()
+            app.screen.query_one("#f-title", Input).value = "API v2"
+            app.screen.query_one("#f-why", TextArea).text = "Clients need it."
+            app.screen.query_one("#f-what", TextArea).text = "New endpoints."
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+        self.assertEqual(self.store.list_plans(), [])
+        self.assertEqual([draft.title for draft in self.store.list_drafts()], ["API v2"])
 
     async def test_enter_opens_the_draft_screen(self) -> None:
         draft = drafts.create(self.store, document())

@@ -97,12 +97,13 @@ lpui --actor helper --porcelain next
 lpui --actor helper --porcelain context --max-chars 4000
 lpui plan recipe feature > plan.json
 lpui --actor helper --porcelain plan apply --file plan.json
-lpui --actor helper --porcelain draft add --file plan.json
+lpui --actor helper --porcelain draft wait --id 1
 ```
 
-`draft add` stores the same document outside the queue; the human annotates it
-in the review screen, and promoting it creates the plan tree atomically once
-every annotation is answered.
+New plans start as drafts outside the queue. The human annotates them in the
+review screen, each saved annotation wakes the agent running `draft wait`, and
+promoting the draft creates the plan tree atomically once every annotation is
+answered.
 
 Parallel plans are lanes: a milestone gets a wave, a role, and its own
 registered worktree, and roles name a capability tier and an effort level.

@@ -24,8 +24,8 @@ BASELINE_HANDLER_DUPLICATES: tuple[tuple[str, ...], ...] = ()
 
 #: Action ids typed as literals outside the Action rows, and their occurrences.
 #: After the registry slice these are the palette Command references alone.
-BASELINE_RETYPED_IDS = 60
-BASELINE_RETYPED_OCCURRENCES = 95
+BASELINE_RETYPED_IDS = 59
+BASELINE_RETYPED_OCCURRENCES = 94
 
 
 class DuplicationReportTest(unittest.TestCase):

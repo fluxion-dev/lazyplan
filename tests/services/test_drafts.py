@@ -170,7 +170,7 @@ class DraftsServiceTest(unittest.TestCase):
     def test_revise_requires_the_base_and_returns_to_review(self) -> None:
         draft = drafts.create(self.store, document())
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen this")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
         with self.assertRaisesRegex(ValueError, "revision 1, not 0"):
             drafts.revise(self.store, draft.id, document(), base_revision=0)
         revised = drafts.revise(
@@ -204,7 +204,6 @@ class DraftsServiceTest(unittest.TestCase):
         lost = drafts.annotate(
             self.store, draft.id, "plan:what", "change", "Gone", quote="One thing"
         )
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -237,7 +236,6 @@ class DraftsServiceTest(unittest.TestCase):
             end_offset=9,
         )
         self.assertEqual(annotation.anchor_state, "ok")
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -267,7 +265,6 @@ class DraftsServiceTest(unittest.TestCase):
         why_annotation = drafts.annotate(
             self.store, draft.id, "plan:why", "comment", "Keep the why", quote="Why"
         )
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -290,7 +287,6 @@ class DraftsServiceTest(unittest.TestCase):
         )
         drafts.dismiss(self.store, dismissed.id, "no longer relevant")
         drafts.annotate(self.store, draft.id, "plan:what", "comment", "Keep")
-        drafts.submit(self.store, draft.id)
         drafts.revise(
             self.store,
             draft.id,
@@ -305,13 +301,11 @@ class DraftsServiceTest(unittest.TestCase):
         self.assertEqual(row.anchor_state, "ok")
         self.assertEqual((row.start_offset, row.end_offset), (9, 16))
 
-    def test_submit_ready_and_resolve(self) -> None:
+    def test_annotate_moves_to_revising_then_ready_and_resolve(self) -> None:
         draft = drafts.create(self.store, document())
-        with self.assertRaisesRegex(ValueError, "no open annotations"):
-            drafts.submit(self.store, draft.id)
+        self.assertEqual(draft.status, "review")
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "question", "Why?")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
-        self.assertEqual(drafts.submit(self.store, draft.id).status, "revising")
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
         with self.assertRaisesRegex(ValueError, "still has 1 open"):
             drafts.ready(self.store, draft.id)
         resolved = drafts.resolve(self.store, annotation.id, "Because", actor="agent", now=100.0)
@@ -347,10 +341,9 @@ class DraftsServiceTest(unittest.TestCase):
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
         with self.assertRaisesRegex(ValueError, "open annotation"):
             drafts.promote(self.store, draft.id)
-        drafts.submit(self.store, draft.id)
+        drafts.resolve(self.store, annotation.id, "Done", actor="agent")
         with self.assertRaisesRegex(ValueError, "revising"):
             drafts.promote(self.store, draft.id)
-        drafts.resolve(self.store, annotation.id, "Done", actor="agent")
         drafts.ready(self.store, draft.id)
         promotion = drafts.promote(self.store, draft.id, actor="agent")
         self.assertTrue(promotion.created)
@@ -373,10 +366,59 @@ class DraftsServiceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "already belongs to plan"):
             drafts.promote(self.store, draft.id)
 
+    def test_annotating_a_revising_draft_keeps_it_revising(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.annotate(self.store, draft.id, "plan:why", "change", "One")
+        drafts.annotate(self.store, draft.id, "plan:what", "comment", "Two")
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
+
+    def _wait(self, draft_id: int, timeout: float | None = 1.0) -> drafts.DraftWake | None:
+        ticks = iter(range(100))
+        return drafts.wait_for_feedback(
+            self.store,
+            draft_id,
+            timeout=timeout,
+            clock=lambda: float(next(ticks)),
+            sleep=lambda _seconds: None,
+        )
+
+    def test_wait_returns_open_feedback_at_once(self) -> None:
+        draft = drafts.create(self.store, document())
+        annotation = drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")
+        wake = self._wait(draft.id)
+        assert wake is not None
+        self.assertEqual([row.id for row in wake.annotations], [annotation.id])
+        self.assertEqual(wake.draft.status, "revising")
+
+    def test_wait_ignores_addressed_and_dismissed_feedback(self) -> None:
+        draft = drafts.create(self.store, document())
+        first = drafts.annotate(self.store, draft.id, "plan:why", "change", "One")
+        second = drafts.annotate(self.store, draft.id, "plan:what", "comment", "Two")
+        drafts.respond(self.store, first.id, "Done")
+        drafts.dismiss(self.store, second.id, "No")
+        self.assertIsNone(self._wait(draft.id, timeout=3.0))
+
+    def test_wait_times_out_without_feedback(self) -> None:
+        draft = drafts.create(self.store, document())
+        self.assertIsNone(self._wait(draft.id, timeout=3.0))
+
+    def test_wait_ends_with_no_feedback_once_promoted(self) -> None:
+        draft = drafts.create(self.store, document())
+        drafts.promote(self.store, draft.id)
+        wake = self._wait(draft.id)
+        assert wake is not None
+        self.assertEqual(wake.draft.status, "promoted")
+        self.assertEqual(wake.annotations, ())
+
+    def test_wait_names_a_missing_draft(self) -> None:
+        with self.assertRaisesRegex(KeyError, "draft #9 not found"):
+            self._wait(9)
+
     def test_promoted_draft_is_read_only(self) -> None:
         draft = drafts.create(self.store, document())
         annotation = drafts.annotate(self.store, draft.id, "plan:why", "comment", "Body")
         drafts.resolve(self.store, annotation.id, "Done")
+        drafts.ready(self.store, draft.id)
         drafts.promote(self.store, draft.id)
         with self.assertRaisesRegex(ValueError, "read-only"):
             drafts.annotate(self.store, draft.id, "plan:why", "comment", "Late")
@@ -384,8 +426,6 @@ class DraftsServiceTest(unittest.TestCase):
             drafts.delete_annotation(self.store, annotation.id)
         with self.assertRaisesRegex(ValueError, "promoted"):
             drafts.revise(self.store, draft.id, document(), base_revision=1)
-        with self.assertRaisesRegex(ValueError, "promoted"):
-            drafts.submit(self.store, draft.id)
         with self.assertRaisesRegex(ValueError, "promoted"):
             drafts.ready(self.store, draft.id)
         with self.assertRaisesRegex(ValueError, "promoted"):

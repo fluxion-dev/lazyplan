@@ -13,6 +13,7 @@ from lazyplan.services import evidence as evidence_service
 from lazyplan.services import revisions as revisions_service
 
 from ....core.entities import Milestone, Plan, Status, Task
+from ....core.policies.lanes import DEFAULT_DISPATCH_MODE, DEFAULT_MAX_AGENTS
 from ....core.ports.app import AppPort
 from ....core.ports.coordination import CoordinationPort
 from ....core.ports.insights import InsightsPort
@@ -71,6 +72,13 @@ def _cmd_add_plan(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     desc = args.desc if args.desc is not None else (args.what or "")
     goal = args.goal if args.goal is not None else (args.why or "")
     if not args.direct:
+        if args.dispatch != DEFAULT_DISPATCH_MODE or args.max_agents != DEFAULT_MAX_AGENTS:
+            print(
+                "error: lane settings are chosen when the plan is formalized;"
+                " use --direct to queue them now",
+                file=sys.stderr,
+            )
+            return 2
         try:
             draft = services.drafts.create_from_fields(
                 store,

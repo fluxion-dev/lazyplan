@@ -25,14 +25,18 @@ def annotation_payload(annotation: DraftAnnotation) -> dict:
 
 
 def detail_payload(detail: DraftDetail) -> dict:
-    """One draft's document, blocks, and annotations."""
+    """One draft's content, blocks, and annotations."""
     draft = detail.draft
-    return {
+    payload = {
         "draft": draft_payload(draft, detail.open_annotations, detail.total_annotations),
-        "document": json.loads(draft.document),
         "blocks": [vars(block) for block in detail.blocks],
         "annotations": [annotation_payload(row) for row in detail.annotations],
     }
+    if draft.format == "sketch":
+        payload["sketch"] = draft.document
+    else:
+        payload["document"] = json.loads(draft.document)
+    return payload
 
 
 def promotion_payload(promotion: DraftPromotion, open_count: int, total_count: int) -> dict:

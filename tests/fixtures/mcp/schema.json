@@ -1261,7 +1261,25 @@
       "annotations": {
         "readOnlyHint": false
       },
-      "description": "Replace a draft document with a revision of the base.",
+      "description": "Store a definition-only Markdown sketch as a draft.",
+      "inputSchema": {
+        "properties": {
+          "markdown": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "markdown"
+        ],
+        "type": "object"
+      },
+      "name": "draft_sketch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Replace an approved sketch with its derived plan document.",
       "inputSchema": {
         "properties": {
           "base_revision": {
@@ -1269,6 +1287,38 @@
           },
           "document": {
             "type": "object"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "document",
+          "base_revision"
+        ],
+        "type": "object"
+      },
+      "name": "draft_formalize"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false
+      },
+      "description": "Replace a draft with a revision in its stored format.",
+      "inputSchema": {
+        "properties": {
+          "base_revision": {
+            "type": "integer"
+          },
+          "document": {
+            "type": [
+              "object",
+              "string"
+            ]
           },
           "id": {
             "type": "integer"

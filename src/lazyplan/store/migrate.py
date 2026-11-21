@@ -9,7 +9,7 @@ from .migrate_lanes import migrate_lanes
 from .migrate_worktrees import migrate_worktree_lanes
 from .schema import SCHEMA
 
-SCHEMA_VERSION = 19
+SCHEMA_VERSION = 20
 
 # Idempotent migrations for DBs created by older versions.
 _MIGRATIONS: dict[str, tuple[str, ...]] = {
@@ -266,6 +266,14 @@ def _migrate_plan_worktree_required(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE plans ADD COLUMN worktree_required INTEGER NOT NULL DEFAULT 0")
 
 
+def _migrate_draft_format(conn: sqlite3.Connection) -> None:
+    """Add the sketch or document format to drafts stored before it existed."""
+    for table in ("plan_drafts", "plan_draft_revisions"):
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+        if "format" not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN format TEXT NOT NULL DEFAULT 'document'")
+
+
 def _migrate_archive_columns(conn: sqlite3.Connection) -> None:
     """Add the archive stamp to plans and session history, then index it."""
     history = _history_table(conn)
@@ -299,6 +307,7 @@ def migrate(conn: sqlite3.Connection) -> None:
     _migrate_session_attribution(conn)
     _migrate_claim_location(conn)
     _migrate_plan_worktree_required(conn)
+    _migrate_draft_format(conn)
     migrate_lanes(conn)
     _migrate_archive_columns(conn)
     _drop_agent_registry(conn)

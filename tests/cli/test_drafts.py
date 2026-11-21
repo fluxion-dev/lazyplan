@@ -45,11 +45,25 @@ def document(
     }
 
 
+SKETCH = (
+    "# Sketch title\n\n## Why\n\nWhy review matters."
+    "\n\n## What\n\n## Scope\n\n- One thing.\n\n## Done\n\n- Works."
+)
+
+
+def sketch_document() -> dict:
+    """The structured document matching SKETCH's reviewed definition."""
+    return document(key="sketch-plan", title="Sketch title", why="Why review matters.")
+
+
 class DraftCliTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
+        self.sketch_path = os.path.join(self.tmp.name, "sketch.md")
+        with open(self.sketch_path, "w", encoding="utf-8") as handle:
+            handle.write(SKETCH)
 
     def tearDown(self) -> None:
         self.tmp.cleanup()
@@ -67,12 +81,23 @@ class DraftCliTest(unittest.TestCase):
             json.dump(payload, handle)
         return path
 
+    def _write_text(self, name: str, text: str) -> str:
+        path = os.path.join(self.tmp.name, name)
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        return path
+
     def _add(self, payload: dict | None = None) -> tuple[int, str, str]:
         path = self._write("draft.json", payload or document())
         return self._run("--json", "draft", "add", "--file", path)
 
     def _draft_id(self) -> int:
         code, out, err = self._add()
+        self.assertEqual(code, 0, err)
+        return int(json.loads(out)["draft"]["id"])
+
+    def _sketch(self) -> int:
+        code, out, err = self._run("--json", "draft", "sketch", "--file", self.sketch_path)
         self.assertEqual(code, 0, err)
         return int(json.loads(out)["draft"]["id"])
 
@@ -286,6 +311,135 @@ class DraftCliTest(unittest.TestCase):
         code, out, err = self._add(document(key=key))
         self.assertEqual(code, 0, err)
         return int(json.loads(out)["draft"]["id"])
+
+    def test_sketch_show_revise_formalize_promote(self) -> None:
+        draft_id = self._sketch()
+        code, out, err = self._run("--json", "draft", "show", "--id", str(draft_id))
+        self.assertEqual(code, 0, err)
+        shown = json.loads(out)
+        self.assertEqual(shown["draft"]["format"], "sketch")
+        self.assertIn("# Sketch title", shown["sketch"])
+        self.assertNotIn("document", shown)
+        self.assertEqual(shown["blocks"][0]["key"], "sketch:title")
+
+        code, out, err = self._run("draft", "list")
+        self.assertEqual(code, 0, err)
+        self.assertIn("sketch", out)
+
+        code, out, err = self._annotate(
+            draft_id, block="sketch:why", quote="review", text="Sharpen the why"
+        )
+        self.assertEqual(code, 0, err)
+        annotation_id = json.loads(out)["annotation"]["id"]
+        revised_path = self._write_text(
+            "revised.md",
+            SKETCH.replace("Why review matters.", "A sharper why."),
+        )
+        code, out, err = self._run(
+            "--json",
+            "draft",
+            "revise",
+            "--id",
+            str(draft_id),
+            "--file",
+            revised_path,
+            "--base-revision",
+            "1",
+        )
+        self.assertEqual(code, 0, err)
+        revised = json.loads(out)["draft"]
+        self.assertEqual((revised["format"], revised["revision"]), ("sketch", 2))
+        code, _out, err = self._run(
+            "--json", "draft", "resolve", "--id", str(annotation_id), "--response", "Sharpened"
+        )
+        self.assertEqual(code, 0, err)
+
+        formal = sketch_document()
+        formal["plan"]["why"] = "A sharper why."
+        formal_path = self._write("formal.json", formal)
+        code, out, err = self._run(
+            "--json",
+            "draft",
+            "formalize",
+            "--id",
+            str(draft_id),
+            "--file",
+            formal_path,
+            "--base-revision",
+            "2",
+            "--note",
+            "derived the milestones",
+        )
+        self.assertEqual(code, 0, err)
+        formalized = json.loads(out)["draft"]
+        self.assertEqual((formalized["format"], formalized["revision"]), ("document", 3))
+
+        code, out, err = self._run("--json", "draft", "promote", "--id", str(draft_id))
+        self.assertEqual(code, 0, err)
+        promotion = json.loads(out)
+        self.assertTrue(promotion["created"])
+        self.assertEqual(promotion["plan"]["name"], "Sketch title")
+
+    def test_sketch_gates(self) -> None:
+        draft_id = self._sketch()
+        code, _out, err = self._run("--json", "draft", "promote", "--id", str(draft_id))
+        self.assertEqual(code, 2)
+        self.assertIn("formalize it before promoting", err)
+
+        formal_path = self._write("formal.json", sketch_document())
+        code, _out, err = self._run(
+            "--json",
+            "draft",
+            "formalize",
+            "--id",
+            str(draft_id),
+            "--file",
+            formal_path,
+            "--base-revision",
+            "0",
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("revision 1, not 0", err)
+
+        drifted = sketch_document()
+        drifted["plan"]["title"] = "Other title"
+        code, _out, err = self._run(
+            "--json",
+            "draft",
+            "formalize",
+            "--id",
+            str(draft_id),
+            "--file",
+            self._write("drifted.json", drifted),
+            "--base-revision",
+            "1",
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("reviewed title", err)
+
+        self._annotate(draft_id, block="sketch:why", text="Open question")
+        code, _out, err = self._run(
+            "--json",
+            "draft",
+            "formalize",
+            "--id",
+            str(draft_id),
+            "--file",
+            formal_path,
+            "--base-revision",
+            "1",
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("open annotation", err)
+
+    def test_invalid_sketch_file_is_refused(self) -> None:
+        bad = self._write_text("bad.md", "# Only a title\n")
+        code, _out, err = self._run("--json", "draft", "sketch", "--file", bad)
+        self.assertEqual(code, 2)
+        self.assertIn("## Why", err)
+        code, _out, err = self._run("--json", "draft", "sketch", "--file", "/missing/sketch.md")
+        self.assertEqual(code, 2)
+        self.assertIn("cannot read", err)
 
 
 if __name__ == "__main__":

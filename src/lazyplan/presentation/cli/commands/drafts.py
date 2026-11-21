@@ -6,8 +6,8 @@ import argparse
 import json
 import sys
 
+from lazyplan.services import draft_sketch, plan_document
 from lazyplan.services import drafts as draft_services
-from lazyplan.services import plan_document
 
 from ....core.entities import DraftAnnotation, PlanDraft
 from ....core.ports.app import AppPort
@@ -42,7 +42,7 @@ def _draft_text(draft: PlanDraft, open_count: int, total_count: int) -> str:
     """One human draft line."""
     target = f" -> P{draft.plan_id}" if draft.plan_id else ""
     return (
-        f"D{draft.id} [{draft.status} r{draft.revision}] {draft.title}"
+        f"D{draft.id} [{draft.status} r{draft.revision} {draft.format}] {draft.title}"
         f" · {open_count}/{total_count} open{target}"
     )
 
@@ -143,10 +143,13 @@ def _cmd_draft_show(store: AppPort, args: argparse.Namespace, actor: str) -> int
     draft = detail.draft
     payload = {
         "draft": _draft_payload(draft, detail.open_annotations, detail.total_annotations),
-        "document": json.loads(draft.document),
         "blocks": [vars(block) for block in detail.blocks],
         "annotations": [to_payload(vars(row)) for row in detail.annotations],
     }
+    if draft.format == "sketch":
+        payload["sketch"] = draft.document
+    else:
+        payload["document"] = json.loads(draft.document)
     porcelain_lines = [_draft_row(draft, detail.open_annotations, detail.total_annotations)]
     porcelain_lines.extend(
         porcelain.block_row(block.key, block.kind, block.label, draft.id, block.level)
@@ -181,13 +184,46 @@ def _cmd_draft_add(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     return emit_draft(store, args, draft, f"created D{draft.id} {draft.title!r}")
 
 
-def _cmd_draft_revise(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+def _cmd_draft_sketch(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+    try:
+        draft = draft_sketch.create_sketch_file(store, args.file, actor=actor)
+    except (OSError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    return emit_draft(store, args, draft, f"created sketch D{draft.id} {draft.title!r}")
+
+
+def _cmd_draft_formalize(store: AppPort, args: argparse.Namespace, actor: str) -> int:
     try:
         raw = plan_document.load_document(args.file)
-        draft = draft_services.revise(
+        draft = draft_sketch.formalize(
             store,
             args.id,
             raw,
+            args.base_revision,
+            actor=actor,
+            note=args.note,
+        )
+    except KeyError as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 1
+    except (OSError, ValueError) as exc:
+        print(msg_error(exc), file=sys.stderr)
+        return 2
+    return emit_draft(
+        store,
+        args,
+        draft,
+        f"formalized D{draft.id} to r{draft.revision}",
+    )
+
+
+def _cmd_draft_revise(store: AppPort, args: argparse.Namespace, actor: str) -> int:
+    try:
+        draft = draft_services.revise_file(
+            store,
+            args.id,
+            args.file,
             args.base_revision,
             actor=actor,
             note=args.note,

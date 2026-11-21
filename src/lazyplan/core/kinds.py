@@ -23,6 +23,11 @@ QUESTION_STATUSES: tuple[str, str] = ("open", "resolved")
 #: Draft lifecycle states.
 DRAFT_STATUSES: tuple[str, str, str] = ("review", "revising", "promoted")
 
+#: Draft content forms: a definition-only sketch or a full plan document.
+DRAFT_FORMAT_SKETCH = "sketch"
+DRAFT_FORMAT_DOCUMENT = "document"
+DRAFT_FORMATS: tuple[str, str] = (DRAFT_FORMAT_SKETCH, DRAFT_FORMAT_DOCUMENT)
+
 #: Annotation kinds a reviewer can leave on a draft block.
 DRAFT_ANNOTATION_KINDS: tuple[str, str, str] = ("comment", "question", "change")
 

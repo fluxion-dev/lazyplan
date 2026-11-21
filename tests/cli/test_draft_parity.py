@@ -147,6 +147,17 @@ def _stored_tree(store: Store, plan_id: int) -> dict:
     }
 
 
+SKETCH = (
+    "# Sketch title\n\n## Why\n\nWhy review matters."
+    "\n\n## What\n\n## Scope\n\n- One thing.\n\n## Done\n\n- Works."
+)
+
+
+def sketch_document() -> dict:
+    """The structured document matching SKETCH's reviewed definition."""
+    return document(key="sketch-plan", title="Sketch title", why="Why review matters.")
+
+
 class DraftParityTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -312,6 +323,80 @@ class DraftParityTest(unittest.TestCase):
         self.assertEqual(tree["name"], "Revised")
         self.assertEqual(tree["milestones"][0]["tasks"][0]["title"], "Implement it")
         self.assertEqual(promotion["draft"]["status"], "promoted")
+
+    def test_sketch_loop_matches(self) -> None:
+        sketch_file = os.path.join(self.tmp.name, "sketch.md")
+        revised_file = os.path.join(self.tmp.name, "sketch-revised.md")
+        with open(sketch_file, "w", encoding="utf-8") as handle:
+            handle.write(SKETCH)
+        with open(revised_file, "w", encoding="utf-8") as handle:
+            handle.write(SKETCH.replace("Why review matters.", "A sharper why."))
+
+        cli_added = self._cli_json("draft", "sketch", "--file", sketch_file)
+        mcp_added = self._tool_json("draft_sketch", {"markdown": SKETCH})
+        assert isinstance(cli_added, dict) and isinstance(mcp_added, dict)
+        cli_id = int(cli_added["draft"]["id"])
+        mcp_id = int(mcp_added["draft"]["id"])
+        self.assertEqual(_draft_summary(cli_added["draft"]), _draft_summary(mcp_added["draft"]))
+
+        cli_show = self._cli_json("draft", "show", "--id", str(cli_id))
+        mcp_show = self._tool_json("draft_show", {"id": mcp_id})
+        assert isinstance(cli_show, dict) and isinstance(mcp_show, dict)
+        self.assertEqual(cli_show["sketch"], mcp_show["sketch"])
+        self.assertEqual(
+            [block["key"] for block in cli_show["blocks"]],
+            [block["key"] for block in mcp_show["blocks"]],
+        )
+
+        self._cli_json(
+            "draft",
+            "revise",
+            "--id",
+            str(cli_id),
+            "--file",
+            revised_file,
+            "--base-revision",
+            "1",
+        )
+        self._tool_json(
+            "draft_revise",
+            {
+                "id": mcp_id,
+                "document": SKETCH.replace("Why review matters.", "A sharper why."),
+                "base_revision": 1,
+            },
+        )
+
+        formal = sketch_document()
+        formal["plan"]["why"] = "A sharper why."
+        formal_file = os.path.join(self.tmp.name, "formal.json")
+        self._write(formal_file, formal)
+        cli_formal = self._cli_json(
+            "draft",
+            "formalize",
+            "--id",
+            str(cli_id),
+            "--file",
+            formal_file,
+            "--base-revision",
+            "2",
+        )
+        mcp_formal = self._tool_json(
+            "draft_formalize",
+            {"id": mcp_id, "document": formal, "base_revision": 2},
+        )
+        assert isinstance(cli_formal, dict) and isinstance(mcp_formal, dict)
+        self.assertEqual(cli_formal["draft"]["format"], "document")
+        self.assertEqual(_draft_summary(cli_formal["draft"]), _draft_summary(mcp_formal["draft"]))
+
+        cli_promotion = self._cli_json("draft", "promote", "--id", str(cli_id))
+        mcp_promotion = self._tool_json("draft_promote", {"id": mcp_id})
+        assert isinstance(cli_promotion, dict) and isinstance(mcp_promotion, dict)
+        self.assertEqual(cli_promotion["counts"], mcp_promotion["counts"])
+        self.assertEqual(
+            _stored_tree(self.cli_store, int(cli_promotion["plan"]["id"])),
+            _stored_tree(self.mcp_store, int(mcp_promotion["plan"]["id"])),
+        )
 
     def test_stale_revision_fails_identically(self) -> None:
         self._cli_json("draft", "add", "--file", self.file)

@@ -7,7 +7,7 @@ import os
 import tempfile
 import unittest
 
-from lazyplan.services import drafts
+from lazyplan.services import draft_sketch, drafts
 from lazyplan.store import Store
 
 
@@ -55,6 +55,23 @@ def minimal_document(why: str = "Why this matters.") -> dict:
     }
 
 
+SKETCH = (
+    "# Sketch title\n\n## Why\n\nBecause review should stay at the definition."
+    "\n\n## What\n\n## Scope\n\n- One thing.\n\n## Done\n\n- Works."
+)
+
+
+def sketch_document(**changes: object) -> dict:
+    """A structured document matching SKETCH's reviewed definition."""
+    raw = document(
+        key="sketch-plan",
+        title="Sketch title",
+        why="Because review should stay at the definition.",
+    )
+    raw["plan"].update(changes)
+    return raw
+
+
 class DraftsServiceTest(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
@@ -88,9 +105,210 @@ class DraftsServiceTest(unittest.TestCase):
         self.assertEqual(detail.draft, draft)
         self.assertEqual(detail.blocks[0].key, "plan:title")
         self.assertIn("plan:why", {block.key for block in detail.blocks})
+        self.assertIsNone(detail.sketch)
         self.assertEqual((detail.open_annotations, detail.total_annotations), (0, 0))
         with self.assertRaises(KeyError):
             drafts.detail(self.store, 999_999)
+
+    def test_sketch_detail_blocks_and_annotation(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        detail = drafts.detail(self.store, draft.id)
+        self.assertIsNone(detail.document)
+        assert detail.sketch is not None
+        self.assertEqual(detail.sketch.title, "Sketch title")
+        self.assertEqual(
+            [block.key for block in detail.blocks],
+            ["sketch:title", "sketch:why", "sketch:what", "sketch:criterion:0"],
+        )
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:why",
+            "change",
+            "Sharpen this",
+            quote="review",
+            author="human",
+        )
+        self.assertEqual((annotation.start_offset, annotation.end_offset), (8, 14))
+        self.assertEqual(self.store.get_draft(draft.id).status, "revising")
+
+    def test_sketch_criterion_annotation(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:criterion:0",
+            "question",
+            "How is this proven?",
+            quote="Works",
+        )
+        self.assertEqual((annotation.start_offset, annotation.end_offset), (0, 5))
+        self.assertEqual(drafts.annotation_counts(self.store, draft.id), (1, 1))
+
+    def test_sketch_does_not_reserve_a_plan_key(self) -> None:
+        self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        draft = drafts.create(self.store, document())
+        self.assertEqual(json.loads(draft.document)["plan"]["key"], "demo-plan")
+
+    def test_unreadable_sketch_is_named(self) -> None:
+        draft = self.store.add_draft("Broken", "# No sections", format="sketch")
+        with self.assertRaisesRegex(ValueError, "unreadable sketch"):
+            drafts.detail(self.store, draft.id)
+        with self.assertRaisesRegex(ValueError, "unreadable sketch"):
+            drafts.annotate(self.store, draft.id, "sketch:why", "comment", "No")
+
+    def test_create_from_fields_makes_a_sketch(self) -> None:
+        draft = drafts.create_from_fields(self.store, "  Sketch  ", "Why.", "What.")
+        self.assertEqual(draft.format, "sketch")
+        self.assertEqual(draft.title, "Sketch")
+        detail = drafts.detail(self.store, draft.id)
+        assert detail.sketch is not None
+        self.assertEqual(detail.sketch.criteria, ())
+        self.assertEqual(self.store.list_plans(), [])
+        for fields, message in (
+            (("", "Why.", "What."), "title must not be empty"),
+            (("Sketch", " ", "What."), "why must not be empty"),
+            (("Sketch", "Why.", " "), "what must not be empty"),
+        ):
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    drafts.create_from_fields(self.store, *fields)
+
+    def test_revise_sketch_reanchors_and_returns_to_review(self) -> None:
+        draft = drafts.create_from_fields(self.store, "Sketch", "Why review matters.", "What.")
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:why",
+            "change",
+            "Sharpen this",
+            quote="review",
+        )
+        revised = drafts.revise(
+            self.store,
+            draft.id,
+            "# Revised sketch\n\n## Why\n\nA sharpened review.\n\n## What\n\nWhat.\n",
+            base_revision=1,
+        )
+        self.assertEqual(revised.title, "Revised sketch")
+        self.assertEqual(revised.format, "sketch")
+        self.assertEqual(revised.status, "review")
+        moved = self.store.get_draft_annotation(annotation.id)
+        assert moved is not None
+        self.assertEqual(moved.anchor_state, "moved")
+        block = next(
+            block
+            for block in drafts.detail(self.store, draft.id).blocks
+            if block.key == "sketch:why"
+        )
+        self.assertEqual(block.text[moved.start_offset : moved.end_offset], "review")
+
+    def test_revise_requires_the_matching_input_format(self) -> None:
+        sketch = drafts.create_from_fields(self.store, "Sketch", "Why.", "What.")
+        with self.assertRaisesRegex(ValueError, "revise it with Markdown"):
+            drafts.revise(self.store, sketch.id, document(), base_revision=1)
+        document_draft = drafts.create(self.store, document())
+        with self.assertRaisesRegex(ValueError, "revise it with a JSON plan document"):
+            drafts.revise(self.store, document_draft.id, "# T\n", base_revision=1)
+
+    def test_revise_file_reads_the_draft_format(self) -> None:
+        sketch = drafts.create_from_fields(self.store, "Sketch", "Why.", "What.")
+        sketch_path = os.path.join(self.tmp.name, "sketch.md")
+        with open(sketch_path, "w", encoding="utf-8") as handle:
+            handle.write("# File sketch\n\n## Why\n\nWhy.\n\n## What\n\nWhat.\n")
+        revised = drafts.revise_file(self.store, sketch.id, sketch_path, base_revision=1)
+        self.assertEqual(revised.title, "File sketch")
+        document_draft = drafts.create(self.store, document())
+        document_path = os.path.join(self.tmp.name, "document.json")
+        with open(document_path, "w", encoding="utf-8") as handle:
+            json.dump(document(title="From file"), handle)
+        revised = drafts.revise_file(self.store, document_draft.id, document_path, base_revision=1)
+        self.assertEqual(revised.title, "From file")
+        with self.assertRaisesRegex(ValueError, "cannot read"):
+            drafts.revise_file(self.store, sketch.id, os.path.join(self.tmp.name, "missing.md"), 2)
+
+    def test_formalize_stores_the_derived_document(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        updated = draft_sketch.formalize(
+            self.store,
+            draft.id,
+            sketch_document(),
+            base_revision=1,
+            actor="agent",
+            note="derived the slices",
+        )
+        self.assertEqual(updated.format, "document")
+        self.assertEqual(updated.revision, 2)
+        self.assertEqual(updated.status, "review")
+        self.assertEqual(updated.title, "Sketch title")
+        detail = drafts.detail(self.store, draft.id)
+        assert detail.document is not None
+        self.assertIsNone(detail.sketch)
+        self.assertEqual(detail.document.key, "sketch-plan")
+        first = self.store.get_draft_revision(draft.id, 1)
+        assert first is not None
+        self.assertEqual(first.format, "sketch")
+
+    def test_formalize_refuses_open_annotations(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        drafts.annotate(self.store, draft.id, "sketch:why", "change", "Sharpen this")
+        with self.assertRaisesRegex(ValueError, "open annotation"):
+            draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+        self.assertEqual(self.store.get_draft(draft.id).format, "sketch")
+
+    def test_formalize_requires_the_current_revision(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        with self.assertRaisesRegex(ValueError, "revision 1, not 0"):
+            draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=0)
+
+    def test_formalize_refuses_a_document_draft(self) -> None:
+        draft = drafts.create(self.store, document())
+        with self.assertRaisesRegex(ValueError, "is a document, not a sketch"):
+            draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+
+    def test_formalize_refuses_definition_drift(self) -> None:
+        cases = (
+            ({"title": "Other title"}, "title"),
+            ({"why": "A different why."}, "why"),
+            ({"what": "## Scope\n\n- Something else."}, "what"),
+            ({"criteria": ["Other criterion."]}, "acceptance criteria"),
+        )
+        for changes, field in cases:
+            with self.subTest(field=field):
+                draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+                with self.assertRaisesRegex(ValueError, f"reviewed {field}"):
+                    draft_sketch.formalize(
+                        self.store,
+                        draft.id,
+                        sketch_document(**changes),
+                        base_revision=1,
+                    )
+                self.assertEqual(self.store.get_draft(draft.id).format, "sketch")
+
+    def test_formalize_refuses_a_taken_plan_key(self) -> None:
+        plan = self.store.add_plan("Existing")
+        self.store.set_entity_key("plan", plan.id, "sketch-plan")
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        with self.assertRaisesRegex(ValueError, "already belongs to plan"):
+            draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+
+    def test_formalize_refuses_a_key_held_by_another_draft(self) -> None:
+        drafts.create(self.store, document(key="sketch-plan"))
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        with self.assertRaisesRegex(ValueError, "already in draft"):
+            draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+
+    def test_formalized_draft_revises_as_a_document(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+        revised = drafts.revise(
+            self.store,
+            draft.id,
+            sketch_document(title="Formal title"),
+            base_revision=2,
+        )
+        self.assertEqual(revised.format, "document")
+        self.assertEqual(revised.title, "Formal title")
 
     def test_annotate_stores_a_quote_and_offsets(self) -> None:
         draft = drafts.create(self.store, document())
@@ -358,6 +576,17 @@ class DraftsServiceTest(unittest.TestCase):
         retry = drafts.promote(self.store, draft.id)
         self.assertFalse(retry.created)
         self.assertEqual(retry.plan.id, promotion.plan.id)
+
+    def test_promote_refuses_a_sketch(self) -> None:
+        draft = self.store.add_draft("Sketch title", SKETCH, format="sketch")
+        with self.assertRaisesRegex(ValueError, "formalize it before promoting"):
+            drafts.promote(self.store, draft.id)
+        self.assertEqual(self.store.list_plans(), [])
+        draft_sketch.formalize(self.store, draft.id, sketch_document(), base_revision=1)
+        promotion = drafts.promote(self.store, draft.id)
+        self.assertTrue(promotion.created)
+        self.assertEqual(promotion.plan.name, "Sketch title")
+        self.assertEqual(promotion.draft.format, "document")
 
     def test_promote_refuses_a_taken_plan_key(self) -> None:
         draft = drafts.create(self.store, document())

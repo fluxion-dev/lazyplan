@@ -93,10 +93,20 @@ if _TEXTUAL_OK:
                     git.show_empty("No git context", "drafts are not linked to checkouts")
                 return
             draft = detail.draft
-            blocks = [
-                PreviewBlock("Why", (detail.document.why,)),
-                PreviewBlock("What", (detail.document.what,)),
-            ]
+            if detail.sketch is not None:
+                sketch = detail.sketch
+                blocks = [
+                    PreviewBlock("Why", (sketch.why,)),
+                    PreviewBlock("What", (sketch.what,)),
+                ]
+                if sketch.criteria:
+                    blocks.append(PreviewBlock("Done", sketch.criteria))
+            else:
+                assert detail.document is not None
+                blocks = [
+                    PreviewBlock("Why", (detail.document.why,)),
+                    PreviewBlock("What", (detail.document.what,)),
+                ]
             if detail.annotations:
                 lines = tuple(
                     f"A{row.id} [{row.status} {row.kind}] {row.block_key}: {row.body}"
@@ -107,7 +117,7 @@ if _TEXTUAL_OK:
                 PreviewDocument(
                     header=f"D{draft.id} {draft.title}",
                     meta_line=(
-                        f"{draft.status} · r{draft.revision}"
+                        f"{draft.format} · {draft.status} · r{draft.revision}"
                         f" · {detail.open_annotations}/{detail.total_annotations} open"
                     ),
                     blocks=tuple(blocks),

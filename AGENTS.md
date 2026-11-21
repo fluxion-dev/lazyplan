@@ -21,7 +21,10 @@ the retained files.
 
 ## Plan drafts
 
-When the work needs review before it becomes the plan of record, use the draft
-loop in the packaged agent skill: `lpui draft add`, annotate, and save; the
-agent wakes, revises with `--base-revision`, and promotion waits until no
-annotation is open.
+When the work needs review before it becomes the plan of record, start with a
+definition-only sketch: `lpui plan add` or `lpui draft sketch --file sketch.md`.
+The sketch holds the title, why, what, and `## Done` criteria; the agent
+annotates and revises it with `--base-revision`. Once the sketch is approved,
+`lpui draft formalize --id D --file plan.json --base-revision N` derives the
+milestones and tasks without changing the reviewed definition, and promotion
+waits until no annotation is open.

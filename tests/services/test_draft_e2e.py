@@ -1,4 +1,4 @@
-"""End-to-end draft loop over a recipe-shaped plan document."""
+"""End-to-end draft loops over sketch and document drafts."""
 
 from __future__ import annotations
 
@@ -6,9 +6,72 @@ import os
 import tempfile
 import unittest
 
-from lazyplan.services import drafts, plan_recipes
+from lazyplan.services import draft_sketch, drafts, plan_recipes
 from lazyplan.services.plan_document import validate_document
 from lazyplan.store import Store
+
+SKETCH = """# Sketch loop
+
+## Why
+
+A proof of the sketch loop.
+
+## What
+
+## Scope
+
+- One slice.
+
+## Done
+
+- The sketch promotes.
+"""
+
+REVISED_SKETCH = """# Sketch loop
+
+## Why
+
+A sharper proof of the sketch loop.
+
+## What
+
+## Scope
+
+- One slice.
+
+## Done
+
+- The sketch promotes.
+"""
+
+
+def sketch_document() -> dict:
+    """The structured document matching REVISED_SKETCH's definition."""
+    return {
+        "plan": {
+            "key": "sketch-loop",
+            "title": "Sketch loop",
+            "why": "A sharper proof of the sketch loop.",
+            "what": "## Scope\n\n- One slice.",
+            "criteria": ["The sketch promotes."],
+        },
+        "milestones": [
+            {
+                "key": "slice",
+                "title": "Deliver the slice",
+                "desc": "As a user, I want the approved sketch to become a plan.",
+                "criteria": ["Slice lands."],
+                "tasks": [
+                    {
+                        "key": "impl",
+                        "title": "Implement the slice",
+                        "desc": "Approach: land the reviewed scope.\n\nVerify: the slice test passes.",
+                        "criteria": ["Tests pass."],
+                    }
+                ],
+            }
+        ],
+    }
 
 
 class DraftEndToEndTest(unittest.TestCase):
@@ -100,6 +163,59 @@ class DraftEndToEndTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "open annotation"):
             drafts.promote(self.store, draft.id)
         self.assertEqual(self.store.counts()["plans"], 0)
+
+    def test_sketch_annotate_revise_formalize_promote(self) -> None:
+        draft = draft_sketch.create_sketch(self.store, SKETCH, actor="agent")
+        self.assertEqual(draft.format, "sketch")
+        self.assertEqual(self.store.counts()["plans"], 0)
+
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:why",
+            "change",
+            "Sharpen the proof",
+            quote="proof",
+            author="human",
+        )
+        revised = drafts.revise(
+            self.store,
+            draft.id,
+            REVISED_SKETCH,
+            base_revision=1,
+            actor="agent",
+            note="Sharpened the why",
+        )
+        self.assertEqual(revised.format, "sketch")
+        moved = self.store.get_draft_annotation(annotation.id)
+        assert moved is not None
+        self.assertEqual(moved.anchor_state, "moved")
+        drafts.respond(self.store, annotation.id, "Sharpened the why", actor="agent")
+        drafts.ready(self.store, draft.id, actor="agent")
+
+        with self.assertRaisesRegex(ValueError, "formalize it before promoting"):
+            drafts.promote(self.store, draft.id)
+        self.assertEqual(self.store.counts()["plans"], 0)
+
+        formal = draft_sketch.formalize(
+            self.store,
+            draft.id,
+            sketch_document(),
+            base_revision=2,
+            actor="agent",
+        )
+        self.assertEqual(formal.format, "document")
+        self.assertEqual(formal.revision, 3)
+
+        promotion = drafts.promote(self.store, draft.id, actor="agent")
+        self.assertTrue(promotion.created)
+        self.assertEqual(promotion.draft.status, "promoted")
+        self.assertEqual(self.store.counts()["plans"], 1)
+        self._assert_tree(promotion.plan.id, sketch_document())
+        self.assertEqual(
+            [row.format for row in self.store.list_draft_revisions(draft.id)],
+            ["sketch", "sketch", "document"],
+        )
 
     def _assert_tree(self, plan_id: int, raw: dict) -> None:
         expected = validate_document(self.store, raw)

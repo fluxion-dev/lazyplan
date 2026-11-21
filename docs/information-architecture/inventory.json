@@ -1650,12 +1650,12 @@
   "counts": {
     "cli_commands": 53,
     "doc_files": 9,
-    "doc_headings": 106,
+    "doc_headings": 114,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 5,
-    "mcp_tools": 80,
+    "mcp_tools": 82,
     "palette_commands": 57,
     "setup_steps": 5,
     "stale_claims": 0,
@@ -1742,6 +1742,10 @@
           "Plan documents and recipes",
           "Visual choices",
           "Drafts",
+          "Title",
+          "Why",
+          "What",
+          "Done",
           "Context and claims",
           "Progress and rollups",
           "Tracking guarantees",
@@ -1798,6 +1802,10 @@
           "Review gate: plan is truth",
           "Plan documents and recipes",
           "Plan drafts",
+          "Title",
+          "Why",
+          "What",
+          "Done",
           "Trust and coordination",
           "Plan worktrees",
           "Orchestration and dispatch",
@@ -2148,6 +2156,10 @@
         "name": "draft_dismiss"
       },
       {
+        "description": "Replace an approved sketch with its derived plan document.",
+        "name": "draft_formalize"
+      },
+      {
         "description": "Plan drafts with status and annotation counts.",
         "name": "draft_list"
       },
@@ -2168,12 +2180,16 @@
         "name": "draft_respond"
       },
       {
-        "description": "Replace a draft document with a revision of the base.",
+        "description": "Replace a draft with a revision in its stored format.",
         "name": "draft_revise"
       },
       {
         "description": "One draft document with its blocks and annotations.",
         "name": "draft_show"
+      },
+      {
+        "description": "Store a definition-only Markdown sketch as a draft.",
+        "name": "draft_sketch"
       },
       {
         "description": "Edit a plan, milestone, or task.",
@@ -3183,7 +3199,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "P",
         "label": "Promote",
-        "line": "47",
+        "line": "48",
         "screen": "draft"
       },
       {
@@ -3191,7 +3207,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "U",
         "label": "Update",
-        "line": "51",
+        "line": "52",
         "screen": "draft"
       },
       {
@@ -3199,7 +3215,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "a",
         "label": "Annotate",
-        "line": "46",
+        "line": "47",
         "screen": "draft"
       },
       {
@@ -3207,7 +3223,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "d",
         "label": "Delete",
-        "line": "49",
+        "line": "50",
         "screen": "draft"
       },
       {
@@ -3215,7 +3231,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "escape",
         "label": "Back",
-        "line": "43",
+        "line": "44",
         "screen": "draft"
       },
       {
@@ -3223,7 +3239,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "j",
         "label": "Next block",
-        "line": "44",
+        "line": "45",
         "screen": "draft"
       },
       {
@@ -3231,7 +3247,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "k",
         "label": "Prev block",
-        "line": "45",
+        "line": "46",
         "screen": "draft"
       },
       {
@@ -3239,7 +3255,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "r",
         "label": "Refresh",
-        "line": "50",
+        "line": "51",
         "screen": "draft"
       },
       {
@@ -3247,7 +3263,7 @@
         "file": "src/lazyplan/presentation/tui/screens/draft.py",
         "key": "x",
         "label": "Dismiss",
-        "line": "48",
+        "line": "49",
         "screen": "draft"
       },
       {
@@ -3686,7 +3702,7 @@
           {
             "action": "update_prompt",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "51"
+            "line": "52"
           },
           {
             "action": "update_prompt",
@@ -3721,7 +3737,7 @@
           {
             "action": "annotate",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "46"
+            "line": "47"
           },
           {
             "action": "add",
@@ -3746,7 +3762,7 @@
           {
             "action": "delete_annotation",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "49"
+            "line": "50"
           },
           {
             "action": "delete",
@@ -3791,7 +3807,7 @@
           {
             "action": "back",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "43"
+            "line": "44"
           },
           {
             "action": "cancel",
@@ -3951,7 +3967,7 @@
           {
             "action": "refresh",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "50"
+            "line": "51"
           },
           {
             "action": "refresh",
@@ -4021,7 +4037,7 @@
           {
             "action": "dismiss_annotation",
             "file": "src/lazyplan/presentation/tui/screens/draft.py",
-            "line": "48"
+            "line": "49"
           },
           {
             "action": "hub_toggle",

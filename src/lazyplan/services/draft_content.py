@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from ..core.kinds import ANCHOR_MOVED, ANCHOR_OK, ANCHOR_ORPHANED, DRAFT_ANCHOR_STATES
 from .plan_document import MilestoneDocument, PlanDocument, TaskDocument
+from .sketch_document import SketchDocument
 
 BLOCK_TITLE = "title"
 BLOCK_TEXT = "text"
@@ -211,6 +212,25 @@ def build_blocks(document: PlanDocument) -> tuple[DraftBlock, ...]:
         )
     for milestone in document.milestones:
         blocks.extend(_milestone_blocks(milestone))
+    return tuple(blocks)
+
+
+def build_sketch_blocks(sketch: SketchDocument) -> tuple[DraftBlock, ...]:
+    """Render one definition-only sketch as ordered, keyed blocks."""
+    blocks = [
+        DraftBlock("sketch:title", "Plan title", sketch.title, kind=BLOCK_TITLE),
+        DraftBlock("sketch:why", "Plan why", sketch.why),
+        DraftBlock("sketch:what", "Plan what", sketch.what),
+    ]
+    for index, criterion in enumerate(sketch.criteria):
+        blocks.append(
+            DraftBlock(
+                f"sketch:criterion:{index}",
+                f"Acceptance criterion {index + 1}",
+                criterion,
+                kind=BLOCK_CRITERION,
+            )
+        )
     return tuple(blocks)
 
 

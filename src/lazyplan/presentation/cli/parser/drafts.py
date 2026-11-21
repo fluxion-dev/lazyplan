@@ -65,6 +65,27 @@ def add_draft_group(
         "add", help="store a validated plan document as a draft", parents=[common]
     )
     add.add_argument("--file", required=True, metavar="PATH", help="JSON plan document")
+    sketch = actions.add_parser(
+        "sketch", help="store a definition-only Markdown sketch as a draft", parents=[common]
+    )
+    sketch.add_argument("--file", required=True, metavar="PATH", help="Markdown sketch")
+    formalize = actions.add_parser(
+        "formalize",
+        help="replace an approved sketch with its structured plan document",
+        parents=[common],
+    )
+    formalize.add_argument("--id", type=int, required=True, metavar="ID", help="draft id")
+    formalize.add_argument("--file", required=True, metavar="PATH", help="JSON plan document")
+    formalize.add_argument(
+        "--base-revision",
+        type=int,
+        required=True,
+        metavar="N",
+        help="the sketch revision this document formalizes",
+    )
+    formalize.add_argument(
+        "--note", default="", metavar="TEXT", help="what this formalization adds"
+    )
     revise = actions.add_parser(
         "revise", help="replace a draft document with a new revision", parents=[common]
     )

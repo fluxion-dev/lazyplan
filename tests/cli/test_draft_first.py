@@ -10,6 +10,7 @@ import unittest
 from contextlib import redirect_stderr, redirect_stdout
 
 from lazyplan.presentation.cli import main as lpui_main
+from lazyplan.services.sketch_document import parse_sketch
 from lazyplan.store import Store
 
 from .test_drafts import document
@@ -44,15 +45,39 @@ class DraftFirstCliTest(unittest.TestCase):
         self.assertEqual(code, 0, err)
         draft = json.loads(out)["draft"]
         self.assertEqual(draft["status"], "review")
+        self.assertEqual(draft["format"], "sketch")
         self.assertEqual(self.store.list_plans(), [])
 
-    def test_plan_add_suffixes_a_taken_key(self) -> None:
+    def test_plan_add_refuses_lane_settings_before_formalizing(self) -> None:
+        code, _out, err = self._run(
+            "plan",
+            "add",
+            "--title",
+            "API v2",
+            "--why",
+            "w",
+            "--what",
+            "x",
+            "--dispatch",
+            "parallel",
+            "--max-agents",
+            "2",
+        )
+        self.assertEqual(code, 2)
+        self.assertIn("formalized", err)
+        self.assertEqual(self.store.list_drafts(), [])
+
+    def test_plan_add_creates_independent_sketches(self) -> None:
         self._add()
         code, out, err = self._add()
         self.assertEqual(code, 0, err)
         stored = self.store.get_draft(json.loads(out)["draft"]["id"])
         assert stored is not None
-        self.assertEqual(json.loads(stored.document)["plan"]["key"], "api-v2-2")
+        self.assertEqual(stored.format, "sketch")
+        sketch = parse_sketch(stored.document)
+        self.assertEqual(sketch.title, "API v2")
+        self.assertEqual(sketch.why, "w")
+        self.assertEqual(sketch.what, "x")
 
     def test_plan_add_without_why_is_refused(self) -> None:
         code, _out, err = self._run("plan", "add", "--title", "Bare")

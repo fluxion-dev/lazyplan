@@ -18,6 +18,7 @@ class DraftsPort(PlanningPort, Protocol):
         actor: str = "human",
         status: str = "review",
         now: float | None = None,
+        format: str = "document",
     ) -> PlanDraft: ...
 
     def get_draft(self, draft_id: int) -> PlanDraft | None: ...
@@ -33,6 +34,7 @@ class DraftsPort(PlanningPort, Protocol):
         title: str = "",
         expected_revision: int | None = None,
         now: float | None = None,
+        format: str | None = None,
     ) -> tuple[PlanDraft, DraftRevision]: ...
 
     def get_draft_revision(self, draft_id: int, revision: int) -> DraftRevision | None: ...

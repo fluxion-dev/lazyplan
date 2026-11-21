@@ -191,7 +191,7 @@ def add_noun_groups(
         parser.add_argument("--tree", action="store_true", help="show the full tree")
 
     _group, _actions = _noun_group("plan", "")
-    _a = _actions.add_parser("add", help="draft a plan for review", parents=[common])
+    _a = _actions.add_parser("add", help="draft a plan sketch for review", parents=[common])
     _title_flags(_a)
     _a.add_argument("--what", default="", metavar="TEXT", help="what you will build")
     _a.add_argument("--desc", default=None, metavar="TEXT", help="same as --what")

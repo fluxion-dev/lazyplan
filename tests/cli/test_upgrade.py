@@ -307,7 +307,7 @@ class TestRunners(unittest.TestCase):
             with self.assertRaises(upgrade.UpgradeError):
                 upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
 
-    def test_uv_upgrade_first_try_wins(self):
+    def test_uv_upgrade_installs_the_pinned_version_first(self):
         ok = mock.Mock(returncode=0)
         with (
             mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
@@ -315,9 +315,11 @@ class TestRunners(unittest.TestCase):
         ):
             upgrade.upgrade_uv("0.16.0", installed="0.15.0")
         self.assertEqual(run.call_count, 1)
-        self.assertEqual(run.call_args[0][0], ["uv", "tool", "upgrade", "lazyplan-tui"])
+        self.assertEqual(
+            run.call_args[0][0], ["uv", "tool", "install", "lazyplan-tui==0.16.0", "--force"]
+        )
 
-    def test_uv_upgrade_falls_back_to_pinned_force_install(self):
+    def test_uv_upgrade_falls_back_to_a_plain_upgrade(self):
         bad = mock.Mock(returncode=1, stderr="", stdout="nope")
         good = mock.Mock(returncode=0)
         with (
@@ -326,8 +328,7 @@ class TestRunners(unittest.TestCase):
         ):
             upgrade.upgrade_uv("0.16.0", installed="0.15.0")
         self.assertEqual(run.call_count, 2)
-        fallback = run.call_args[0][0]
-        self.assertEqual(fallback, ["uv", "tool", "install", "lazyplan-tui==0.16.0", "--force"])
+        self.assertEqual(run.call_args[0][0], ["uv", "tool", "upgrade", "lazyplan-tui"])
 
     def test_uv_upgrade_failure_names_the_log(self):
         bad = mock.Mock(returncode=1, stderr="permission denied", stdout="")

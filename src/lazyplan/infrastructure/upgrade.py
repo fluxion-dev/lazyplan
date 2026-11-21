@@ -565,13 +565,13 @@ def upgrade_uv(
     timeout: float = UPGRADE_TIMEOUT,
     installed: str | None = None,
 ) -> None:
-    """Upgrade the uv tool, falling back to a pinned forced install."""
+    """Reinstall the pinned uv tool, falling back to a plain upgrade."""
     require_newer(version, installed)
     if shutil.which("uv") is None:
         raise UpgradeError("uv is not on PATH")
     cmds = [
-        ["uv", "tool", "upgrade", PYPI_PKG],
         ["uv", "tool", "install", f"{PYPI_PKG}=={version}", "--force"],
+        ["uv", "tool", "upgrade", PYPI_PKG],
     ]
     last_lines: list[str] = []
     last_log = ""
@@ -594,7 +594,7 @@ def upgrade_uv(
         if out.returncode == 0:
             return
         last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
-    raise UpgradeError(f"uv tool upgrade failed: {'; '.join(last_lines)}{last_log}")
+    raise UpgradeError(f"uv tool install failed: {'; '.join(last_lines)}{last_log}")
 
 
 def upgrade_pipx(

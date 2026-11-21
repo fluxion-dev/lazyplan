@@ -24,6 +24,8 @@ except ImportError:  # pragma: no cover - textual not installed
     CriteriaHub = None  # type: ignore[assignment]
     Text = cell_len = Tree = None  # type: ignore[assignment,misc]
 
+from tests.support.tui import settle_reflow, wait_for_tree_resize
+
 
 @unittest.skipUnless(create_app is not None, "textual not installed")
 class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
@@ -59,7 +61,7 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
             }
         )
         app.refresh_all()  # type: ignore[attr-defined]
-        await pilot.pause()  # type: ignore[attr-defined]
+        await settle_reflow(app, pilot)
 
     def assert_no_state_words(self, text: str) -> None:
         for word in ("doing", "blocked", "review"):
@@ -85,7 +87,7 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
 
             app._apply_layout(design.EMOJI_MIN_WIDTH - 1)  # type: ignore[attr-defined]
             app.refresh_all()  # type: ignore[attr-defined]
-            await pilot.pause()
+            await settle_reflow(app, pilot)
 
             fallback = {
                 ("task", self.todo.id): "○",
@@ -113,7 +115,7 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
 
             app._apply_layout(40)  # type: ignore[attr-defined]
             app.refresh_all()  # type: ignore[attr-defined]
-            await pilot.pause()
+            await settle_reflow(app, pilot)
             self.assertTrue(self.row(app, plan_key).endswith("?"))
             self.assertTrue(self.row(app, task_key).endswith("●"))
 
@@ -222,9 +224,10 @@ class TestStatusMatrix(unittest.IsolatedAsyncioTestCase):
                     if has_progress:
                         self.assertEqual(row.index("/"), width - 5)
 
+            before = tree.size.width
             app._apply_layout(design.EMOJI_MIN_WIDTH - 1)  # type: ignore[attr-defined]
             app.refresh_all()  # type: ignore[attr-defined]
-            await pilot.pause()
+            await wait_for_tree_resize(app, pilot, before)
             fallback = self.row(app, ("task", self.todo.id))
             fallback_width = app.tree_controller.row_width(tree, 11)  # type: ignore[attr-defined]
             self.assertEqual(cell_len(fallback), fallback_width)

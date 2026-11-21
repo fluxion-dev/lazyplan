@@ -6,7 +6,6 @@ import unittest
 
 try:
     from rich.cells import cell_len
-    from rich.console import Console
 
     from lazyplan.presentation.tui.views.agents import (
         claim_line,
@@ -17,11 +16,7 @@ except ImportError:  # pragma: no cover - rich not installed
     cell_len = len  # type: ignore[assignment]
     claim_line = rank_claims = claims_summary = None  # type: ignore[assignment]
 
-
-def plain(markup: str) -> str:
-    console = Console(record=True, width=400, force_terminal=False)
-    console.print(markup, end="")
-    return console.export_text()
+from tests.support.tui import plain
 
 
 def claim(task_id: int, actor: str, started_at: float, **fields: object) -> dict:

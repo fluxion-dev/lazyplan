@@ -165,7 +165,10 @@ add a regression test.
 - Use `sandbox_home` or a per-test temp directory for anything that reads or
   writes home. Quiesce SQLite before snapshotting a tree.
 - Wait for workers, timers, and mount state. `time.sleep` and `asyncio.sleep`
-  are rejected by `tools/test_hygiene.py`.
+  are rejected by `tools/test_hygiene.py`. For TUI work, use
+  `tests/support/tui.py`: `wait_for_flush` for the coalesced poll,
+  `settle_reflow` for a queued reflow, and `wait_for_tree_resize` when a
+  layout change moves the tree.
 - Run a seeded shuffle before calling a fix done:
 
   ```bash

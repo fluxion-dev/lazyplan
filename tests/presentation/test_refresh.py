@@ -12,6 +12,7 @@ from unittest import mock
 from lazyplan import services
 from lazyplan.core.entities import Status
 from lazyplan.store import Store
+from tests.support.tui import wait_for_flush
 
 try:
     from textual.widgets import Tree
@@ -198,7 +199,7 @@ class TestPollScheduling(RefreshCase):
                 self.store.update_task(self.task.id, title=f"Task {index}", actor="ana")
                 harness.poll()
             self.assertEqual(harness.rebuilds, before)
-            await pilot.pause(COALESCE_PAUSE)
+            await wait_for_flush(app, pilot)
             self.assertEqual(harness.rebuilds - before, 1)
 
     async def test_an_open_modal_defers_the_refresh_until_it_closes(self) -> None:
@@ -212,7 +213,7 @@ class TestPollScheduling(RefreshCase):
             before = harness.rebuilds
             self.store.update_task(self.task.id, title="While modal", actor="ana")
             harness.poll()
-            await pilot.pause(COALESCE_PAUSE)
+            await wait_for_flush(app, pilot)
             self.assertEqual(harness.rebuilds, before)
             self.assertTrue(app._dirty_external)
             app.pop_screen()

@@ -6,26 +6,31 @@ import json
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from ..core.entities import DraftAnnotation, Plan, PlanDraft
-from ..core.kinds import ANCHOR_ORPHANED, DRAFT_FORMAT_DOCUMENT, DRAFT_FORMAT_SKETCH
+from ..core.kinds import DRAFT_FORMAT_DOCUMENT, DRAFT_FORMAT_SKETCH
 from ..core.policies.lanes import DEFAULT_DISPATCH_MODE, DEFAULT_MAX_AGENTS
-from ..core.policies.worktrees import slugify
 from ..core.ports.drafts import DraftsPort
-from . import plan_apply
+from . import draft_sketch, plan_apply
+from .draft_anchors import reanchor
 from .draft_content import (
     ANCHOR_DUPLICATE,
     ANCHOR_MISSING,
-    AnchorUpdate,
     DraftBlock,
     blocks_by_key,
     build_blocks,
     build_sketch_blocks,
-    reanchor_quote,
     resolve_quote,
 )
-from .plan_document import PlanDocument, load_normalized, to_json, validate_document
+from .plan_document import (
+    PlanDocument,
+    load_document,
+    load_normalized,
+    to_json,
+    validate_document,
+)
 from .sketch_document import SketchDocument, parse_sketch
 
 
@@ -137,16 +142,6 @@ def _ensure_no_open_draft(port: DraftsPort, key: str) -> None:
         raise ValueError(f"plan key {key!r} is already in draft #{holder}")
 
 
-def _free_plan_key(port: DraftsPort, title: str) -> str:
-    """A plan key slugged from the title, suffixed until no plan or open draft owns it."""
-    drafted = _open_draft_keys(port)
-    base = slugify(title)
-    key, suffix = base, 2
-    while key in drafted or port.get_entity_key("plan", key) is not None:
-        key, suffix = f"{base}-{suffix}", suffix + 1
-    return key
-
-
 def create_from_fields(
     port: DraftsPort,
     title: str,
@@ -157,19 +152,9 @@ def create_from_fields(
     max_agents: int = DEFAULT_MAX_AGENTS,
     actor: str = "human",
 ) -> PlanDraft:
-    """Store a milestone-free plan definition as a new draft."""
-    raw = {
-        "plan": {
-            "key": _free_plan_key(port, title),
-            "title": title,
-            "why": why,
-            "what": what,
-            "dispatch_mode": dispatch_mode,
-            "max_agents": max_agents,
-        },
-        "milestones": [],
-    }
-    return create(port, raw, actor=actor)
+    """Store a definition-only sketch; lane settings wait for formalization."""
+    del dispatch_mode, max_agents
+    return draft_sketch.create_from_fields(port, title, why, what, actor=actor)
 
 
 def list_drafts(port: DraftsPort, status: str = "all") -> list[PlanDraft]:
@@ -212,42 +197,6 @@ def annotation_counts_map(port: DraftsPort) -> dict[int, tuple[int, int]]:
     return port.draft_annotation_counts_map()
 
 
-def _reanchor(
-    port: DraftsPort, draft: PlanDraft, blocks: tuple[DraftBlock, ...], actor: str
-) -> None:
-    """Track every live annotation into revised blocks."""
-    indexed = blocks_by_key(blocks)
-    for annotation in port.list_draft_annotations(draft.id):
-        if annotation.status == "dismissed":
-            continue
-        block = indexed.get(annotation.block_key)
-        if block is None:
-            update = AnchorUpdate(ANCHOR_ORPHANED, annotation.start_offset, annotation.end_offset)
-        else:
-            update = reanchor_quote(
-                block.text,
-                annotation.quote,
-                annotation.start_offset,
-                annotation.end_offset,
-            )
-        current = (
-            annotation.anchor_state,
-            annotation.start_offset,
-            annotation.end_offset,
-        )
-        if current == (update.state, update.start_offset, update.end_offset):
-            continue
-        changed = port.update_draft_annotation(
-            annotation.id,
-            actor=actor,
-            anchor_state=update.state,
-            start_offset=update.start_offset,
-            end_offset=update.end_offset,
-        )
-        if changed is None:
-            raise KeyError(f"annotation #{annotation.id} not found")
-
-
 def revise(
     port: DraftsPort,
     draft_id: int,
@@ -256,8 +205,25 @@ def revise(
     actor: str = "human",
     note: str = "",
 ) -> PlanDraft:
-    """Replace the document with a validated revision of the same draft."""
+    """Replace a draft with a validated revision in its stored format."""
     draft = _require_draft(port, draft_id)
+    if draft.format == DRAFT_FORMAT_SKETCH:
+        if not isinstance(raw, str):
+            raise ValueError(
+                f"draft #{draft_id} is a sketch; revise it with Markdown, not a document"
+            )
+        return draft_sketch.revise_sketch(
+            port,
+            draft_id,
+            raw,
+            base_revision,
+            actor=actor,
+            note=note,
+        )
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"draft #{draft_id} is a document; revise it with a JSON plan document, not Markdown"
+        )
     if draft.status == "promoted":
         raise ValueError(f"draft #{draft_id} is promoted; it cannot be revised")
     if base_revision != draft.revision:
@@ -275,10 +241,30 @@ def revise(
             title=document.title,
             expected_revision=base_revision,
         )
-        _reanchor(port, updated, blocks, actor)
+        reanchor(port, updated, blocks, actor)
         if updated.status != "review":
             updated = port.set_draft_status(draft.id, "review", actor=actor) or updated
     return updated
+
+
+def revise_file(
+    port: DraftsPort,
+    draft_id: int,
+    path: str | Path,
+    base_revision: int,
+    actor: str = "human",
+    note: str = "",
+) -> PlanDraft:
+    """Revise one draft from Markdown or JSON, matching its stored format."""
+    draft = _require_draft(port, draft_id)
+    if draft.format == DRAFT_FORMAT_SKETCH:
+        source = Path(path).expanduser()
+        try:
+            text = source.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise ValueError(f"cannot read {source}: {exc}") from exc
+        return revise(port, draft_id, text, base_revision, actor=actor, note=note)
+    return revise(port, draft_id, load_document(path), base_revision, actor=actor, note=note)
 
 
 def ready(port: DraftsPort, draft_id: int, actor: str = "human") -> PlanDraft:

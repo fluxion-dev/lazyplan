@@ -146,6 +146,76 @@ class DraftsServiceTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "unreadable sketch"):
             drafts.annotate(self.store, draft.id, "sketch:why", "comment", "No")
 
+    def test_create_from_fields_makes_a_sketch(self) -> None:
+        draft = drafts.create_from_fields(self.store, "  Sketch  ", "Why.", "What.")
+        self.assertEqual(draft.format, "sketch")
+        self.assertEqual(draft.title, "Sketch")
+        detail = drafts.detail(self.store, draft.id)
+        assert detail.sketch is not None
+        self.assertEqual(detail.sketch.criteria, ())
+        self.assertEqual(self.store.list_plans(), [])
+        for fields, message in (
+            (("", "Why.", "What."), "title must not be empty"),
+            (("Sketch", " ", "What."), "why must not be empty"),
+            (("Sketch", "Why.", " "), "what must not be empty"),
+        ):
+            with self.subTest(message=message):
+                with self.assertRaisesRegex(ValueError, message):
+                    drafts.create_from_fields(self.store, *fields)
+
+    def test_revise_sketch_reanchors_and_returns_to_review(self) -> None:
+        draft = drafts.create_from_fields(self.store, "Sketch", "Why review matters.", "What.")
+        annotation = drafts.annotate(
+            self.store,
+            draft.id,
+            "sketch:why",
+            "change",
+            "Sharpen this",
+            quote="review",
+        )
+        revised = drafts.revise(
+            self.store,
+            draft.id,
+            "# Revised sketch\n\n## Why\n\nA sharpened review.\n\n## What\n\nWhat.\n",
+            base_revision=1,
+        )
+        self.assertEqual(revised.title, "Revised sketch")
+        self.assertEqual(revised.format, "sketch")
+        self.assertEqual(revised.status, "review")
+        moved = self.store.get_draft_annotation(annotation.id)
+        assert moved is not None
+        self.assertEqual(moved.anchor_state, "moved")
+        block = next(
+            block
+            for block in drafts.detail(self.store, draft.id).blocks
+            if block.key == "sketch:why"
+        )
+        self.assertEqual(block.text[moved.start_offset : moved.end_offset], "review")
+
+    def test_revise_requires_the_matching_input_format(self) -> None:
+        sketch = drafts.create_from_fields(self.store, "Sketch", "Why.", "What.")
+        with self.assertRaisesRegex(ValueError, "revise it with Markdown"):
+            drafts.revise(self.store, sketch.id, document(), base_revision=1)
+        document_draft = drafts.create(self.store, document())
+        with self.assertRaisesRegex(ValueError, "revise it with a JSON plan document"):
+            drafts.revise(self.store, document_draft.id, "# T\n", base_revision=1)
+
+    def test_revise_file_reads_the_draft_format(self) -> None:
+        sketch = drafts.create_from_fields(self.store, "Sketch", "Why.", "What.")
+        sketch_path = os.path.join(self.tmp.name, "sketch.md")
+        with open(sketch_path, "w", encoding="utf-8") as handle:
+            handle.write("# File sketch\n\n## Why\n\nWhy.\n\n## What\n\nWhat.\n")
+        revised = drafts.revise_file(self.store, sketch.id, sketch_path, base_revision=1)
+        self.assertEqual(revised.title, "File sketch")
+        document_draft = drafts.create(self.store, document())
+        document_path = os.path.join(self.tmp.name, "document.json")
+        with open(document_path, "w", encoding="utf-8") as handle:
+            json.dump(document(title="From file"), handle)
+        revised = drafts.revise_file(self.store, document_draft.id, document_path, base_revision=1)
+        self.assertEqual(revised.title, "From file")
+        with self.assertRaisesRegex(ValueError, "cannot read"):
+            drafts.revise_file(self.store, sketch.id, os.path.join(self.tmp.name, "missing.md"), 2)
+
     def test_annotate_stores_a_quote_and_offsets(self) -> None:
         draft = drafts.create(self.store, document())
         annotation = drafts.annotate(

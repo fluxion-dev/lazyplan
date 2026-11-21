@@ -306,6 +306,23 @@ class TestApply(unittest.TestCase):
         self.assertFalse(update_stage._state_path(update_stage.STAGED, self.home).exists())
         self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
 
+    def test_failed_uv_install_parks_the_stage(self):
+        update = update_stage.stage_update(
+            VERSION, UV, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
+        )
+        with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/uv"):
+            state, detail = update_stage.apply_on_launch(
+                "0.27.2",
+                self.home,
+                exe="/tools/lazyplan-tui/bin/python",
+                runner=runner(1, "boom"),
+                windows=False,
+            )
+        self.assertEqual(state, "error")
+        self.assertIn("boom", detail)
+        self.assertEqual(update_stage.read_failure(self.home), detail)
+        self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
+
     def test_skips_when_already_current(self):
         self._stage()
         state, _ = update_stage.apply_on_launch(VERSION, self.home)

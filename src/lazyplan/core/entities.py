@@ -14,6 +14,8 @@ from .kinds import (
     DRAFT_ANCHOR_STATES,
     DRAFT_ANNOTATION_KINDS,
     DRAFT_ANNOTATION_STATUSES,
+    DRAFT_FORMAT_DOCUMENT,
+    DRAFT_FORMATS,
     DRAFT_STATUSES,
     KINDS,
     PARENT_KIND_ERROR,
@@ -207,6 +209,7 @@ class PlanDraft:
     id: int
     title: str
     document: str
+    format: str = DRAFT_FORMAT_DOCUMENT
     status: str = "review"
     revision: int = 1
     actor: str = "human"
@@ -222,6 +225,8 @@ class PlanDraft:
             raise ValueError("draft title must not be empty")
         if not self.document.strip():
             raise ValueError("draft document must not be empty")
+        if self.format not in DRAFT_FORMATS:
+            raise ValueError(f"draft format must be {'|'.join(DRAFT_FORMATS)}")
         if self.status not in DRAFT_STATUSES:
             raise ValueError(f"draft status must be {'|'.join(DRAFT_STATUSES)}")
         if self.revision < 1:
@@ -238,6 +243,7 @@ class DraftRevision:
     draft_id: int
     revision: int
     document: str
+    format: str = DRAFT_FORMAT_DOCUMENT
     actor: str = "human"
     ts: float = 0.0
     note: str = ""
@@ -251,6 +257,8 @@ class DraftRevision:
             raise ValueError("draft revision number must be at least 1")
         if not self.document.strip():
             raise ValueError("draft revision document must not be empty")
+        if self.format not in DRAFT_FORMATS:
+            raise ValueError(f"draft revision format must be {'|'.join(DRAFT_FORMATS)}")
 
 
 @dataclass(frozen=True)

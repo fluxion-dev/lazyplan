@@ -90,6 +90,8 @@ CREATE TABLE IF NOT EXISTS plan_drafts (
     status TEXT NOT NULL DEFAULT 'review'
         CHECK (status IN ('review', 'revising', 'promoted')),
     document TEXT NOT NULL CHECK (trim(document) <> ''),
+    format TEXT NOT NULL DEFAULT 'document'
+        CHECK (format IN ('sketch', 'document')),
     revision INTEGER NOT NULL DEFAULT 1 CHECK (revision > 0),
     actor TEXT NOT NULL DEFAULT 'human',
     created_at REAL NOT NULL,
@@ -103,6 +105,8 @@ CREATE TABLE IF NOT EXISTS plan_draft_revisions (
     draft_id INTEGER NOT NULL REFERENCES plan_drafts(id) ON DELETE CASCADE,
     revision INTEGER NOT NULL CHECK (revision > 0),
     document TEXT NOT NULL CHECK (trim(document) <> ''),
+    format TEXT NOT NULL DEFAULT 'document'
+        CHECK (format IN ('sketch', 'document')),
     actor TEXT NOT NULL DEFAULT 'human',
     ts REAL NOT NULL,
     note TEXT NOT NULL DEFAULT '',

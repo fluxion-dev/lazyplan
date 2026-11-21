@@ -74,6 +74,67 @@ class TestDraftsStore(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.list_drafts("bogus")
 
+    def test_draft_format_defaults_and_round_trips(self) -> None:
+        document = self.store.add_draft("Document", "{}")
+        self.assertEqual(document.format, "document")
+        sketch = self.store.add_draft("Sketch", "# Title\n", format="sketch")
+        self.assertEqual(sketch.format, "sketch")
+        updated, snapshot = self.store.add_draft_revision(
+            sketch.id,
+            "# Title\n\n## Why\nBecause.\n",
+            format="sketch",
+        )
+        self.assertEqual((updated.format, snapshot.format), ("sketch", "sketch"))
+        self.assertEqual(self.store.get_draft(sketch.id).format, "sketch")
+        self.assertEqual(self.store.get_draft_revision(sketch.id, 2).format, "sketch")
+        with self.assertRaises(ValueError):
+            self.store.add_draft("Bogus", "{}", format="outline")
+
+    def test_pre_format_drafts_migrate_to_document(self) -> None:
+        old = os.path.join(self.tmp.name, "old.db")
+        with closing(sqlite3.connect(old)) as conn:
+            conn.executescript(
+                """
+                CREATE TABLE plan_drafts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'review',
+                    document TEXT NOT NULL,
+                    revision INTEGER NOT NULL DEFAULT 1,
+                    actor TEXT NOT NULL DEFAULT 'human',
+                    created_at REAL NOT NULL,
+                    updated_at REAL NOT NULL,
+                    plan_id INTEGER,
+                    promoted_at REAL NOT NULL DEFAULT 0
+                );
+                CREATE TABLE plan_draft_revisions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    draft_id INTEGER NOT NULL,
+                    revision INTEGER NOT NULL,
+                    document TEXT NOT NULL,
+                    actor TEXT NOT NULL DEFAULT 'human',
+                    ts REAL NOT NULL,
+                    note TEXT NOT NULL DEFAULT ''
+                );
+                INSERT INTO plan_drafts
+                    (title, document, created_at, updated_at)
+                    VALUES ('Old draft', '{"plan": {}}', 1.0, 1.0);
+                INSERT INTO plan_draft_revisions
+                    (draft_id, revision, document, ts)
+                    VALUES (1, 1, '{"plan": {}}', 1.0);
+                PRAGMA user_version = 19;
+                """
+            )
+            conn.commit()
+
+        reopened = Store(old)
+        draft = reopened.get_draft(1)
+        assert draft is not None
+        self.assertEqual(draft.format, "document")
+        revision = reopened.get_draft_revision(1, 1)
+        assert revision is not None
+        self.assertEqual(revision.format, "document")
+
     def test_revision_snapshots_and_stale_base(self) -> None:
         draft = self.store.add_draft("Draft", '{"plan": {}}')
         updated, snapshot = self.store.add_draft_revision(

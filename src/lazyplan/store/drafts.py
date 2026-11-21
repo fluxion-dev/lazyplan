@@ -7,7 +7,7 @@ import time
 from dataclasses import replace
 
 from ..core.entities import DraftRevision, PlanDraft
-from ..core.kinds import DRAFT_STATUSES
+from ..core.kinds import DRAFT_FORMAT_DOCUMENT, DRAFT_STATUSES
 from .base import StoreBase
 
 
@@ -22,6 +22,7 @@ class DraftsMixin(StoreBase):
             id=int(r["id"]),
             title=str(r["title"]),
             document=str(r["document"]),
+            format=str(r["format"]),
             status=str(r["status"]),
             revision=int(r["revision"]),
             actor=str(r["actor"]),
@@ -39,6 +40,7 @@ class DraftsMixin(StoreBase):
             draft_id=int(r["draft_id"]),
             revision=int(r["revision"]),
             document=str(r["document"]),
+            format=str(r["format"]),
             actor=str(r["actor"]),
             ts=float(r["ts"]),
             note=str(r["note"]),
@@ -51,6 +53,7 @@ class DraftsMixin(StoreBase):
         actor: str = "human",
         status: str = "review",
         now: float | None = None,
+        format: str = DRAFT_FORMAT_DOCUMENT,
     ) -> PlanDraft:
         """Store a draft and its first revision."""
         stamp = time.time() if now is None else now
@@ -58,6 +61,7 @@ class DraftsMixin(StoreBase):
             id=0,
             title=title.strip(),
             document=document.strip(),
+            format=format,
             status=status,
             actor=actor,
             created_at=stamp,
@@ -66,12 +70,13 @@ class DraftsMixin(StoreBase):
         with self._connect() as conn:
             cur = conn.execute(
                 "INSERT INTO plan_drafts"
-                " (title, status, document, revision, actor, created_at, updated_at)"
-                " VALUES (?,?,?,?,?,?,?)",
+                " (title, status, document, format, revision, actor, created_at, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?)",
                 (
                     draft.title,
                     draft.status,
                     draft.document,
+                    draft.format,
                     draft.revision,
                     actor,
                     stamp,
@@ -81,9 +86,9 @@ class DraftsMixin(StoreBase):
             draft_id = int(cur.lastrowid or 0)
             conn.execute(
                 "INSERT INTO plan_draft_revisions"
-                " (draft_id, revision, document, actor, ts, note)"
-                " VALUES (?,?,?,?,?,?)",
-                (draft_id, draft.revision, draft.document, actor, stamp, ""),
+                " (draft_id, revision, document, format, actor, ts, note)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (draft_id, draft.revision, draft.document, draft.format, actor, stamp, ""),
             )
         self.log(actor, "draft", "add", f"D#{draft_id} {draft.title[:80]}")
         return replace(draft, id=draft_id)
@@ -116,6 +121,7 @@ class DraftsMixin(StoreBase):
         title: str = "",
         expected_revision: int | None = None,
         now: float | None = None,
+        format: str | None = None,
     ) -> tuple[PlanDraft, DraftRevision]:
         """Append the next document revision, refusing a stale base."""
         stamp = time.time() if now is None else now
@@ -130,10 +136,12 @@ class DraftsMixin(StoreBase):
                 )
             revision = current + 1
             title_text = title.strip() or str(row["title"])
+            next_format = str(row["format"]) if format is None else format
             draft = PlanDraft(
                 id=draft_id,
                 title=title_text,
                 document=document.strip(),
+                format=next_format,
                 status=str(row["status"]),
                 revision=revision,
                 actor=actor,
@@ -143,14 +151,15 @@ class DraftsMixin(StoreBase):
                 promoted_at=float(row["promoted_at"]),
             )
             conn.execute(
-                "UPDATE plan_drafts SET title=?, document=?, revision=?, updated_at=? WHERE id=?",
-                (draft.title, draft.document, draft.revision, stamp, draft_id),
+                "UPDATE plan_drafts"
+                " SET title=?, document=?, format=?, revision=?, updated_at=? WHERE id=?",
+                (draft.title, draft.document, draft.format, draft.revision, stamp, draft_id),
             )
             cur = conn.execute(
                 "INSERT INTO plan_draft_revisions"
-                " (draft_id, revision, document, actor, ts, note)"
-                " VALUES (?,?,?,?,?,?)",
-                (draft_id, revision, draft.document, actor, stamp, note.strip()),
+                " (draft_id, revision, document, format, actor, ts, note)"
+                " VALUES (?,?,?,?,?,?,?)",
+                (draft_id, revision, draft.document, draft.format, actor, stamp, note.strip()),
             )
             revision_id = int(cur.lastrowid or 0)
         self.log(actor, "draft", "revise", f"D#{draft_id} r{revision}")
@@ -159,6 +168,7 @@ class DraftsMixin(StoreBase):
             draft_id=draft_id,
             revision=revision,
             document=draft.document,
+            format=draft.format,
             actor=actor,
             ts=stamp,
             note=note.strip(),

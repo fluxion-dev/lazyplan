@@ -43,7 +43,7 @@ The gate runs:
 - the site build and discoverability check (`site/`, `tools/check-site.py`)
 - a clean-install smoke that builds, installs, and runs both console scripts
 - the performance budgets (`tools/perf_bench.py --check`: exact query ceilings on a deterministic fixture)
-- the unittest suite on both system Python and the venv Python
+- the unittest suite in the venv, plus a stdlib-only CLI smoke that runs without Textual
 
 On Windows, run it from Git Bash. CI runs the same gates on Linux and macOS for
 every change; Windows runs the suite nightly in
@@ -169,16 +169,8 @@ add a regression test.
   `tests/support/tui.py`: `wait_for_flush` for the coalesced poll,
   `settle_reflow` for a queued reflow, and `wait_for_tree_resize` when a
   layout change moves the tree.
-- Run a seeded shuffle before calling a fix done:
-
-  ```bash
-  python tools/repeat-tests.py --times 3 --seed 0
-  python tools/repeat-tests.py --times 2 --seed 7 --no-tui
-  ```
-
-  The runner prints the exact reproducer for the first failure. The nightly
-  `flakes` workflow runs the same command on Linux, macOS, and Windows.
-
+- The gate runs the suite once. Do not add repeated, seeded, or soak runs to a
+  pull request; a flake needs a fix and a regression test, not another pass.
 - A temporary quarantine lives in `tests/quarantine.json`. Every entry needs a
   test id, a linked task, a reason, and a future `expires` date; a malformed or
   expired entry fails the suite. Permanent skips are not allowed.

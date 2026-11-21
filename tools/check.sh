@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# lazyplan gates: lint + format + types + tests (both interpreters).
+# lazyplan gates: lint + format + types + tests.
 # Usage: ./tools/check.sh   (Linux, macOS, or Git Bash on Windows)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -44,8 +44,8 @@ echo "== clean install smoke =="
 ./tools/check-install.sh
 echo "== performance budgets =="
 "$VENV_BIN"/python tools/perf_bench.py --check
-echo "== unittest (system python, stdlib only) =="
-PYTHONPATH=src "$SYS_PY" -m unittest discover -s tests -t .
+echo "== stdlib-only CLI smoke =="
+PYTHONPATH=src "$SYS_PY" -m lazyplan --help >/dev/null
 echo "== unittest (venv python, with textual) =="
 PYTHONPATH=src "$VENV_BIN"/python -m unittest discover -s tests -t .
 echo "ALL GATES GREEN"

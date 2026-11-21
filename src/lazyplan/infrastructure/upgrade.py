@@ -485,7 +485,7 @@ def reinstall_hint() -> str:
 
 def guard_message(info: InstallInfo) -> str:
     """Why this install cannot self-upgrade, and what to run instead."""
-    upgradeable = "`lpui upgrade` only manages pipx and venv installs"
+    upgradeable = "`lpui upgrade` only manages pipx, uv, and venv installs"
     if info.method == RPM:
         return (
             f"system rpm install: upgrade with your package manager "

@@ -420,6 +420,15 @@ class TestGuards(unittest.TestCase):
             msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
         self.assertIn("uv tool install lazyplan-tui", msg)
 
+    def test_system_guards_list_every_upgradeable_method(self):
+        for info in (
+            upgrade.InstallInfo(upgrade.RPM, False),
+            upgrade.InstallInfo(upgrade.DEB, False),
+            upgrade.InstallInfo(upgrade.SOURCE, False, "editable"),
+        ):
+            with self.subTest(method=info.method):
+                self.assertIn("pipx, uv, and venv", upgrade.guard_message(info))
+
 
 class TestHints(unittest.TestCase):
     def test_reinstall_hint_prefers_uv_when_present(self):

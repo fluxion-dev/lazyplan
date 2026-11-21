@@ -83,6 +83,12 @@ class TestPayload(unittest.TestCase):
         update_stage._state_path(update_stage.STAGED, self.home).write_text("{bad")
         self.assertIsNone(update_stage.read_stage(home=self.home))
 
+    def test_uv_stage_round_trips(self):
+        update = update_stage.stage_update(
+            VERSION, UV, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
+        )
+        self.assertEqual(update_stage.read_stage(home=self.home), update)
+
     def test_rejects_untrusted_fields(self):
         base = update_stage.StagedUpdate(
             VERSION, PIPX, FILENAME, URL, SHA, len(WHEEL), 1000.0

@@ -157,7 +157,9 @@ Then draft your first plan:
 lpui plan add --title "my-plan" --why "reason" --what "scope"
 ```
 
-It opens in the plan drafts panel; promote it to put it in the plan queue.
+It opens in the plan drafts panel as a definition-only sketch. Add acceptance
+criteria to the sketch, annotate it, and let your agent formalize it into
+milestones and tasks before you promote it.
 
 `lpui` with no command opens the screen. `lpui ui` does the same.
 
@@ -486,32 +488,38 @@ and says why.
 
 ### Plan drafts
 
-A draft is one validated plan document that stays out of the plan queue until
-you promote it. The agent writes the document; you review it in the `plan
-drafts` panel. Select a draft and press `e` or `enter` to open the review
-screen.
+A draft is a definition-only sketch or a validated plan document that stays
+out of the plan queue until you promote it. The agent writes the draft; you
+review it in the `plan drafts` panel. Select a draft and press `e` or `enter`
+to open the review screen.
 
-The review screen puts the document on the left and its annotations on the
-right. Every constituent part is a selectable block: the plan title, why, what,
-settings, and criteria; each milestone title, description, settings, and
-criteria; and each task title, description, role, and criteria.
+A sketch has four parts: the plan title, why, what, and acceptance criteria.
+It deliberately carries no milestones or tasks; the agent derives those after
+the definition is approved. A document draft carries the full tree.
+
+The review screen puts the draft on the left and its annotations on the right.
+Every constituent part is a selectable block. A sketch exposes the title, why,
+what, and each criterion. A document also exposes its settings, each milestone
+title, description, settings, and criteria, and each task title, description,
+role, and criteria.
 
 | key | action |
 |---|---|
 | `j` / `k` | move block focus |
 | `a` | annotate the selected text, or the focused block |
-| `P` | promote a clean draft into the plan queue |
+| `P` | promote a clean document draft into the plan queue |
 | `enter` | view the focused annotation |
 | `x` / `d` | dismiss · delete an open annotation |
 | `r` / `escape` | refresh · back |
 
 Mouse selection anchors to the block and the exact quote. Press `a` to record
 a comment, question, or change. Saving it moves the draft to `revising` and
-wakes any agent running `lpui draft wait` on it; the agent revises the document
+wakes any agent running `lpui draft wait` on it; the agent revises the draft
 and answers each annotation. When no open annotations
-remain, the draft returns to `review`. Promotion refuses open annotations,
-invalid or stale documents, and a plan key that already belongs to a plan; it
-then creates the whole plan tree atomically and selects the new plan.
+remain, the draft returns to `review`. Promotion refuses a sketch that has not
+been formalized, open annotations, invalid or stale documents, and a plan key
+that already belongs to a plan; it then creates the whole plan tree atomically
+and selects the new plan.
 
 On terminals narrower than 80 columns the annotation panel stacks under the
 document. The draft stays out of the plan queue and consumes no plan id until
@@ -649,9 +657,10 @@ Your agent is expected to work from the plan, not invent it:
   metadata only and never writes back.
 - Relate every plan criterion to a proving task and run
   `lpui --porcelain lint --plan P` before check-off.
-- Draft the whole tree in one JSON write with `plan apply`; start from
-  `plan recipe feature|bugfix|refactor` and edit the words before applying.
-  Run `draft wait` in the background so each saved annotation wakes you.
+- Start from a definition-only sketch: `plan add` or `draft sketch`, review the
+  why, what, and criteria, then `draft formalize` the derived tree. Use
+  `plan apply` when the whole tree is already known. Run `draft wait` in the
+  background so each saved annotation wakes you.
 - Start with `lpui --porcelain next` to claim work, or
   `lpui --porcelain context --max-chars 4000` for the budgeted picture.
   Renew the lease while you work, note handoffs, and release it when you stop.
@@ -671,11 +680,14 @@ profile that owns it. A plan sets `--dispatch serial|parallel` and
 
 ```bash
 lpui --actor NAME plan add --title "API v2" --why ".." --what ".." \
-  --dispatch parallel --max-agents 2
+  --direct --reason "lane fixture" --dispatch parallel --max-agents 2
 lpui --actor NAME milestone add --plan 7 --title "Read path" \
   --lane-group 1 --agent-role implementer
 lpui --actor NAME task add --milestone 12 --title "Run the suite" --role qa
 ```
+
+A sketch defers lane settings until its formal document; `--direct` applies them
+immediately.
 
 Waves run in group order. Lanes in one wave may run at once, up to the plan's
 agent cap, and tasks inside a lane run serially. A parallel plan with more than
@@ -802,9 +814,10 @@ lpui plan apply --file plan.json --direct --reason "bulk import"
 lpui plan recipe feature > plan.json
 ```
 
-`plan apply` and `plan add` create a draft for review. `--direct --reason TEXT`
-skips review, creates the plan in the queue at once, and notes the reason on
-the plan.
+`plan apply` creates a document draft for review; `plan add` creates a sketch
+draft. `--direct --reason TEXT` skips review, creates the plan in the queue at
+once, and notes the reason on the plan. Lane flags on `plan add` belong to
+`--direct`; a sketch gets its dispatch settings when it is formalized.
 
 The document is JSON with `plan` and `milestones`; each milestone carries
 `tasks`. Every plan, milestone, and task needs a stable `key`. A retry with the
@@ -844,22 +857,60 @@ folds that choice into the plan.
 
 ### Drafts
 
-A draft is the review step every new plan goes through. `plan add`, `plan
-apply`, and `draft add` store a validated document that stays out of the plan
-queue until you promote it.
+A draft is the review step every new plan goes through. `plan add` and the
+screen's `n` form create a definition-only sketch; `plan apply` and `draft add`
+create a full document draft. Neither enters the plan queue until promotion.
+
+A sketch is plain Markdown:
+
+```markdown
+# Title
+
+## Why
+
+...
+
+## What
+
+...
+
+## Done
+
+- Acceptance criterion
+```
+
+`# Title`, `## Why`, and `## What` are required. `## Done` holds the plan-level
+acceptance criteria. Common aliases such as `## Goal`, `## Scope`, and
+`## Acceptance criteria` are accepted, and unknown sections stay in the what.
+Milestones and tasks do not belong in a sketch.
+
+At formalization the agent supplies them as the same JSON document `plan apply`
+takes. The reviewed title, why, what, and criteria must carry over unchanged;
+`formalize` refuses drift, so any definition change goes through another sketch
+revision first.
 
 ```bash
-lpui --actor NAME draft add --file plan.json
+lpui --actor NAME draft sketch --file sketch.md
 lpui draft list
 lpui draft show --id 4
-lpui --actor NAME draft annotate --id 4 --block plan:why --kind change \
+lpui --actor NAME draft annotate --id 4 --block sketch:why --kind change \
   --text "Sharpen this" --quote "the promise"
 lpui draft wait --id 4 --timeout 600
 lpui --actor NAME draft annotations --id 4
 lpui --actor NAME draft respond --id 8 --response "Rewrote the promise"
-lpui --actor NAME draft revise --id 4 --file plan.json --base-revision 2 --note "Addressed"
+lpui --actor NAME draft revise --id 4 --file sketch.md --base-revision 1 --note "Addressed"
 lpui --actor NAME draft ready --id 4
+lpui --actor NAME draft formalize --id 4 --file plan.json --base-revision 2 \
+  --note "Derived the milestones and tasks"
 lpui --actor NAME draft promote --id 4
+```
+
+A document draft starts from `draft add`, and `draft revise` takes the same JSON
+document:
+
+```bash
+lpui --actor NAME draft add --file plan.json
+lpui --actor NAME draft revise --id 5 --file plan.json --base-revision 2
 ```
 
 Saving an annotation moves the draft to `revising`. `draft wait` blocks until
@@ -867,17 +918,25 @@ the draft has open annotations and prints them (exit 0), and exits 3 once the
 draft is promoted and 4 after `--timeout`. Open annotations end the wait at
 once, so an agent re-arms it after answering each one.
 
-`draft add` and `draft revise` validate and normalize the document, so review
-and promotion see the same values. A revision must name the current base
-revision. Annotations anchor to one block and an optional exact quote; all
-three kinds use the same one-response loop. `ready` returns a revised draft to
-review only when no open annotations remain. `promote` is the only path into
-the plan queue: it refuses open annotations, invalid or stale documents, and a
-plan key that already belongs to a plan, then creates the whole tree atomically.
-The promoted draft keeps its plan id for audit.
+`draft revise` reads Markdown for a sketch and JSON for a document. A revision
+must name the current base revision, and the values are normalized, so review
+and promotion see the same content. Annotations anchor to one block and an
+optional exact quote; all three kinds use the same one-response loop. `ready`
+returns a revised draft to review only when no open annotations remain.
+`formalize` refuses open annotations, a stale revision, a non-sketch draft, and
+any document whose title, why, what, or plan criteria differ from the sketch.
+`promote` is the only path into the plan queue: it refuses a sketch, open
+annotations, invalid or stale documents, and a plan key that already belongs to
+a plan, then creates the whole tree atomically. The promoted draft keeps its
+plan id for audit.
 
-`draft show` returns the document, blocks, and annotations as JSON. Porcelain
-rows are `draft`, `block`, and `annotation`.
+A sketch reserves no plan key; the formal document names one. Lane settings
+also arrive with the formal document, not the sketch.
+
+`draft show` returns the draft including its `format` field, its `blocks`, and
+its `annotations` as JSON, plus `sketch` Markdown for a sketch or the
+`document` object for a document. Porcelain rows are `draft`, `block`, and
+`annotation`.
 
 ### Context and claims
 

@@ -3,6 +3,28 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **Plan drafts start as definition-only sketches.** `lpui draft sketch --file
+  sketch.md` stores a title, why, what, and `## Done` acceptance criteria as
+  Markdown. The review screen annotates those blocks with the same anchored
+  comments, revisions, and `draft wait` loop as a document draft.
+- **`draft formalize` derives the tree after approval.** The agent supplies the
+  milestones and tasks as the usual JSON document; lpui refuses any change to
+  the reviewed title, why, what, or plan criteria, then stores the document as
+  the next revision. `draft promote` refuses a sketch that is not formalized.
+- **`draft_sketch` and `draft_formalize` MCP tools** expose the same loop to MCP
+  hosts; `draft_revise` accepts Markdown for a sketch.
+
+### Changed
+
+- **`plan add` and the screen's `n` form now create sketches**, not
+  milestone-free documents. Lane settings move to the formal document;
+  `plan add --direct` still queues them immediately. `plan apply` and
+  `draft add` keep creating full document drafts.
+
 ## v0.51.0 — 2026-11-21
 
 ### Changed

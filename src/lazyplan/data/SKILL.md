@@ -202,19 +202,21 @@ task. No row is written from unscouted ground, in any case, no exceptions.
 
 ```bash
 lpui --actor NAME plan add --title "API v2" --why ".." --what ".."
-lpui --actor NAME criterion add --kind plan --id P --text "Works offline"
-lpui criterion list --kind plan --id P
-lpui criterion edit --id C --done / --open
+lpui --actor NAME --porcelain draft sketch --file sketch.md
+lpui --porcelain draft list
 ```
 
-`plan add` and `plan apply` create a draft in review, never a queued plan; the
-plan id exists only after the human promotes it (see Plan drafts). Pass
-`--direct --reason TEXT` only for bulk or fixture work the human has waived
-review for; the reason is noted on the plan.
+`plan add` creates a definition-only sketch; `plan apply` and `draft add`
+create full document drafts. Neither gets a plan id until the human promotes it
+(see Plan drafts). Put acceptance criteria in the sketch's `## Done` section
+with `draft revise`, then review the definition. Pass `--direct --reason TEXT`
+only for bulk or fixture work the human has waived review for; the reason is
+noted on the plan.
 
-Only once the definition is agreed, cut the work — milestones from the plan,
-then tasks from each milestone, shaped as below plus the default QA, refactor,
-and documentation tasks.
+Only once the definition is agreed, formalize the sketch into the plan
+document — milestones from the plan, then tasks from each milestone, shaped as
+below plus the default QA, refactor, and documentation tasks. The sketch is the
+review gate; the derived tree is not reviewed a second time.
 
 Every plan carries QA testing tasks, a refactoring task, and documentation
 cleanup by default, shaped by the interview's testing answer. Ground every QA task in the acceptance criteria: each criterion is exercised by a named test task, and DoD checklists reference the criteria they satisfy. Only an explicit user opt-out ("skip QA", "no refactoring") excludes them — silence means include. Default task shapes include "Run the relevant test suites", "Refactor what the change touched", and "Clean up touched documentation".
@@ -225,25 +227,28 @@ done. Do not defer commits to the end of the plan.
 
 ## Review gate: plan is truth
 
-Once the definition is recorded and the work is cut, present the plan for check-off before implementing anything:
+Present the draft — the sketch when there is one — for check-off before
+formalizing or implementing anything:
 
 ```bash
-lpui list --status all                 # the whole tree
-lpui plan show --id P                  # why/what + criteria + children
+lpui --porcelain list --tree --status all
+lpui --porcelain draft show --id D
 ```
 
-Walk the human through every milestone and task, make last edits on the spot,
-and start executing only on explicit check-off. Relate every plan criterion to
-at least one proving task (`lpui criterion relate --id C --task T`) and run
-`lpui lint --plan P` before check-off. Ensure the plan names its commit strategy
-and that every task desc names its expected commit slice and verification;
-reject a plan that batches a whole milestone or plan into one commit. During
-execution the plan stays the truth: fold new findings into the plan before
-changing code, never around it.
+Walk the human through every block, make last edits on the sketch, and start
+only on explicit check-off. Then formalize and promote, relate every plan
+criterion to at least one proving task
+(`lpui criterion relate --id C --task T`), and run `lpui lint --plan P` before
+implementation. Ensure the formal document names its commit strategy and that
+every task desc names its expected commit slice and verification; reject a plan
+that batches a whole milestone or plan into one commit. During execution the
+plan stays the truth: fold new findings into the plan before changing code,
+never around it.
 
 ## Plan documents and recipes
 
-Draft the whole tree in one write; promotion creates it atomically:
+When the whole tree is already known, write it in one document; promotion
+creates it atomically:
 
 ```bash
 lpui --porcelain plan recipe feature > plan.json   # feature | bugfix | refactor
@@ -259,12 +264,39 @@ the words, add criteria, then apply.
 
 ## Plan drafts
 
-Every new plan starts as a draft: a plan document under review that stays out
-of the queue until the human promotes it. `plan add`, `plan apply`, the TUI `n`
-form, and `draft add` all create one:
+Every new plan starts as a draft that stays out of the queue until the human
+promotes it. There are two forms:
+
+- A **sketch** is the default. `plan add`, the TUI `n` form, and `draft sketch`
+  store a definition-only Markdown page with a title, why, what, and acceptance
+  criteria. It has no milestones or tasks.
+- A **document** is the full tree. `plan apply` and `draft add` store the same
+  JSON document that promotion creates.
+
+A sketch is plain Markdown:
+
+```markdown
+# Title
+
+## Why
+
+...
+
+## What
+
+...
+
+## Done
+
+- Acceptance criterion
+```
+
+`# Title`, `## Why`, and `## What` are required; aliases such as `## Goal`,
+`## Scope`, and `## Acceptance criteria` are accepted, and unknown sections stay
+in the what.
 
 ```bash
-lpui --actor NAME --porcelain draft add --file plan.json
+lpui --actor NAME --porcelain draft sketch --file sketch.md
 lpui --porcelain draft list [--status review|revising|promoted|all]
 lpui --porcelain draft show --id D
 lpui --porcelain draft annotations --id D [--status open|addressed|dismissed|all]
@@ -272,9 +304,11 @@ lpui --actor NAME --porcelain draft annotate --id D --block KEY --kind comment|q
 lpui --porcelain draft wait --id D [--timeout SECONDS]
 lpui --actor NAME --porcelain draft respond --id A --response TEXT
 lpui --actor NAME --porcelain draft resolve --id A [--response TEXT]
-lpui --actor NAME --porcelain draft revise --id D --file plan.json --base-revision N --note TEXT
+lpui --actor NAME --porcelain draft revise --id D --file sketch.md --base-revision N --note TEXT
 lpui --actor NAME --porcelain draft ready --id D
+lpui --actor NAME --porcelain draft formalize --id D --file plan.json --base-revision N --note TEXT
 lpui --actor NAME --porcelain draft promote --id D
+lpui --actor NAME --porcelain draft add --file plan.json
 ```
 
 - Right after creating a draft, and after every `draft revise`, run
@@ -284,17 +318,24 @@ lpui --actor NAME --porcelain draft promote --id D
   `ready` once none are open, and re-arm. Exit 3 means promoted, so stop; exit 4
   is `--timeout`, so re-arm. Open annotations end the wait immediately, so
   nothing saved between two waits is missed.
-- The draft uses the same JSON document as `plan apply`; review and promotion
-  see normalized values.
+- Review the sketch, not the derived tree. After the human approves the
+  definition, `draft formalize` supplies the milestones and tasks as the JSON
+  document. lpui refuses a document whose title, why, what, or plan criteria
+  differ from the sketch; any definition change goes through another sketch
+  revision.
+- `draft revise` reads Markdown for a sketch and JSON for a document. It must
+  name the current base revision.
+- `promote` refuses an unformalized sketch, open annotations, invalid
+  documents, and a taken plan key; it creates the tree atomically.
+- A sketch reserves no plan key and carries no lane settings; the formal
+  document supplies both. Use `plan add --direct` when lane settings must be
+  queued immediately.
 - Annotations anchor to one block and an optional exact quote. A revision that
   cannot find a quote marks the annotation `moved` or `orphaned`; answer or ask,
   never delete feedback silently.
-- `revise` must name the current base revision. `ready` returns to review only
-  when no open annotations remain. `promote` refuses open annotations, invalid
-  documents, and a taken plan key; it creates the tree atomically.
-- MCP tools: `draft_list`, `draft_show`, `draft_add`, `draft_revise`,
-  `draft_annotate`, `draft_respond`, `draft_resolve`, `draft_promote`; the
-  resource is `lazyplan://draft/{id}`.
+- MCP tools: `draft_list`, `draft_show`, `draft_sketch`, `draft_add`,
+  `draft_formalize`, `draft_revise`, `draft_annotate`, `draft_respond`,
+  `draft_resolve`, `draft_promote`; the resource is `lazyplan://draft/{id}`.
 
 ## Trust and coordination
 

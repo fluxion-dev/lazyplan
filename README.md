@@ -58,9 +58,11 @@ data with `lpui seed`.
 
 - **One source of truth.** The plan you see is the plan your agent reads. No
   copy-pasting context between chats.
-- **Reviewed, not rubber-stamped.** A draft plan takes anchored comments,
-  questions, and change requests; the agent revises against them, and promotion
-  is refused while feedback is open.
+- **Reviewed, not rubber-stamped.** A plan starts as a short sketch — why, what,
+  and acceptance criteria. The human leaves anchored comments, questions, and
+  change requests; the agent revises against them, then derives the milestones
+  and tasks without changing the reviewed definition. Promotion is refused
+  while feedback is open or a sketch is unformalized.
 - **Made for focus.** Plans stay as one-line summaries until you open them,
   branches stay open or closed exactly as you left them, large branches load on
   demand, and the timeline waits for `T`. Three themes and five icon palettes
@@ -95,14 +97,17 @@ fidelity:
 ```bash
 lpui --actor helper --porcelain next
 lpui --actor helper --porcelain context --max-chars 4000
-lpui plan recipe feature > plan.json
-lpui --actor helper --porcelain plan apply --file plan.json
+lpui --actor helper --porcelain draft sketch --file sketch.md
 lpui --actor helper --porcelain draft wait --id 1
+lpui --actor helper --porcelain draft formalize --id 1 --file plan.json --base-revision 2
+lpui --actor helper --porcelain draft promote --id 1
 ```
 
-New plans start as drafts outside the queue. The human annotates them in the
-review screen, each saved annotation wakes the agent running `draft wait`, and
-promoting the draft creates the plan tree atomically once every annotation is
+New plans start as definition-only sketches outside the queue. The human
+annotates the sketch in the review screen, each saved annotation wakes the agent
+running `draft wait`, and `draft formalize` supplies the milestones and tasks
+without rewriting the reviewed title, why, what, or criteria. Promoting the
+formalized draft creates the plan tree atomically once every annotation is
 answered.
 
 Parallel plans are lanes: a milestone gets a wave, a role, and its own

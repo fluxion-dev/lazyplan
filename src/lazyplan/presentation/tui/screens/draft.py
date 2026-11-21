@@ -25,6 +25,7 @@ except ImportError:  # pragma: no cover - stdlib-only interpreter
     _TEXTUAL_OK = False
 
 from ....core.entities import DraftAnnotation
+from ....core.kinds import DRAFT_FORMAT_DOCUMENT
 from ....core.ports.app import AppPort
 from ....services import drafts as draft_services
 from ....services.draft_content import DraftAnchor
@@ -99,6 +100,7 @@ if _TEXTUAL_OK:
             draft = detail.draft
             self.query_one("#draft-head", Static).update(
                 f"D{draft.id} {draft.title} · {draft.status} · r{draft.revision}"
+                f" · {draft.format}"
                 f" · {detail.open_annotations}/{detail.total_annotations} open"
             )
             body.mount_all([DraftBlockView(block) for block in detail.blocks])
@@ -306,6 +308,9 @@ if _TEXTUAL_OK:
                 return
             if draft.status != "review":
                 self.notify("the agent must revise this draft before promotion", timeout=5)
+                return
+            if draft.format != DRAFT_FORMAT_DOCUMENT:
+                self.notify("this draft is a sketch; formalize it before promoting", timeout=5)
                 return
             if self._detail.open_annotations:
                 self.notify("resolve or dismiss open annotations first", timeout=5)

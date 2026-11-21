@@ -491,6 +491,22 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             await pilot.pause()
             self.assertEqual(len(app.screen_stack), 1)
 
+    async def test_sketch_renders_and_promotion_is_guarded(self) -> None:
+        draft = drafts.create_from_fields(self.store, "Sketch title", "Why.", "What.")
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            head = str(app.screen.query_one("#draft-head").render())
+            self.assertIn("sketch", head)
+            bodies = list(app.screen.query(".draft-block-body"))
+            self.assertIn("Sketch title", str(bodies[0].render()))
+            app.screen.action_promote()
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "DraftScreen")
+            self.assertEqual(self.store.list_plans(), [])
+
     async def test_new_plan_form_creates_a_draft_and_opens_it(self) -> None:
         app = create_app(str(self.store.path))
         async with app.run_test(size=(130, 40)) as pilot:
@@ -505,6 +521,7 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(type(app.screen).__name__, "DraftScreen")
         self.assertEqual(self.store.list_plans(), [])
         self.assertEqual([draft.title for draft in self.store.list_drafts()], ["API v2"])
+        self.assertEqual([draft.format for draft in self.store.list_drafts()], ["sketch"])
 
     async def test_enter_opens_the_draft_screen(self) -> None:
         draft = drafts.create(self.store, document())

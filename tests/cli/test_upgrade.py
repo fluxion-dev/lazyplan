@@ -481,6 +481,28 @@ class TestUpgradeCommand(unittest.TestCase):
         self.assertIn("9.9.9", out)
         run.assert_not_called()
 
+    def test_check_reports_uv_method(self):
+        with (
+            mock.patch.object(cli_mod, "detect", return_value=UV_INFO),
+            mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+            mock.patch.object(cli_mod, "run_upgrade") as run,
+        ):
+            code, out, _ = self._run(["upgrade", "--check"])
+        self.assertEqual(code, 0)
+        self.assertIn("uv", out)
+        run.assert_not_called()
+
+    def test_uv_diagnose_json_names_the_tool_venv(self):
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+            mock.patch.object(upgrade, "detect", return_value=UV_INFO),
+        ):
+            code, out, _ = self._run(["upgrade", "--diagnose", "--json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["method"], upgrade.UV)
+        self.assertEqual(payload["uv_tool"], UV_INFO.detail)
+
     def test_diagnose_json_reports_the_environment_without_network(self):
         payload = {
             "method": upgrade.PIPX,

@@ -57,6 +57,11 @@ latest_version() {
     python3 -c 'import json, sys; print(json.load(sys.stdin)["info"]["version"])'
 }
 
+detected_method() {
+  "$1" upgrade --diagnose --json |
+    python3 -c 'import json, sys; print(json.load(sys.stdin)["method"])'
+}
+
 previous_version() {
   curl -fsSL "https://pypi.org/pypi/$PKG/json" |
     python3 -c '
@@ -155,8 +160,28 @@ elif [[ -n "$FROM_VERSION" ]]; then
   echo "== upgrade uv from $FROM_VERSION to $VERSION =="
   uv tool install --quiet "$PKG==$FROM_VERSION" --force
   [[ "$("$UV_LPUI" --version)" == "$FROM_VERSION" ]]
-  "$UV_LPUI" upgrade
+  FROM_METHOD="$(detected_method "$UV_LPUI")"
+  if [[ "$FROM_METHOD" == "uv" ]]; then
+    "$UV_LPUI" upgrade
+  else
+    # The first uv-aware release follows one that cannot detect its own uv
+    # install. Use the documented forced install, then prove the new version
+    # can upgrade itself next time.
+    echo "previous release reports '$FROM_METHOD'; using uv tool install --force"
+    uv tool install --quiet "$PKG==$VERSION" --force
+  fi
   [[ "$("$UV_LPUI" --version)" == "$VERSION" ]]
+
+  echo "== upgraded uv method detection =="
+  UV_DIAG="$("$UV_LPUI" upgrade --diagnose --json)"
+  python3 - "$UV_DIAG" <<'PY'
+import json
+import sys
+
+data = json.loads(sys.argv[1])
+if data["method"] != "uv" or not data["upgradeable"]:
+    raise SystemExit(f"upgraded uv install not detected: {data['method']} {data['upgradeable']}")
+PY
 
   echo "== upgrade pipx from $FROM_VERSION to $VERSION =="
   pipx install --quiet "$PKG==$FROM_VERSION" --force

@@ -182,11 +182,13 @@ if _TEXTUAL_OK:
             text: str,
             confirm_label: str = "Delete",
             variant: Literal["default", "primary", "success", "warning", "error"] = "error",
+            focus: Literal["confirm", "cancel"] = "cancel",
         ) -> None:
             super().__init__()
             self.text = text
             self.confirm_label = confirm_label
             self.variant = variant
+            self.focus_confirm = focus == "confirm"
 
         def compose(self) -> ComposeResult:
             with self._dialog():
@@ -196,9 +198,10 @@ if _TEXTUAL_OK:
                     yield Button("Cancel", id="cancel")
 
         def on_mount(self) -> None:
-            """Default to the safe choice: Enter cancels, it does not delete."""
+            """Focus the confirm button only when the caller opts in; else Enter cancels."""
+            target = "#ok" if self.focus_confirm else "#cancel"
             try:
-                self.query_one("#cancel", Button).focus()
+                self.query_one(target, Button).focus()
             except Exception:
                 pass
 

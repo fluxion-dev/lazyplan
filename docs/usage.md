@@ -521,7 +521,7 @@ role, and criteria.
 |---|---|
 | `j` / `k` | move block focus |
 | `a` | annotate the selected text, or the focused block |
-| `P` | promote a clean document draft into the plan queue |
+| `p` / `P` | promote a clean document draft into the plan queue |
 | `enter` | view the focused annotation |
 | `x` / `d` | dismiss · delete an open annotation |
 | `r` / `escape` | refresh · back |

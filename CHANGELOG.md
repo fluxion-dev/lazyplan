@@ -28,6 +28,10 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
   Promote button, lowercase `p` opens it beside Shift+P, and the draft screen
   hint matches. Delete and other destructive confirmations still default to
   Cancel.
+- **The release smoke handles a previous release without uv detection.** When
+  the previous PyPI release predates uv support, the smoke upgrades with
+  `uv tool install --force` and still asserts the new install reports `uv`;
+  later releases upgrade through `lpui upgrade`.
 
 ## v0.51.1 — 2026-11-21
 

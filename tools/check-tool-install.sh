@@ -37,6 +37,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# A release gate runs seconds after publish; a cached simple index would hide
+# the new version from uv until the cache expires.
+export UV_NO_CACHE=1
+
 for tool in uv pipx python3; do
   if ! command -v "$tool" >/dev/null 2>&1; then
     echo "error: $tool is required for the tool-install smoke" >&2
@@ -93,6 +97,24 @@ if [[ -z "$WHEEL" ]]; then
       exit 1
     fi
   fi
+fi
+
+FILE_PKG="${PKG//-/_}"
+
+wait_for_index() {
+  local version="$1" attempt
+  for attempt in $(seq 1 24); do
+    if curl -fsSL "https://pypi.org/simple/$PKG/" | grep -q "$FILE_PKG-$version-"; then
+      return 0
+    fi
+    sleep 5
+  done
+  echo "error: PyPI does not list $PKG $version" >&2
+  return 1
+}
+
+if [[ -z "$WHEEL" ]]; then
+  wait_for_index "$VERSION"
 fi
 
 WORK="$(mktemp -d)"

@@ -45,7 +45,8 @@ if _TEXTUAL_OK:
             Binding("j", "next_block", "Next block", show=False),
             Binding("k", "prev_block", "Prev block", show=False),
             Binding("a", "annotate", "Annotate"),
-            Binding("P", "promote", "Promote"),
+            Binding("p", "promote", "Promote"),
+            Binding("P", "promote", "Promote", show=False),
             Binding("x", "dismiss_annotation", "Dismiss"),
             Binding("d", "delete_annotation", "Delete"),
             Binding("r", "refresh", "Refresh", show=False),
@@ -111,7 +112,7 @@ if _TEXTUAL_OK:
                     [
                         ("j/k", "block"),
                         ("a", "annotate"),
-                        ("P", "promote"),
+                        ("p", "promote"),
                         ("esc", "back"),
                     ],
                 )
@@ -335,6 +336,7 @@ if _TEXTUAL_OK:
                     f"Promote D{self.draft_id} into the plan queue?",
                     confirm_label="Promote",
                     variant="primary",
+                    focus="confirm",
                 ),
                 cb,
             )

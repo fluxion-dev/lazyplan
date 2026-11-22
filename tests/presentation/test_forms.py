@@ -214,6 +214,39 @@ class DialogSizingTest(unittest.IsolatedAsyncioTestCase):
                 self.assertLessEqual(button_region.bottom, region.bottom)
 
 
+class ConfirmFocusTest(unittest.IsolatedAsyncioTestCase):
+    async def _app(self):
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(self.tmp.cleanup)
+        store = Store(os.path.join(self.tmp.name, "confirm.db"))
+        return create_app(str(store.path))
+
+    async def test_destructive_confirmation_defaults_to_cancel(self) -> None:
+        app = await self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.push_screen(ConfirmScreen("Delete plan P1?"))
+            await pilot.pause()
+            cancel = app.screen.query_one("#cancel", Button)
+            self.assertIs(app.screen.focused, cancel)
+
+    async def test_a_promote_confirmation_can_focus_its_action(self) -> None:
+        app = await self._app()
+        async with app.run_test(size=(120, 40)) as pilot:
+            await pilot.pause()
+            app.push_screen(
+                ConfirmScreen(
+                    "Promote D1?",
+                    confirm_label="Promote",
+                    variant="primary",
+                    focus="confirm",
+                )
+            )
+            await pilot.pause()
+            ok = app.screen.query_one("#ok", Button)
+            self.assertIs(app.screen.focused, ok)
+
+
 class DialogCssTest(unittest.TestCase):
     def test_entity_dialogs_scope_the_larger_scale(self) -> None:
         text = CSS.read_text(encoding="utf-8")

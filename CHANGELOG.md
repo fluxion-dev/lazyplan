@@ -22,6 +22,13 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 - **Install docs show uv and pipx side by side**, including PATH setup,
   upgrade, migration, and uninstall for both.
 
+### Fixed
+
+- **Promoting a draft with Enter works.** The promote confirmation focuses its
+  Promote button, lowercase `p` opens it beside Shift+P, and the draft screen
+  hint matches. Delete and other destructive confirmations still default to
+  Cancel.
+
 ## v0.51.1 — 2026-11-21
 
 ### Added

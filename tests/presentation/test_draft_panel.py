@@ -373,6 +373,41 @@ class TestDraftPanel(unittest.IsolatedAsyncioTestCase):
             self.assertIsNotNone(promotion.plan_id)
             self.assertEqual(app.selected, ("plan", promotion.plan_id))
 
+    async def test_enter_on_the_promote_confirmation_promotes(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            await pilot.press("P")
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
+            await pilot.press("enter")
+            await pilot.pause()
+            self.assertEqual(len(app.screen_stack), 1)
+            promotion = self.store.get_draft(draft.id)
+            assert promotion is not None
+            self.assertEqual(promotion.status, "promoted")
+            self.assertIsNotNone(promotion.plan_id)
+            self.assertEqual(app.selected, ("plan", promotion.plan_id))
+
+    async def test_lowercase_p_opens_the_promote_confirmation(self) -> None:
+        draft = drafts.create(self.store, document())
+        app = create_app(str(self.store.path))
+        async with app.run_test(size=(130, 40)) as pilot:
+            await pilot.pause()
+            app.open_draft(draft.id)
+            await pilot.pause()
+            await pilot.press("p")
+            await pilot.pause()
+            self.assertEqual(type(app.screen).__name__, "ConfirmScreen")
+            app.screen.query_one("#ok", Button).press()
+            await pilot.pause()
+            promotion = self.store.get_draft(draft.id)
+            assert promotion is not None
+            self.assertEqual(promotion.status, "promoted")
+
     async def test_promote_refuses_open_annotations(self) -> None:
         draft = drafts.create(self.store, document())
         drafts.annotate(self.store, draft.id, "plan:why", "change", "Sharpen")

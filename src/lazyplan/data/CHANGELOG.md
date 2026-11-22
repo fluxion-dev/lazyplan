@@ -3,6 +3,25 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Added
+
+- **uv is a supported install.** `uv tool install lazyplan-tui` is detected as
+  its own method, and `lpui upgrade` reinstalls the pinned version with
+  `uv tool install --force`. The Windows helper updates the uv tool venv with
+  `uv pip`, and `install.sh --method uv` installs and uninstalls; `auto` falls
+  through to uv only when pipx is absent.
+- **`uvx --from lazyplan-tui lpui`** runs the latest release without installing.
+
+### Changed
+
+- **Repair and PATH hints name uv.** An unrecognized install is repaired with
+  `uv tool install` when uv is on PATH, and the upgrade guards list pipx, uv,
+  and venv.
+- **Install docs show uv and pipx side by side**, including PATH setup,
+  upgrade, migration, and uninstall for both.
+
 ## v0.51.1 — 2026-11-21
 
 ### Added

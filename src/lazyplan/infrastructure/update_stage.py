@@ -41,6 +41,7 @@ from .upgrade import (
     PIPX,
     PYPI_PKG,
     UPGRADEABLE,
+    UV,
     VENV,
     UpgradeError,
     parse_version,
@@ -359,6 +360,11 @@ def _install_command(update: StagedUpdate, home: str | Path | None, exe: str) ->
         if shutil.which("pipx") is None:
             raise StageError("pipx is not on PATH")
         return ["pipx", "install", wheel, "--force"]
+    if update.method == UV:
+        uv = shutil.which("uv")
+        if uv is None:
+            raise StageError("uv is not on PATH")
+        return [uv, "pip", "install", "--python", exe, wheel]
     if update.method == VENV:
         return [exe, "-m", "pip", "install", wheel]
     raise StageError(f"no apply path for a {update.method} install")

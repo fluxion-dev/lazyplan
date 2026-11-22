@@ -15,6 +15,7 @@ from lazyplan.infrastructure import update_log, update_stage, upgrade
 from lazyplan.presentation.cli import main
 from lazyplan.presentation.cli.commands import admin as cli_mod
 from tests.support.home import sandbox_home
+from tests.support.installs import source_checkout, uv_tool_venv
 
 
 class TestDetect(unittest.TestCase):
@@ -28,6 +29,62 @@ class TestDetect(unittest.TestCase):
         self.assertEqual(
             upgrade._looks_like_pipx(exe).lower(), "c:/users/u/pipx/venvs/lazyplan-tui"
         )
+
+    def test_uv_tool_venv_is_detected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = uv_tool_venv(tmp)
+            info = upgrade.detect(
+                exe=str(venv / "bin" / "python"),
+                prefix=str(venv),
+                base_prefix="/usr",
+                cwd=tmp,
+            )
+        self.assertEqual(info.method, upgrade.UV)
+        self.assertTrue(info.upgradeable)
+        self.assertEqual(info.detail, venv.as_posix())
+
+    def test_uv_tool_venv_wins_over_a_source_checkout(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = uv_tool_venv(tmp)
+            source_checkout(tmp)
+            info = upgrade.detect(
+                exe=str(venv / "bin" / "python"),
+                prefix=str(venv),
+                base_prefix="/usr",
+                cwd=tmp,
+            )
+        self.assertEqual(info.method, upgrade.UV)
+
+    def test_uv_receipt_for_another_package_is_not_uv(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            venv = uv_tool_venv(tmp, package="other-tool")
+            with (
+                mock.patch.object(upgrade, "_is_editable_install", return_value=False),
+                mock.patch.object(upgrade, "_looks_like_source", return_value=False),
+            ):
+                info = upgrade.detect(
+                    exe=str(venv / "bin" / "python"),
+                    prefix=str(venv),
+                    base_prefix="/usr",
+                    cwd=tmp,
+                )
+        self.assertEqual(info.method, upgrade.VENV)
+
+    def test_uv_tool_venv_path_on_windows_keeps_the_drive(self):
+        with mock.patch.object(
+            upgrade.textfile, "read", return_value='requirements = [{ name = "lazyplan-tui" }]'
+        ):
+            prefix = "C:/Users/u/AppData/Local/uv/tools/lazyplan-tui"
+            self.assertEqual(upgrade._looks_like_uv_tool(prefix), prefix)
+
+    def test_uv_tool_dir_without_a_receipt_still_matches(self):
+        with mock.patch.object(upgrade.textfile, "read", side_effect=OSError):
+            prefix = "/home/u/.local/share/uv/tools/lazyplan-tui"
+            self.assertEqual(upgrade._looks_like_uv_tool(prefix), prefix)
+
+    def test_uv_tool_dir_outside_tools_is_not_uv(self):
+        with mock.patch.object(upgrade.textfile, "read", side_effect=OSError):
+            self.assertIsNone(upgrade._looks_like_uv_tool("/home/u/venvs/lazyplan-tui"))
 
     def test_plain_venv_is_upgradeable(self):
         with (
@@ -63,12 +120,8 @@ class TestDetect(unittest.TestCase):
                 self.assertFalse(info.upgradeable)
 
     def test_source_checkout_layout(self):
-        import tempfile
-
         with tempfile.TemporaryDirectory() as tmp:
-            (Path(tmp) / "pyproject.toml").write_text(
-                '[project]\nname = "lazyplan-tui"\n', encoding="utf-8"
-            )
+            source_checkout(tmp)
             exe = str(Path(tmp) / "bin" / "python")
             with mock.patch.object(upgrade, "_probe", return_value=False):
                 info = upgrade.detect(exe=exe, prefix="/usr", base_prefix="/usr", cwd=tmp)
@@ -122,6 +175,7 @@ class TestRunners(unittest.TestCase):
         cases = (
             ("unknown method", upgrade.InstallInfo(upgrade.RPM, False), "0.16.0", None),
             ("pipx", PIPX_INFO, "0.16.0", "pipx"),
+            ("uv", UV_INFO, "0.16.0", "uv"),
             ("venv", VENV_INFO, "0.16.0", "venv"),
             ("downgrade", PIPX_INFO, "0.15.0", "reject"),
         )
@@ -129,16 +183,24 @@ class TestRunners(unittest.TestCase):
             with self.subTest(case=label):
                 with (
                     mock.patch.object(upgrade, "upgrade_pipx") as pipx_run,
+                    mock.patch.object(upgrade, "upgrade_uv") as uv_run,
                     mock.patch.object(upgrade, "upgrade_venv") as venv_run,
                 ):
                     if outcome == "reject":
                         with self.assertRaises(upgrade.UpgradeError):
                             upgrade.run_upgrade(info, version, installed="0.16.0")
                         pipx_run.assert_not_called()
+                        uv_run.assert_not_called()
                         venv_run.assert_not_called()
                     elif outcome == "pipx":
                         upgrade.run_upgrade(info, version, installed="0.15.0")
                         pipx_run.assert_called_once_with(version, installed="0.15.0")
+                        uv_run.assert_not_called()
+                        venv_run.assert_not_called()
+                    elif outcome == "uv":
+                        upgrade.run_upgrade(info, version, installed="0.15.0")
+                        uv_run.assert_called_once_with(version, installed="0.15.0")
+                        pipx_run.assert_not_called()
                         venv_run.assert_not_called()
                     elif outcome == "venv":
                         upgrade.run_upgrade(
@@ -148,11 +210,13 @@ class TestRunners(unittest.TestCase):
                             version, "/some/venv/bin/python", installed="0.15.0"
                         )
                         pipx_run.assert_not_called()
+                        uv_run.assert_not_called()
 
     def test_installed_upgraders_refuse_a_downgrade(self):
         with mock.patch.object(upgrade.subprocess, "run") as run:
             for label, action in (
                 ("pipx", lambda: upgrade.upgrade_pipx("0.15.0", installed="0.16.0")),
+                ("uv", lambda: upgrade.upgrade_uv("0.15.0", installed="0.16.0")),
                 (
                     "venv",
                     lambda: upgrade.upgrade_venv("0.15.0", "/venv/bin/python", installed="0.16.0"),
@@ -226,6 +290,48 @@ class TestRunners(unittest.TestCase):
             with self.assertRaises(upgrade.UpgradeError):
                 upgrade.upgrade_pipx("0.16.0", installed="0.15.0")
 
+    def test_uv_upgrade_installs_the_pinned_version_first(self):
+        ok = mock.Mock(returncode=0)
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+            mock.patch.object(upgrade.subprocess, "run", return_value=ok) as run,
+        ):
+            upgrade.upgrade_uv("0.16.0", installed="0.15.0")
+        self.assertEqual(run.call_count, 1)
+        self.assertEqual(
+            run.call_args[0][0], ["uv", "tool", "install", "lazyplan-tui==0.16.0", "--force"]
+        )
+
+    def test_uv_upgrade_falls_back_to_a_plain_upgrade(self):
+        bad = mock.Mock(returncode=1, stderr="", stdout="nope")
+        good = mock.Mock(returncode=0)
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+            mock.patch.object(upgrade.subprocess, "run", side_effect=[bad, good]) as run,
+        ):
+            upgrade.upgrade_uv("0.16.0", installed="0.15.0")
+        self.assertEqual(run.call_count, 2)
+        self.assertEqual(run.call_args[0][0], ["uv", "tool", "upgrade", "lazyplan-tui"])
+
+    def test_uv_upgrade_failure_names_the_log(self):
+        bad = mock.Mock(returncode=1, stderr="permission denied", stdout="")
+        log_path = Path("/tmp/update-uv.log")
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+            mock.patch.object(upgrade.subprocess, "run", return_value=bad),
+            mock.patch.object(update_log, "record_update", return_value=log_path) as record,
+        ):
+            with self.assertRaises(upgrade.UpgradeError) as caught:
+                upgrade.upgrade_uv("0.16.0", installed="0.15.0")
+        self.assertIn(str(log_path), str(caught.exception))
+        record.assert_called()
+
+    def test_uv_missing_raises(self):
+        with mock.patch.object(upgrade.shutil, "which", return_value=None):
+            with self.assertRaises(upgrade.UpgradeError) as caught:
+                upgrade.upgrade_uv("0.16.0", installed="0.15.0")
+        self.assertIn("uv is not on PATH", str(caught.exception))
+
     def test_venv_reinstall_runs_venv_pip(self):
         ok = mock.Mock(returncode=0)
         with mock.patch.object(upgrade.subprocess, "run", return_value=ok) as run:
@@ -254,6 +360,7 @@ class TestRunners(unittest.TestCase):
 
 
 PIPX_INFO = upgrade.InstallInfo(upgrade.PIPX, True, "/home/u/.local/share/pipx/venvs/lazyplan-tui")
+UV_INFO = upgrade.InstallInfo(upgrade.UV, True, "/home/u/.local/share/uv/tools/lazyplan-tui")
 VENV_INFO = upgrade.InstallInfo(upgrade.VENV, True, "/home/u/.local/share/lazyplan-venv")
 RPM_INFO = upgrade.InstallInfo(upgrade.RPM, False, "system rpm install")
 
@@ -273,15 +380,72 @@ class TestGuards(unittest.TestCase):
         self.assertIn("git pull", msg)
 
     def test_unknown_message_points_at_installer(self):
-        with mock.patch.object(upgrade.os, "name", "posix"):
+        with (
+            mock.patch.object(upgrade.os, "name", "posix"),
+            mock.patch.object(upgrade.shutil, "which", return_value=None),
+        ):
             msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
         self.assertIn("install.sh", msg)
 
     def test_unknown_message_on_windows_points_at_pipx(self):
-        with mock.patch.object(upgrade.os, "name", "nt"):
+        with (
+            mock.patch.object(upgrade.os, "name", "nt"),
+            mock.patch.object(upgrade.shutil, "which", return_value=None),
+        ):
             msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
         self.assertIn("pipx install --backend pip lazyplan-tui", msg)
         self.assertNotIn("install.sh", msg)
+
+    def test_unknown_message_prefers_uv_when_present(self):
+        with (
+            mock.patch.object(upgrade.os, "name", "nt"),
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+        ):
+            msg = upgrade.guard_message(upgrade.InstallInfo(upgrade.UNKNOWN, False))
+        self.assertIn("uv tool install lazyplan-tui", msg)
+
+    def test_system_guards_list_every_upgradeable_method(self):
+        for info in (
+            upgrade.InstallInfo(upgrade.RPM, False),
+            upgrade.InstallInfo(upgrade.DEB, False),
+            upgrade.InstallInfo(upgrade.SOURCE, False, "editable"),
+        ):
+            with self.subTest(method=info.method):
+                self.assertIn("pipx, uv, and venv", upgrade.guard_message(info))
+
+
+class TestHints(unittest.TestCase):
+    def test_reinstall_hint_prefers_uv_when_present(self):
+        with mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"):
+            self.assertEqual(upgrade.reinstall_hint(), "uv tool install lazyplan-tui")
+
+    def test_reinstall_hint_falls_back_to_pipx_on_windows(self):
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value=None),
+            mock.patch.object(upgrade.os, "name", "nt"),
+        ):
+            self.assertIn("pipx install", upgrade.reinstall_hint())
+
+    def test_reinstall_hint_falls_back_to_installer_on_posix(self):
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value=None),
+            mock.patch.object(upgrade.os, "name", "posix"),
+        ):
+            self.assertIn("install.sh", upgrade.reinstall_hint())
+
+    def test_uv_diagnostics_name_the_tool_venv_and_repair(self):
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+            mock.patch.object(upgrade, "detect", return_value=UV_INFO),
+        ):
+            data = upgrade.diagnostics()
+        self.assertEqual(data["method"], upgrade.UV)
+        self.assertEqual(data["uv_tool"], UV_INFO.detail)
+        self.assertIn("uv tool install", str(data["repair"]))
+
+    def test_notice_for_uv_says_run_upgrade(self):
+        notice = upgrade.notice_text(UV_INFO, "0.15.0", "0.16.0") or ""
+        self.assertIn("lpui upgrade", notice)
 
 
 class TestUpgradeCommand(unittest.TestCase):
@@ -309,6 +473,28 @@ class TestUpgradeCommand(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("9.9.9", out)
         run.assert_not_called()
+
+    def test_check_reports_uv_method(self):
+        with (
+            mock.patch.object(cli_mod, "detect", return_value=UV_INFO),
+            mock.patch.object(cli_mod, "latest_version", return_value="9.9.9"),
+            mock.patch.object(cli_mod, "run_upgrade") as run,
+        ):
+            code, out, _ = self._run(["upgrade", "--check"])
+        self.assertEqual(code, 0)
+        self.assertIn("uv", out)
+        run.assert_not_called()
+
+    def test_uv_diagnose_json_names_the_tool_venv(self):
+        with (
+            mock.patch.object(upgrade.shutil, "which", return_value="/usr/bin/uv"),
+            mock.patch.object(upgrade, "detect", return_value=UV_INFO),
+        ):
+            code, out, _ = self._run(["upgrade", "--diagnose", "--json"])
+        self.assertEqual(code, 0)
+        payload = json.loads(out)
+        self.assertEqual(payload["method"], upgrade.UV)
+        self.assertEqual(payload["uv_tool"], UV_INFO.detail)
 
     def test_diagnose_json_reports_the_environment_without_network(self):
         payload = {

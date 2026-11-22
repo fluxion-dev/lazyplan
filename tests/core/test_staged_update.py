@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest import mock
 
 from lazyplan.infrastructure import update_log, update_stage
-from lazyplan.infrastructure.upgrade import PIPX, VENV
+from lazyplan.infrastructure.upgrade import PIPX, UV, VENV
 
 WHEEL = b"fake wheel bytes"
 VERSION = "0.28.0"
@@ -82,6 +82,12 @@ class TestPayload(unittest.TestCase):
         self.assertEqual(update_stage.read_stage(home=self.home), update)
         update_stage._state_path(update_stage.STAGED, self.home).write_text("{bad")
         self.assertIsNone(update_stage.read_stage(home=self.home))
+
+    def test_uv_stage_round_trips(self):
+        update = update_stage.stage_update(
+            VERSION, UV, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
+        )
+        self.assertEqual(update_stage.read_stage(home=self.home), update)
 
     def test_rejects_untrusted_fields(self):
         base = update_stage.StagedUpdate(
@@ -216,6 +222,29 @@ class TestApply(unittest.TestCase):
         )
         self.assertEqual(venv_runner.call_args[0][0][0], "/venv/bin/python")
 
+    def test_uv_command_installs_into_the_tool_venv_with_uv_pip(self):
+        update = update_stage.StagedUpdate(VERSION, UV, FILENAME, URL, SHA, len(WHEEL), 1000.0)
+        uv_runner = runner()
+        with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/uv"):
+            update_stage.apply_update(
+                update,
+                self.home,
+                exe="/tools/lazyplan-tui/bin/python",
+                runner=uv_runner,
+                installed="0.27.0",
+            )
+        self.assertEqual(
+            uv_runner.call_args[0][0],
+            [
+                "/usr/bin/uv",
+                "pip",
+                "install",
+                "--python",
+                "/tools/lazyplan-tui/bin/python",
+                str(update_stage.wheel_path(update, self.home)),
+            ],
+        )
+
     def test_install_failure_raises(self):
         update = self._stage()
         with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/pipx"):
@@ -275,6 +304,23 @@ class TestApply(unittest.TestCase):
         self.assertTrue(spawn.called)
         self.assertTrue(update_stage._state_path(update_stage.APPLYING, self.home).exists())
         self.assertFalse(update_stage._state_path(update_stage.STAGED, self.home).exists())
+        self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
+
+    def test_failed_uv_install_parks_the_stage(self):
+        update = update_stage.stage_update(
+            VERSION, UV, home=self.home, opener=api_opener(), installed="0.27.0", now=1000.0
+        )
+        with mock.patch.object(update_stage.shutil, "which", return_value="/usr/bin/uv"):
+            state, detail = update_stage.apply_on_launch(
+                "0.27.2",
+                self.home,
+                exe="/tools/lazyplan-tui/bin/python",
+                runner=runner(1, "boom"),
+                windows=False,
+            )
+        self.assertEqual(state, "error")
+        self.assertIn("boom", detail)
+        self.assertEqual(update_stage.read_failure(self.home), detail)
         self.assertTrue(update_stage.wheel_path(update, self.home).is_file())
 
     def test_skips_when_already_current(self):

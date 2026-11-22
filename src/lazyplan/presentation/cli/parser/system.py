@@ -196,7 +196,7 @@ def add_upgrade(
 
     up = sub.add_parser(
         "upgrade",
-        help="upgrade lpui itself to the latest release (pipx/venv installs)",
+        help="upgrade lpui itself to the latest release (pipx/uv/venv installs)",
         parents=[common],
     )
     up.add_argument(

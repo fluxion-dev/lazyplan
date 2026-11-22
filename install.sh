@@ -1,14 +1,15 @@
 #!/bin/sh
 # lazyplan installer — one script for Linux system + user installs.
 #   curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh
-#   ./install.sh [--version X.Y.Z] [--method auto|rpm|deb|pipx|venv] [--prefix ~/.local] [--uninstall]
+#   ./install.sh [--version X.Y.Z] [--method auto|rpm|deb|uv|pipx|venv] [--prefix ~/.local] [--uninstall]
 #
 # Methods:
 #   rpm  - sudo dnf/yum/zypper install of lazyplan-VERSION-1.<arch>.rpm (Fedora/RHEL/openSUSE)
 #   deb  - sudo apt install of lazyplan_VERSION_<arch>.deb (Debian/Ubuntu)
-#   pipx - pipx install lazyplan-tui (isolated venv, preferred user install)
-#   venv - python3 -m venv + pip install + symlinks (no pipx required)
-#   auto - rpm on rpm distros, deb on deb distros, else pipx if present, else venv
+#   uv   - uv tool install lazyplan-tui (isolated tool environment)
+#   pipx - pipx install lazyplan-tui (isolated venv)
+#   venv - python3 -m venv + pip install + symlinks (no uv or pipx required)
+#   auto - rpm on rpm distros, deb on deb distros, else pipx if present, then uv, else venv
 # POSIX sh only. Never writes as root except via the system package manager.
 set -eu
 
@@ -23,13 +24,13 @@ PREFIX="${HOME:-$HOME}/.local"
 UNINSTALL=0
 
 usage() {
-  sed -n '2,12p' "$0"
+  sed -n '2,13p' "$0"
   echo ""
   echo "options:"
   echo "  --version X.Y.Z   pin version (default: latest GitHub release)"
-  echo "  --method M        auto|rpm|deb|pipx|venv (default: auto)"
-  echo "  --prefix DIR      user-install prefix for pipx/venv (default: ~/.local)"
-  echo "  --uninstall       remove lazyplan (tries rpm/dnf, apt, pipx, venv, prefix links)"
+  echo "  --method M        auto|rpm|deb|uv|pipx|venv (default: auto)"
+  echo "  --prefix DIR      user-install prefix for uv/pipx/venv (default: ~/.local)"
+  echo "  --uninstall       remove lazyplan (tries rpm/dnf, apt, uv, pipx, venv, prefix links)"
   echo "  -h, --help        this help"
 }
 
@@ -52,8 +53,8 @@ while [ $# -gt 0 ]; do
 done
 
 case "$METHOD" in
-  auto|rpm|deb|pipx|venv) ;;
-  *) err "--method must be auto|rpm|deb|pipx|venv"; exit 2 ;;
+  auto|rpm|deb|uv|pipx|venv) ;;
+  *) err "--method must be auto|rpm|deb|uv|pipx|venv"; exit 2 ;;
 esac
 
 need_cmd() {
@@ -93,6 +94,7 @@ do_uninstall() {
     if [ -n "${SUDO:-}" ] || [ "$(id -u)" -eq 0 ]; then ${SUDO:+$SUDO }apt remove -y lazyplan || true; fi
   fi
   if command -v pipx >/dev/null 2>&1; then pipx uninstall "$PYPI_PKG" || true; fi
+  if command -v uv >/dev/null 2>&1; then uv tool uninstall "$PYPI_PKG" || true; fi
   rm -rf "$PREFIX/share/lazyplan-venv" "$PREFIX/lib/lazyplan-venv"
   rm -f "$PREFIX/bin/$BIN1" "$PREFIX/bin/$BIN2" "$PREFIX/bin/lp"
   rm -f "$PREFIX/share/man/man1/$BIN1.1" "$PREFIX/share/man/man1/$BIN2.1"
@@ -122,6 +124,8 @@ if [ "$METHOD" = "auto" ]; then
     METHOD="deb"
   elif command -v pipx >/dev/null 2>&1; then
     METHOD="pipx"
+  elif command -v uv >/dev/null 2>&1; then
+    METHOD="uv"
   else
     METHOD="venv"
   fi
@@ -169,6 +173,24 @@ do_pipx() {
   done
   if [ -n "$_cli" ]; then install_extras_from_repo_or_web "$_cli"; fi
   log "installed. Ensure ~/.local/bin is on PATH: export PATH=\"\$HOME/.local/bin:\$PATH\""
+  if [ -n "$_cli" ]; then "$_cli" --help >/dev/null && log "OK: $_cli --help works"; fi
+}
+
+do_uv() {
+  need_cmd uv
+  if uv tool list 2>/dev/null | grep -q "^$PYPI_PKG "; then
+    log "uv tool install $PYPI_PKG==$VERSION --force..."
+    uv tool install "$PYPI_PKG==$VERSION" --force
+  else
+    log "uv tool install $PYPI_PKG==$VERSION..."
+    uv tool install "$PYPI_PKG==$VERSION"
+  fi
+  _cli=""
+  for _b in "$BIN1" "$BIN2" lp; do
+    if command -v "$_b" >/dev/null 2>&1; then _cli="$_b"; break; fi
+  done
+  if [ -n "$_cli" ]; then install_extras_from_repo_or_web "$_cli"; fi
+  log "installed. Ensure the uv tool bin directory is on PATH: run 'uv tool update-shell', then open a new terminal."
   if [ -n "$_cli" ]; then "$_cli" --help >/dev/null && log "OK: $_cli --help works"; fi
 }
 
@@ -237,6 +259,7 @@ do_deb() {
 }
 
 case "$METHOD" in
+  uv) do_uv ;;
   pipx) do_pipx ;;
   venv) do_venv ;;
   rpm) do_rpm ;;

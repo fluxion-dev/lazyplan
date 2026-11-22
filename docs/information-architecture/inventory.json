@@ -1650,7 +1650,7 @@
   "counts": {
     "cli_commands": 53,
     "doc_files": 9,
-    "doc_headings": 114,
+    "doc_headings": 115,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
@@ -1717,6 +1717,7 @@
           "From source",
           "Upgrade",
           "Release notes",
+          "uv",
           "pipx",
           "pip, including the install.sh venv",
           "Uninstall",

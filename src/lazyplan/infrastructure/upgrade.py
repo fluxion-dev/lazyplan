@@ -34,12 +34,16 @@ from ..core.policies.environment import (
 from ..core.policies.environment import (
     version_text as _version_text,
 )
+from .upgrade_exec import (
+    upgrade_pipx,
+    upgrade_uv,
+    upgrade_venv,
+)
 
 REPO = "fluxion-dev/lazyplan"
 PYPI_PKG = "lazyplan-tui"
 RELEASES_LATEST = f"https://github.com/{REPO}/releases/latest"
 RESOLVE_TIMEOUT = 10.0
-UPGRADE_TIMEOUT = 300.0
 UPDATE_CACHE_NAME = "update.json"
 UPDATE_CACHE_TTL = 24 * 3600
 NO_UPDATE_ENV = "LAZYPLAN_NO_UPDATE_CHECK"
@@ -56,13 +60,14 @@ UPDATE_GATE_NAME = "update-gate.json"
 UPDATE_GATE_STALE = 120.0
 
 PIPX = "pipx"
+UV = "uv"
 VENV = "venv"
 RPM = "rpm"
 DEB = "deb"
 SOURCE = "source"
 UNKNOWN = "unknown"
 
-UPGRADEABLE = {PIPX, VENV}
+UPGRADEABLE = {PIPX, UV, VENV}
 
 
 class UpgradeError(Exception):
@@ -84,6 +89,20 @@ def _looks_like_pipx(exe: str) -> str | None:
     for parent in path.parents:
         if parent.name == PYPI_PKG:
             return parent.as_posix()
+    return None
+
+
+def _looks_like_uv_tool(prefix: str) -> str | None:
+    """The uv tool venv dir for this package, else None."""
+    venv = Path(prefix)
+    try:
+        text = textfile.read(venv / "uv-receipt.toml")
+    except OSError:
+        text = ""
+    if f'name="{PYPI_PKG}"' in text.replace(" ", ""):
+        return venv.as_posix()
+    if not text and venv.name == PYPI_PKG and "tools" in venv.parent.parts:
+        return venv.as_posix()
     return None
 
 
@@ -157,6 +176,9 @@ def detect(
     base_prefix = base_prefix if base_prefix is not None else sys.base_prefix
     cwd = cwd if cwd is not None else os.getcwd()
 
+    uv_dir = _looks_like_uv_tool(prefix)
+    if uv_dir is not None:
+        return InstallInfo(UV, True, uv_dir)
     pipx_dir = _looks_like_pipx(exe)
     if pipx_dir is not None:
         return InstallInfo(PIPX, True, pipx_dir)
@@ -193,6 +215,8 @@ def diagnostics(
     root = shared_home(home)
     if info.method == PIPX:
         repair = f"pipx install --force --backend pip {PYPI_PKG}"
+    elif info.method == UV:
+        repair = f"{UV_INSTALL} --force"
     elif info.method == VENV:
         repair = f"{executable} -m pip install --force-reinstall {PYPI_PKG}"
     else:
@@ -210,40 +234,13 @@ def diagnostics(
         "scripts": str(Path(executable).parent),
         "pipx": shutil.which("pipx") or "",
         "pipx_venv": info.detail if info.method == PIPX else "",
+        "uv": shutil.which("uv") or "",
+        "uv_tool": info.detail if info.method == UV else "",
         "home": str(root),
         "update_dir": str(root / "updates"),
         "log_dir": str(update_log.logs_dir(home)),
         "repair": repair,
     }
-
-
-def _text(value: object) -> str:
-    return value if isinstance(value, str) else ""
-
-
-def _command_log(
-    kind: str,
-    method: str,
-    command: list[str],
-    returncode: int | None,
-    stdout: str = "",
-    stderr: str = "",
-) -> str:
-    """Write one command log; return the log suffix for an error message."""
-    try:
-        path = update_log.record_update(
-            kind,
-            method=method,
-            command=command,
-            cwd=os.getcwd(),
-            exe=sys.executable,
-            returncode=returncode,
-            stdout=_text(stdout),
-            stderr=_text(stderr),
-        )
-    except OSError:
-        return ""
-    return f"; log: {path}"
 
 
 def parse_version(text: str) -> tuple[int, int, int]:
@@ -451,16 +448,19 @@ INSTALL_SH = (
     "curl -fsSL https://github.com/fluxion-dev/lazyplan/releases/latest/download/install.sh | sh"
 )
 PIPX_INSTALL = f"pipx install --backend pip {PYPI_PKG}"
+UV_INSTALL = f"uv tool install {PYPI_PKG}"
 
 
 def reinstall_hint() -> str:
     """The supported fresh-install command for this platform."""
+    if shutil.which("uv") is not None:
+        return UV_INSTALL
     return PIPX_INSTALL if os.name == "nt" else INSTALL_SH
 
 
 def guard_message(info: InstallInfo) -> str:
     """Why this install cannot self-upgrade, and what to run instead."""
-    upgradeable = "`lpui upgrade` only manages pipx and venv installs"
+    upgradeable = "`lpui upgrade` only manages pipx, uv, and venv installs"
     if info.method == RPM:
         return (
             f"system rpm install: upgrade with your package manager "
@@ -529,64 +529,7 @@ def run_upgrade(
     require_newer(version, installed)
     if info.method == PIPX:
         upgrade_pipx(version, installed=installed)
+    elif info.method == UV:
+        upgrade_uv(version, installed=installed)
     else:
         upgrade_venv(version, exe or sys.executable, installed=installed)
-
-
-def upgrade_pipx(
-    version: str,
-    timeout: float = UPGRADE_TIMEOUT,
-    installed: str | None = None,
-) -> None:
-    """Mirror install.sh do_pipx: upgrade, falling back to a forced install."""
-    require_newer(version, installed)
-    if shutil.which("pipx") is None:
-        raise UpgradeError("pipx is not on PATH")
-    cmds = [
-        ["pipx", "upgrade", PYPI_PKG, "--pip-args", f"=={version}"],
-        ["pipx", "install", f"{PYPI_PKG}=={version}", "--force"],
-    ]
-    last_lines: list[str] = []
-    last_log = ""
-    for cmd in cmds:
-        try:
-            out = subprocess.run(
-                cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
-            )
-        except OSError as exc:
-            log = _command_log("upgrade", PIPX, cmd, None, stderr=str(exc))
-            raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
-        last_log = _command_log(
-            "upgrade",
-            PIPX,
-            cmd,
-            out.returncode,
-            out.stdout or "",
-            out.stderr or "",
-        )
-        if out.returncode == 0:
-            return
-        last_lines = (out.stderr or out.stdout or "").strip().splitlines()[:3]
-    raise UpgradeError(f"pipx upgrade failed: {'; '.join(last_lines)}{last_log}")
-
-
-def upgrade_venv(
-    version: str,
-    exe: str,
-    timeout: float = UPGRADE_TIMEOUT,
-    installed: str | None = None,
-) -> None:
-    """Reinstall the running venv from PyPI (the install.sh do_venv layout)."""
-    require_newer(version, installed)
-    cmd = [exe, "-m", "pip", "install", f"{PYPI_PKG}=={version}"]
-    try:
-        out = subprocess.run(
-            cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=timeout
-        )
-    except OSError as exc:
-        log = _command_log("upgrade", VENV, cmd, None, stderr=str(exc))
-        raise UpgradeError(f"cannot run {' '.join(cmd)}: {exc}{log}") from exc
-    log = _command_log("upgrade", VENV, cmd, out.returncode, out.stdout or "", out.stderr or "")
-    if out.returncode != 0:
-        detail = "; ".join((out.stderr or out.stdout or "").strip().splitlines()[:3])
-        raise UpgradeError(f"venv reinstall failed: {detail}{log}")

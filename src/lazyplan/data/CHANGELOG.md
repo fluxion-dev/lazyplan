@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **The release smoke waits for PyPI to list the new version.** A gate that
+  starts seconds after publish no longer fails when the package index lags or
+  uv has a cached index; it waits up to two minutes for the pinned version and
+  resolves without the cache.
+
 ## v0.52.1 — 2026-11-22
 
 ### Fixed

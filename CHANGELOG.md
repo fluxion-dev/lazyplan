@@ -3,6 +3,15 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **The tool-install smoke retries the install, not just the index probe.** PyPI
+  can list a release on one CDN edge before uv or pipx resolves it, so the
+  release gate retries each install for up to two minutes instead of reporting
+  a version that is not yet visible everywhere.
+
 ## v0.52.3 — 2026-11-23
 
 ### Changed

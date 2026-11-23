@@ -3,6 +3,17 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Changed
+
+- **Drafts are interrogated before promotion.** The packaged agent contract now
+  requires a post-draft interrogation: reread every block with the human,
+  confirm each assumption, scope edge, edge case, failure mode, and
+  test/QA/refactor/docs choice, and fold the answers into a revision.
+  Unresolved questions stay as open draft annotations, so formalize and promote
+  wait until no assumption is unconfirmed.
+
 ## v0.52.2 — 2026-11-22
 
 ### Fixed

@@ -671,10 +671,12 @@ Your agent is expected to work from the plan, not invent it:
   metadata only and never writes back.
 - Relate every plan criterion to a proving task and run
   `lpui --porcelain lint --plan P` before check-off.
-- Start from a definition-only sketch: `plan add` or `draft sketch`, review the
-  why, what, and criteria, then `draft formalize` the derived tree. Use
-  `plan apply` when the whole tree is already known. Run `draft wait` in the
-  background so each saved annotation wakes you.
+- Start from a definition-only sketch: `plan add` or `draft sketch`, then
+  interrogate the written draft — every assumption, scope edge, edge case,
+  failure mode, and test/QA/refactor/docs choice — and fold the answers into a
+  revision before `draft formalize`. Use `plan apply` when the whole tree is
+  already known. Run `draft wait` in the background so each saved annotation
+  wakes you.
 - Start with `lpui --porcelain next` to claim work, or
   `lpui --porcelain context --max-chars 4000` for the budgeted picture.
   Renew the lease while you work, note handoffs, and release it when you stop.
@@ -902,6 +904,14 @@ At formalization the agent supplies them as the same JSON document `plan apply`
 takes. The reviewed title, why, what, and criteria must carry over unchanged;
 `formalize` refuses drift, so any definition change goes through another sketch
 revision first.
+
+The written draft is interrogated before it is formalized. The agent rereads
+every block with you and questions each assumption the draft makes: scope
+edges, existing behavior that must not change, inputs, data shapes, edge
+cases, failure modes, test scope, and whether QA, refactoring, and
+documentation tasks are included. A nod without specifics is not confirmation.
+Answers land in a revision; unresolved questions stay as open annotations, so
+promotion waits until every assumption belongs to the human, not the agent.
 
 ```bash
 lpui --actor NAME draft sketch --file sketch.md

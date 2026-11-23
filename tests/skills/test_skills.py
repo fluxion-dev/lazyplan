@@ -145,6 +145,11 @@ TEMPLATE_FRAGMENTS = [
     "in-scope and out-of-scope",
     "scout the codebase",
     "Scout the codebase during the interview",
+    "Interrogate the written draft",
+    "post-draft",
+    "no assumption is yours alone",
+    "without specifics is not a confirmation",
+    "assumption is still unconfirmed.",
     "As a [persona], I want [action] so that [benefit]",
     "Given [context], when [action], then [outcome]",
     "independent, negotiable, valuable, estimable, small",
@@ -216,6 +221,10 @@ class TestTemplateParity(unittest.TestCase):
         self.assertIn("interview", text)
         self.assertIn("Never decide a plan's why/what", text)
         self.assertIn("belong to the human", text)
+
+    def test_post_draft_interrogation_ships_in_both_contracts(self):
+        self.assertIn("Interrogate the written draft", skills.render_skill())
+        self.assertIn("Post-draft interrogation", skills.AGENTS_SNIPPET)
 
     def test_description_triggers_on_implementation(self):
         description = skills.render_skill().split("---", 2)[1]

@@ -1650,7 +1650,7 @@
   "counts": {
     "cli_commands": 53,
     "doc_files": 9,
-    "doc_headings": 115,
+    "doc_headings": 116,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
@@ -1800,6 +1800,7 @@
           "Starting a plan: interview first",
           "Readability and scouting",
           "Record the definition",
+          "Interrogate the written draft",
           "Review gate: plan is truth",
           "Plan documents and recipes",
           "Plan drafts",

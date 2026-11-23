@@ -213,7 +213,8 @@ with `draft revise`, then review the definition. Pass `--direct --reason TEXT`
 only for bulk or fixture work the human has waived review for; the reason is
 noted on the plan.
 
-Only once the definition is agreed, formalize the sketch into the plan
+Only once the definition is agreed and every assumption is confirmed (see
+Interrogate the written draft), formalize the sketch into the plan
 document — milestones from the plan, then tasks from each milestone, shaped as
 below plus the default QA, refactor, and documentation tasks. The sketch is the
 review gate; the derived tree is not reviewed a second time.
@@ -224,6 +225,28 @@ cleanup by default, shaped by the interview's testing answer. Ground every QA ta
 Work top-down in creation order. Commit each task as it completes — or in a
 tight series of green commits — then link it and move it through todo → doing →
 done. Do not defer commits to the end of the plan.
+
+## Interrogate the written draft
+
+The first draft is the midpoint of the interview, not the end. Run a post-draft
+interrogation before the review gate: reread the draft as a stranger and grill
+the human on every block until no assumption is yours alone.
+
+- Read the title, why, what, and each `## Done` criterion back one at a time.
+  Name what each leaves open: boundaries, order, data shapes, failure modes,
+  compatibility, and whether the words mean must or nice.
+- State every assumption the draft makes — touched files and systems, existing
+  behavior that must not change, inputs and prerequisites, migration and
+  performance limits, test scope, and whether QA, refactor, and documentation
+  tasks are included — and ask the human to confirm or correct each one. A nod
+  without specifics is not a confirmation.
+- Push the scope edges: what is explicitly out, what would make the plan fail
+  even if every task lands, and which edge cases and non-goals the interview
+  has not named.
+- Fold each answer into a `draft revise` before formalizing. Record each
+  unresolved question as an annotation with `draft annotate --kind question`,
+  wait for the answer, then resolve it. Never formalize or promote while an
+  assumption is still unconfirmed.
 
 ## Review gate: plan is truth
 
@@ -318,6 +341,10 @@ lpui --actor NAME --porcelain draft add --file plan.json
   `ready` once none are open, and re-arm. Exit 3 means promoted, so stop; exit 4
   is `--timeout`, so re-arm. Open annotations end the wait immediately, so
   nothing saved between two waits is missed.
+- Interrogate the written draft before the review gate: read every block back,
+  name each assumption and scope edge, and fold the answers into a revision.
+  Track unresolved ones as `question` annotations and wait; formalize and
+  promote only when none remain.
 - Review the sketch, not the derived tree. After the human approves the
   definition, `draft formalize` supplies the milestones and tasks as the JSON
   document. lpui refuses a document whose title, why, what, or plan criteria

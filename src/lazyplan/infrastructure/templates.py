@@ -133,9 +133,11 @@ How `add-plan` (and the TUI create command) uses this file:
   ship EMPTY on purpose: the interview must add real, measurable criteria
   per plan (never ship bracket or example text as acceptance).
 
-Implementation interrogation (run before any row is written): pin down
-explicit in-scope and out-of-scope lists, the files/touch-points involved,
-edge cases, non-goals, and assumptions. Vague scope is rejected, not recorded.
+Implementation interrogation (run before the draft and again on it before
+promotion): pin down explicit in-scope and out-of-scope lists, the
+files/touch-points involved, edge cases, non-goals, and assumptions. Reread the
+written draft with the human and fold every answer into a revision; vague scope
+or an unconfirmed assumption is rejected, not recorded.
 
 Commit strategy: state the ordered slices of small commits in `what`, and the
 check that keeps each commit green. Do not plan one batch commit for the whole

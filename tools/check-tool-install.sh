@@ -113,6 +113,22 @@ wait_for_index() {
   return 1
 }
 
+# The simple index can list a release before every CDN edge resolves it for uv
+# or pipx. Retry the install, not just the index probe, so the release gate
+# does not fail on that propagation gap.
+install_with_retry() {
+  local label="$1" attempt
+  shift
+  for attempt in $(seq 1 24); do
+    if "$@" >/dev/null 2>&1; then
+      return 0
+    fi
+    sleep 5
+  done
+  echo "error: $label did not succeed after 2 minutes" >&2
+  "$@"
+}
+
 if [[ -z "$WHEEL" ]]; then
   wait_for_index "$VERSION"
 fi
@@ -128,10 +144,10 @@ mkdir -p "$UV_TOOL_BIN_DIR" "$PIPX_BIN_DIR"
 
 if [[ -n "$WHEEL" ]]; then
   echo "== uv tool install $WHEEL =="
-  uv tool install --quiet "$WHEEL"
+  install_with_retry "uv tool install $WHEEL" uv tool install --quiet "$WHEEL"
 else
   echo "== uv tool install $PKG==$VERSION =="
-  uv tool install --quiet "$PKG==$VERSION"
+  install_with_retry "uv tool install $PKG==$VERSION" uv tool install --quiet "$PKG==$VERSION"
 fi
 UV_LPUI="$UV_TOOL_BIN_DIR/lpui"
 test -x "$UV_LPUI"
@@ -155,10 +171,10 @@ PY
 
 if [[ -n "$WHEEL" ]]; then
   echo "== pipx install $WHEEL =="
-  pipx install --quiet "$WHEEL"
+  install_with_retry "pipx install $WHEEL" pipx install --quiet "$WHEEL"
 else
   echo "== pipx install $PKG==$VERSION =="
-  pipx install --quiet "$PKG==$VERSION"
+  install_with_retry "pipx install $PKG==$VERSION" pipx install --quiet "$PKG==$VERSION"
 fi
 PIPX_LPUI="$PIPX_BIN_DIR/lpui"
 test -x "$PIPX_LPUI"
@@ -180,7 +196,7 @@ if [[ -n "$WHEEL" ]]; then
   echo "wheel smoke only: PyPI upgrade exercise skipped"
 elif [[ -n "$FROM_VERSION" ]]; then
   echo "== upgrade uv from $FROM_VERSION to $VERSION =="
-  uv tool install --quiet "$PKG==$FROM_VERSION" --force
+  install_with_retry "uv tool install $PKG==$FROM_VERSION" uv tool install --quiet "$PKG==$FROM_VERSION" --force
   [[ "$("$UV_LPUI" --version)" == "$FROM_VERSION" ]]
   FROM_METHOD="$(detected_method "$UV_LPUI")"
   if [[ "$FROM_METHOD" == "uv" ]]; then
@@ -190,7 +206,7 @@ elif [[ -n "$FROM_VERSION" ]]; then
     # install. Use the documented forced install, then prove the new version
     # can upgrade itself next time.
     echo "previous release reports '$FROM_METHOD'; using uv tool install --force"
-    uv tool install --quiet "$PKG==$VERSION" --force
+    install_with_retry "uv tool install $PKG==$VERSION" uv tool install --quiet "$PKG==$VERSION" --force
   fi
   [[ "$("$UV_LPUI" --version)" == "$VERSION" ]]
 
@@ -206,7 +222,7 @@ if data["method"] != "uv" or not data["upgradeable"]:
 PY
 
   echo "== upgrade pipx from $FROM_VERSION to $VERSION =="
-  pipx install --quiet "$PKG==$FROM_VERSION" --force
+  install_with_retry "pipx install $PKG==$FROM_VERSION" pipx install --quiet "$PKG==$FROM_VERSION" --force
   [[ "$("$PIPX_LPUI" --version)" == "$FROM_VERSION" ]]
   "$PIPX_LPUI" upgrade
   [[ "$("$PIPX_LPUI" --version)" == "$VERSION" ]]

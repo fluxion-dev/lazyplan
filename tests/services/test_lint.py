@@ -20,11 +20,28 @@ class TestLint(StoreCase):
     def setUp(self):
         super().setUp()
         plan = self.store.add_plan("P", actor="fixture")
-        milestone = self.store.add_milestone(plan.id, "M", actor="fixture")
+        milestone = self.store.add_milestone(
+            plan.id,
+            "M",
+            (
+                "Outcome: As a user, I want the change, so that the outcome is visible.\n\n"
+                "Scope: In scope: the reviewed definition. Out of scope: unrelated work.\n\n"
+                "Inputs: The approved definition and the scouted code path.\n\n"
+                "Slices: Implement and verify in separate green commits."
+            ),
+            actor="fixture",
+        )
         task = self.store.add_task(
             milestone.id,
             "T",
-            "Commit slice: one commit.\n\nVerification: pytest.",
+            (
+                "Approach: Change the scouted code path and keep the reviewed behavior.\n\n"
+                "Touch: src/app.py, tests/test_app.py\n\n"
+                "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                "Commit: One implementation slice.\n\n"
+                "Verify: The relevant test suite passes.\n\n"
+                "Guardrails: Keep behavior outside the reviewed scope unchanged."
+            ),
             actor="fixture",
         )
         criterion = self.store.add_criteria("plan", plan.id, "Works", actor="fixture")
@@ -56,14 +73,22 @@ class TestLint(StoreCase):
         assert findings is not None
         self.assertIn("uncovered-criterion", [finding.rule for finding in findings])
 
-    def test_missing_slice_verification_and_placeholder(self):
+    def test_incomplete_brief_and_placeholder(self):
         task = self.store.add_task(1, "Vague", "TODO: something", actor="fixture")
         findings = lint.lint_plan(self.store, 1)
         assert findings is not None
         rules = {finding.rule for finding in findings if finding.obj_id == task.id}
-        self.assertIn("missing-commit-slice", rules)
-        self.assertIn("missing-verification", rules)
+        self.assertIn("incomplete-task-brief", rules)
         self.assertIn("placeholder-text", rules)
+
+    def test_incomplete_milestone_brief(self):
+        milestone = self.store.add_milestone(
+            1, "Vague slice", "As a user, I want it.", actor="fixture"
+        )
+        findings = lint.lint_plan(self.store, 1)
+        assert findings is not None
+        rules = {finding.rule for finding in findings if finding.obj_id == milestone.id}
+        self.assertIn("incomplete-milestone-brief", rules)
 
     def test_done_rows_with_open_criteria(self):
         criterion = self.store.add_criteria("task", 1, "Open", actor="fixture")

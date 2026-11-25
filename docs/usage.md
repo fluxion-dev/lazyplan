@@ -655,8 +655,9 @@ Your agent is expected to work from the plan, not invent it:
 - Work in creation order, and plan the commit sequence before coding: every
   task lands as one or more small, green commits, never one batch for the
   whole plan or milestone.
-- Name each task's expected commit slice and verification in its desc, and
-  commit after each task completes rather than deferring work to the end.
+- Name each task's full resume contract in its desc — approach, touch-points,
+  inputs, commit slice, verification, and guardrails — and commit after each
+  task completes rather than deferring work to the end.
 - Link commits after the fact with `lpui link` or `task finish`; no commit
   trailer is required.
 - Write rows for scanning: short paragraphs and sections, no placeholder text.
@@ -843,6 +844,25 @@ validates the document and prints the intended tree without writing.
 `feature`, `bugfix`, and `refactor` recipes are packaged skeletons with QA,
 refactoring, and documentation tasks. Edit the words, then apply the document.
 
+### Resume contract
+
+A promoted plan is the handoff, so every milestone and task description carries
+enough context for a cold or recovering agent. Milestones use `Outcome:`,
+`Scope:`, `Inputs:`, and `Slices:`; tasks use `Approach:`, `Touch:`, `Inputs:`,
+`Commit:`, `Verify:`, and `Guardrails:`. `Touch:` must name at least one real
+path. `Inputs: none` and `Guardrails: none beyond the plan scope` are legal when
+true. Paragraph labels, `**Label:**`, `## Label` headings, and common aliases
+such as `Files:`, `Prerequisites:`, `Commit slice:`, and `Verification:` are
+accepted.
+
+`draft formalize`, `plan apply`, and `draft promote` refuse a plan with no
+milestone or task, and refuse a tree that leaves a section out. `lint` flags the
+same gaps on plans created or edited later, so
+`plan ready` waits until the brief is complete. An agent starting from `next` or
+resuming after a dead session reads the approach, touch-points, prerequisites,
+commit slices, verification, and guardrails from the row itself instead of
+inferring them.
+
 ### Visual choices
 
 When an interview turns on a visual choice, put the alternatives in a manifest
@@ -903,7 +923,8 @@ Milestones and tasks do not belong in a sketch.
 At formalization the agent supplies them as the same JSON document `plan apply`
 takes. The reviewed title, why, what, and criteria must carry over unchanged;
 `formalize` refuses drift, so any definition change goes through another sketch
-revision first.
+revision first. It also refuses a milestone or task that leaves the resume
+contract implicit.
 
 The written draft is interrogated before it is formalized. The agent rereads
 every block with you and questions each assumption the draft makes: scope
@@ -1185,9 +1206,9 @@ lpui stats --since 7.days
 criterion with no proving task is reported as missing, not omitted.
 
 `lint` is read-only and advisory by default. It flags plan criteria with no
-proving task, task descriptions with no commit-slice or verification token,
-placeholder text, and done rows that still have open criteria. `--strict`
-exits 2 when any finding exists.
+proving task, incomplete milestone or task resume contracts, placeholder text,
+and done rows that still have open criteria. `--strict` exits 2 when any finding
+exists.
 
 `audit` reports commit coverage, status lag, and criteria gaps. Strict defaults
 are 80% coverage, one commit of median lag, and zero gaps; override them with

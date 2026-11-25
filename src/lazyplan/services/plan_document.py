@@ -27,6 +27,7 @@ from ..core.policies.lanes import (
     check_max_agents,
 )
 from ..core.ports.planning import PlanningPort
+from .plan_detail import PlanDetailError, require_milestone, require_task
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b")
 _KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -234,9 +235,27 @@ def _task(port: PlanningPort | None, raw: Any, path: str, seen_tasks: set[str]) 
     return TaskDocument(key, filled["title"], filled["desc"], criteria, role)
 
 
+def check_detail(document: PlanDocument) -> None:
+    """Refuse milestones or tasks that leave the resume contract implicit."""
+    if not document.milestones:
+        raise PlanDetailError("document: resume contract needs at least one milestone")
+    for milestone_index, milestone in enumerate(document.milestones):
+        path = f"milestones[{milestone_index}]"
+        if not milestone.tasks:
+            raise PlanDetailError(f"{path}: resume contract needs at least one task")
+        require_milestone(path, milestone.description)
+        for task_index, task in enumerate(milestone.tasks):
+            require_task(f"{path}.tasks[{task_index}]", task.description)
+
+
 def validate_document(port: PlanningPort, raw: Any) -> PlanDocument:
     """Validate one JSON object and return the resolved document."""
-    return _validate(port, raw)
+    document = _validate(port, raw)
+    try:
+        check_detail(document)
+    except PlanDetailError as exc:
+        raise PlanDocumentError(str(exc)) from exc
+    return document
 
 
 def load_normalized(raw: Any) -> PlanDocument:

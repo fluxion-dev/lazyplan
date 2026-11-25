@@ -216,8 +216,10 @@ noted on the plan.
 Only once the definition is agreed and every assumption is confirmed (see
 Interrogate the written draft), formalize the sketch into the plan
 document — milestones from the plan, then tasks from each milestone, shaped as
-below plus the default QA, refactor, and documentation tasks. The sketch is the
-review gate; the derived tree is not reviewed a second time.
+below plus the default QA, refactor, and documentation tasks. Every derived
+milestone and task must carry the labeled resume contract (see Resume contract):
+`formalize` refuses a tree that leaves it implicit, and the derived tree is not
+reviewed a second time. The sketch is the review gate.
 
 Every plan carries QA testing tasks, a refactoring task, and documentation
 cleanup by default, shaped by the interview's testing answer. Ground every QA task in the acceptance criteria: each criterion is exercised by a named test task, and DoD checklists reference the criteria they satisfy. Only an explicit user opt-out ("skip QA", "no refactoring") excludes them — silence means include. Default task shapes include "Run the relevant test suites", "Refactor what the change touched", and "Clean up touched documentation".
@@ -263,8 +265,9 @@ only on explicit check-off. Then formalize and promote, relate every plan
 criterion to at least one proving task
 (`lpui criterion relate --id C --task T`), and run `lpui lint --plan P` before
 implementation. Ensure the formal document names its commit strategy and that
-every task desc names its expected commit slice and verification; reject a plan
-that batches a whole milestone or plan into one commit. During execution,
+every task desc carries the resume contract, including its expected commit
+slice and verification; reject a plan that batches a whole milestone or plan
+into one commit. During execution,
 the plan stays the truth: fold new findings into the plan before changing code,
 never around it.
 
@@ -348,7 +351,8 @@ lpui --actor NAME --porcelain draft add --file plan.json
 - Review the sketch, not the derived tree. After the human approves the
   definition, `draft formalize` supplies the milestones and tasks as the JSON
   document. lpui refuses a document whose title, why, what, or plan criteria
-  differ from the sketch; any definition change goes through another sketch
+  differ from the sketch, and refuses a milestone or task that leaves the
+  resume contract implicit; any definition change goes through another sketch
   revision.
 - `draft revise` reads Markdown for a sketch and JSON for a document. It must
   name the current base revision.
@@ -499,8 +503,9 @@ every call. Reach for `--json` only when you need full-fidelity fields.
 - `lpui claims` / `lpui who` shows active leases. `claim release --force` and
   `claim --force` record a takeover; blocked work is skipped by `next`.
 - `lpui trace --plan P` walks each criterion to its proving task, commits, and
-  PRs. `lpui lint --plan P --strict` rejects uncovered criteria, missing slices
-  or verification, placeholders, and done rows with open criteria.
+  PRs. `lpui lint --plan P --strict` rejects uncovered criteria, incomplete
+  milestone or task resume contracts, placeholders, and done rows with open
+  criteria.
 - `lpui stats --since 7.days` reports WIP, cycle time, throughput, aging, stale
   work, reopened rows, claims, and blocked tasks. The screen splits plans into
   plan queue and plan review panels; attention data stays in the preview strip.
@@ -618,6 +623,40 @@ blocks. Criteria live on plans, milestones, and tasks; plan-level criteria are
 the definition of done — mark them done as the work lands. Parent progress is
 recomputed from children; `lpui reconcile` can recompute parent statuses from children when an older journal drifts.
 
+## Resume contract
+
+A promoted plan is the handoff. A fresh agent, or one resuming after a dead
+session, must be able to act from the row itself instead of inferring the
+approach, files, prerequisites, commits, checks, or boundaries. Every milestone
+and task description therefore carries labeled sections:
+
+```text
+Milestone
+Outcome: the user value, in As a / I want / so that form
+Scope: what is in and explicitly out for this slice
+Inputs: prerequisites, existing behavior, rows, or environment
+Slices: the ordered commits or tasks that land the milestone
+
+Task
+Approach: the technical how, naming the code path and edge cases
+Touch: at least one concrete path, module, or file
+Inputs: prerequisites and what must already be true
+Commit: the expected commit slice(s)
+Verify: the exact command or check that proves the slice
+Guardrails: invariants, non-goals, and what must not change
+```
+
+`Touch:` must name a real path. `Inputs: none` and `Guardrails: none beyond the
+plan scope` are legal when true. Paragraph labels, `**Label:**`, `## Label`
+headings, and common aliases (`Files:`, `Prerequisites:`, `Commit slice:`,
+`Verification:`, `Invariants:`) are accepted. `draft formalize`, `plan apply`,
+and `draft promote` refuse a plan with no milestone or task, and a tree with a
+missing or unusable section; `lint` flags the same gaps on rows created or
+edited later, so `plan ready` waits
+until the brief is complete. When you start or resume a task, read
+`lpui task show --id T`: the journal supplies status, claims, notes, and
+commits, and the description supplies the contract.
+
 ## Milestone and task standards
 
 Each milestone states user value in narrative form, with testable criteria:
@@ -628,14 +667,15 @@ lpui --actor NAME criterion add --kind milestone --id S --text "Given [context],
 ```
 
 Keep milestones INVEST: independent, negotiable, valuable, estimable, small,
-testable. At creation, `--desc` carries the narrative plus the INVEST check, the
-inputs/prerequisites, and the ordered commit slices; a milestone without them is not ready to cut. Each task advances one small, green commit series; a milestone
-that only works as one batch commit is not ready. No dependency, estimate, or
-owner fields — sequencing lives in creation order, context lives in `--desc`.
+testable. At creation, `--desc` carries every milestone resume-contract section:
+Outcome, Scope, Inputs, and Slices. A milestone without them is not ready to
+cut. Each task advances one small, green commit series; a milestone that only
+works as one batch commit is not ready. No dependency, estimate, or owner
+fields — sequencing lives in creation order, context lives in `--desc`.
 
-Task titles start with a verb and name the target. `--desc` carries the technical
-how: approach, code references, inputs and prerequisites. Task-level checklists
-are the definition of done:
+Task titles start with a verb and name the target. `--desc` carries every task
+resume-contract section: Approach, Touch, Inputs, Commit, Verify, and
+Guardrails. Task-level checklists are the definition of done:
 
 ```bash
 lpui --actor NAME task add --milestone S --title "Implement token rotation" --desc "Approach and file refs"
@@ -649,7 +689,12 @@ Each task lands as one or more small commits. Every commit is green — the
 relevant checks pass and the tree builds — and independently reviewable. Keep
 behavior, tests, docs, and refactors in separate commits when they can stand
 alone. Never batch a whole milestone or plan into one commit. The task `--desc`
-names the expected commit slice and the verification for each commit. Link commits after the fact with `lpui link` or `task finish`; no commit trailer is required. Cut tasks only from scouted ground: each one must name real files, real constraints, real prerequisites. Every task `--desc` names the technical approach, the inputs/prerequisites, and the expected commit slice — a task missing any of them is not ready to cut.
+names the expected commit slice and the verification for each commit. Link
+commits after the fact with `lpui link` or `task finish`; no commit trailer is
+required. Cut tasks only from scouted ground: each one must name real files,
+real constraints, real prerequisites. Every task `--desc` names the technical
+approach, concrete touch-points, inputs/prerequisites, commit slice,
+verification, and guardrails — a task missing any of them is not ready to cut.
 
 ## Human-in-the-loop
 

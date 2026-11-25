@@ -28,6 +28,9 @@ role, tier, effort, and per-host model in `dispatch --json`; start the worker
 with the host's matching managed profile instead of picking a model by hand.
 The worker must:
 
+- read the full task desc with `lpui task show --id T`; it is the resume
+  contract (approach, touch-points, inputs, commit slice, verification,
+  guardrails), not a title to infer from;
 - claim exactly the named task with the printed `lpui claim` command;
 - keep one task doing in the lane;
 - commit small green slices, link each with `lpui link --kind task --id T`,

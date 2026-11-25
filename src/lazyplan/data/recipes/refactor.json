@@ -11,32 +11,32 @@
     {
       "key": "refactor",
       "title": "Refactor the area",
-      "desc": "As a maintainer, I want the area simplified, so that future changes are cheaper. Add inputs and prerequisites.",
+      "desc": "Outcome: As a maintainer, I want the area simplified, so that future changes are cheaper.\n\nScope: In scope: the named area and the behavior it must preserve. Out of scope: new behavior and unrelated cleanup.\n\nInputs: A baseline suite and the scouted area.\n\nSlices: Baseline, simplify, verify, and document in separate green commits.",
       "lane_group": 1,
       "agent_role": "refactor",
       "tasks": [
         {
           "key": "baseline",
           "title": "Establish the baseline",
-          "desc": "Approach: name the tests and checks that prove current behavior.\n\nCommit: baseline slice.\n\nVerify: the baseline suite passes before the change.",
+          "desc": "Approach: Name the tests and checks that prove current behavior.\n\nTouch: tests/\n\nInputs: The area under refactor and its current verification command.\n\nCommit: One baseline slice that pins current behavior.\n\nVerify: The baseline suite passes before the change.\n\nGuardrails: Do not change production behavior in the baseline slice.",
           "role": "qa"
         },
         {
           "key": "simplify",
           "title": "Refactor the area",
-          "desc": "Approach: name the structural change and the behavior that stays fixed.\n\nCommit: refactor slice.\n\nVerify: the baseline suite passes after the change.",
+          "desc": "Approach: Name the structural change and the behavior that stays fixed.\n\nTouch: src/\n\nInputs: The green baseline and the scouted structural change.\n\nCommit: One refactor slice with no behavior change.\n\nVerify: The baseline suite passes after the change.\n\nGuardrails: Stop when a simplification cannot be proved behavior-preserving.",
           "role": "refactor"
         },
         {
           "key": "verify",
           "title": "Test that behavior is unchanged",
-          "desc": "Approach: run the baseline plus the nearest integration checks.\n\nCommit: verification slice.\n\nVerify: every baseline check passes.",
+          "desc": "Approach: Run the baseline plus the nearest integration checks.\n\nTouch: tests/\n\nInputs: The refactor slice and the baseline.\n\nCommit: One verification slice for any missing coverage.\n\nVerify: Every baseline check and the nearest integration checks pass.\n\nGuardrails: Do not loosen the baseline to make the refactor pass.",
           "role": "qa"
         },
         {
           "key": "docs",
           "title": "Update the documentation",
-          "desc": "Approach: record the new structure where maintainers will look.\n\nCommit: docs slice.\n\nVerify: links and examples resolve.",
+          "desc": "Approach: Record the new structure where maintainers will look.\n\nTouch: docs/\n\nInputs: The final structure and its verification commands.\n\nCommit: One documentation slice.\n\nVerify: Links and examples resolve against the shipped structure.\n\nGuardrails: Do not describe behavior the refactor did not change.",
           "role": "docs"
         }
       ]

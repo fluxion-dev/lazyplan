@@ -41,7 +41,7 @@ def payload() -> dict:
         ],
         "commits": [{"sha": "a" * 40, "subject": "work"}],
         "prs": [{"number": 7, "title": "PR", "state": "open", "url": "https://x/7"}],
-        "lint": [{"rule": "missing-verification", "severity": "warn", "message": "needs a check"}],
+        "lint": [{"rule": "incomplete-task-brief", "severity": "warn", "message": "needs a check"}],
         "audit": {"coverage": 1.0, "trace_coverage": 1.0, "evidence_coverage": 0.5},
         "questions": [{"id": 3, "text": "Which host?"}],
         "notes": [{"actor": "brad", "text": "handoff"}],

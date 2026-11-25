@@ -16,11 +16,27 @@ class TestReviewService(unittest.TestCase):
         self.db = os.path.join(self.tmp.name, "t.db")
         self.store = Store(self.db)
         self.plan = self.store.add_plan("Plan", "What we build", goal="Why we build")
-        self.milestone = self.store.add_milestone(self.plan.id, "M")
+        self.milestone = self.store.add_milestone(
+            self.plan.id,
+            "M",
+            (
+                "Outcome: As a user, I want the change, so that the outcome is visible.\n\n"
+                "Scope: In scope: the reviewed definition. Out of scope: unrelated work.\n\n"
+                "Inputs: The approved definition and the scouted code path.\n\n"
+                "Slices: Implement and verify in separate green commits."
+            ),
+        )
         self.task = self.store.add_task(
             self.milestone.id,
             "T",
-            "Approach: do it.\n\nCommit: one slice.\n\nVerify: pytest.",
+            (
+                "Approach: Change the scouted code path and keep the reviewed behavior.\n\n"
+                "Touch: src/app.py, tests/test_app.py\n\n"
+                "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                "Commit: One implementation slice.\n\n"
+                "Verify: The relevant test suite passes.\n\n"
+                "Guardrails: Keep behavior outside the reviewed scope unchanged."
+            ),
         )
         criterion = self.store.add_criteria("plan", self.plan.id, "Works")
         self.store.relate_criterion(criterion.id, self.task.id)

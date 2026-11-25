@@ -1,4 +1,4 @@
-# lazyplan (`lpui`) — v0.52.3
+# lazyplan (`lpui`) — v0.52.4
 
 [![Release](https://img.shields.io/github/v/release/fluxion-dev/lazyplan)](https://github.com/fluxion-dev/lazyplan/releases)
 [![PyPI](https://img.shields.io/pypi/v/lazyplan-tui)](https://pypi.org/project/lazyplan-tui/)

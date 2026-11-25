@@ -3,6 +3,14 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
+## Unreleased
+
+### Fixed
+
+- **The release smoke probes PyPI's JSON index.** The gate waits on the same
+  PEP 691 view uv resolves, so a lagging HTML view cannot hide the version
+  before the install retry begins.
+
 ## v0.52.4 — 2026-11-25
 
 ### Changed

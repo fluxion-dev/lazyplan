@@ -101,10 +101,24 @@ fi
 
 FILE_PKG="${PKG//-/_}"
 
+# uv resolves the PEP 691 JSON view; the HTML view can show a release before
+# uv sees it. Wait on the same view the install uses, then let
+# install_with_retry cover any remaining edge lag.
 wait_for_index() {
   local version="$1" attempt
   for attempt in $(seq 1 24); do
-    if curl -fsSL "https://pypi.org/simple/$PKG/" | grep -q "$FILE_PKG-$version-"; then
+    if curl -fsSL -H 'Accept: application/vnd.pypi.simple.v1+json' \
+      "https://pypi.org/simple/$PKG/" 2>/dev/null |
+      python3 -c '
+import json
+import sys
+
+try:
+    files = json.load(sys.stdin)["files"]
+except (ValueError, KeyError):
+    raise SystemExit(1)
+raise SystemExit(0 if any(sys.argv[1] in row["filename"] for row in files) else 1)
+' "$FILE_PKG-$version-"; then
       return 0
     fi
     sleep 5

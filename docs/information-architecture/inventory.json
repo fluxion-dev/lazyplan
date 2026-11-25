@@ -368,6 +368,9 @@
           ],
           [
             "--max-chars"
+          ],
+          [
+            "--context-percent"
           ]
         ]
       },
@@ -1650,12 +1653,12 @@
   "counts": {
     "cli_commands": 53,
     "doc_files": 9,
-    "doc_headings": 118,
+    "doc_headings": 120,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
     "mcp_resources": 5,
-    "mcp_tools": 82,
+    "mcp_tools": 83,
     "palette_commands": 57,
     "setup_steps": 5,
     "stale_claims": 0,
@@ -1748,6 +1751,7 @@
           "Why",
           "What",
           "Done",
+          "Fresh sessions and context budgets",
           "Context and claims",
           "Progress and rollups",
           "Tracking guarantees",
@@ -1817,6 +1821,7 @@
           "Templates",
           "Write and criteria",
           "Resume contract",
+          "Fresh sessions and context budgets",
           "Milestone and task standards",
           "Human-in-the-loop",
           "Rules"
@@ -2338,6 +2343,10 @@
       {
         "description": "Repos, commits, files, and pull requests for a row.",
         "name": "source_trail"
+      },
+      {
+        "description": "Fresh-session task brief with its context budget.",
+        "name": "task_brief"
       },
       {
         "description": "Add a task touch-point path or glob.",

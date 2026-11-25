@@ -369,6 +369,7 @@ and `--actor`; `upgrade` adds `--check` and `--diagnose`.
 lpui list                         # plans and progress
 lpui list --tree                  # full plan/milestone/task tree
 lpui plan show --id 1             # why, what, criteria, milestones
+lpui task brief --id 1            # fresh-session context and budget
 lpui task move --id 1 --to doing
 lpui criterion edit --id 1 --done
 lpui context --max-chars 4000     # active plan, next work, and proof
@@ -678,7 +679,9 @@ Your agent is expected to work from the plan, not invent it:
   revision before `draft formalize`. Use `plan apply` when the whole tree is
   already known. Run `draft wait` in the background so each saved annotation
   wakes you.
-- Start with `lpui --porcelain next` to claim work, or
+- Start each task in a new session from `lpui --porcelain task brief --id T`;
+  do not carry the previous task's conversation. Start with
+  `lpui --porcelain next` to claim work, or
   `lpui --porcelain context --max-chars 4000` for the budgeted picture.
   Renew the lease while you work, note handoffs, and release it when you stop.
   Update the journal after each commit, then run
@@ -983,11 +986,34 @@ its `annotations` as JSON, plus `sketch` Markdown for a sketch or the
 `document` object for a document. Porcelain rows are `draft`, `block`, and
 `annotation`.
 
+### Fresh sessions and context budgets
+
+Every task runs in its own agent session. `task brief --id T` prints the whole
+starting context: the plan, the milestone, the task's resume contract, criteria,
+touch-points, relevant notes, and a finish protocol. Start the task from that
+brief, not from the previous task's conversation.
+
+The brief is measured in estimated tokens against the role's context window in
+`agents.json`. The `context` map sets a window per tier and host; defaults are
+128k for fast roles and 200k for standard and deep roles. The default budget is
+25% of the window. `dispatch` and `plan ready` refuse a task whose fresh brief
+exceeds the budget; split the task or trim its description instead.
+`task brief --host claude` resolves a host-specific window, and
+`--context-window TOKENS` overrides it. Dispatch marks every worker prompt
+`fresh_session` and includes the measured budget.
+
+```bash
+lpui --porcelain task brief --id 12
+lpui --json task brief --id 12 --host claude
+lpui --porcelain dispatch --plan 7 --json
+```
+
 ### Context and claims
 
 ```bash
 lpui --porcelain context --max-chars 4000  # active plan, next work, proof, claims
 lpui --porcelain brief                     # active plan, doing task, next task, loose commits
+lpui --porcelain task brief --id 3         # one task's fresh-session context and budget
 lpui --porcelain next                      # claim the first eligible todo
 lpui --porcelain claim renew --id 3 --ttl 1.hours
 lpui --porcelain claim release --id 3
@@ -1065,9 +1091,10 @@ unlisted, or drifted worktrees, including lanes with no registration, without
 deleting anything. Plans created before isolation stay grandfathered.
 
 `lpui dispatch --plan 6` is the read-only orchestration view: waves, lane
-state, capacity, the exact worktree commands, and a bounded prompt for each
-ready task. Add `--lane 12` for one lane, `--max-chars N` for the prompt
-budget, and `--json` or `--porcelain` for agents. It never creates a worktree,
+state, capacity, the exact worktree commands, and a fresh-session prompt with
+its measured context budget for each ready task. Add `--lane 12` for one lane,
+`--context-percent N` for the budget, `--max-chars N` for an optional prompt
+cap, and `--json` or `--porcelain` for agents. It never creates a worktree,
 starts an agent, or writes a feed event.
 
 ### Claims and touch-points
@@ -1184,8 +1211,9 @@ criterion's proof state. lazyplan never executes the command, fetches a PR, or
 reads an artifact. `task finish --require-evidence` gates on the latest passing
 row.
 
-Open questions are plan-level rows. `plan ready` combines three checks: lint is
-clean, every plan criterion has a proving task, and no questions are open. It
+Open questions are plan-level rows. `plan ready` combines five checks: lint is
+clean, every task's fresh brief fits its context budget, every plan criterion
+has a proving task, no questions are open, and the worktree gate passes. It
 exits 0 when ready, 1 when not ready, and 2 for an unknown plan.
 
 `review` prints one deterministic Markdown packet for a human or reviewer

@@ -16,14 +16,14 @@ python3 tools/ia_inventory.py --check
 | --- | ---: |
 | cli_commands | 53 |
 | palette_commands | 57 |
-| mcp_tools | 82 |
+| mcp_tools | 83 |
 | mcp_resources | 5 |
 | tui_screens | 22 |
 | tui_bindings | 88 |
 | setup_steps | 5 |
 | hook_events | 35 |
 | doc_files | 9 |
-| doc_headings | 118 |
+| doc_headings | 120 |
 | tui_key_conflicts | 17 |
 | stale_claims | 0 |
 | env_names | 12 |
@@ -43,7 +43,7 @@ python3 tools/ia_inventory.py --check
 | `completion` | --json, --porcelain, --version, --actor, --heal, --no-heal, --shell |
 | `context` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `criterion` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `dispatch` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --lane, --max-chars |
+| `dispatch` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --lane, --max-chars, --context-percent |
 | `doctor` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `draft` | --json, --porcelain, --version, --actor, --heal, --no-heal |
 | `export` | --json, --porcelain, --version, --actor, --heal, --no-heal, --format, --plan, --file, --force |
@@ -230,6 +230,7 @@ python3 tools/ia_inventory.py --check
 | `ship` | Deterministic Markdown outcome ship note for one plan. |
 | `show_row` | One plan, milestone, or task with full context. |
 | `source_trail` | Repos, commits, files, and pull requests for a row. |
+| `task_brief` | Fresh-session task brief with its context budget. |
 | `touch_add` | Add a task touch-point path or glob. |
 | `touch_list` | Touch-point paths on one task. |
 | `touch_remove` | Remove a task touch-point path or glob. |

@@ -459,10 +459,11 @@ tasks run serially inside a lane. A parallel plan needs an integrator lane in a
 later wave.
 
 `lpui dispatch --plan P` is read-only: it returns waves, lane state, capacity,
-the exact worktree commands, and a bounded prompt per dispatchable task. Run
-the printed git commands, register each lane with `plan worktree add
---milestone S`, then start one worker per ready task with its role profile. A
-high-reasoning orchestrator plans and reviews; cheap workers implement.
+the exact worktree commands, and a fresh-session prompt per dispatchable task,
+with each brief's measured context budget. Run the printed git commands,
+register each lane with `plan worktree add --milestone S`, then start one
+worker per ready task in a new session with its role profile. A high-reasoning
+orchestrator plans and reviews; cheap workers implement.
 
 One lane holds one doing task. `next --lane S` limits selection; a second claim
 is refused unless forced with a reason. Session start names the lane, wave,
@@ -546,7 +547,8 @@ lpui --porcelain context --max-chars 4000
 lpui --porcelain brief
 lpui --porcelain audit --since 7.days
 lpui --porcelain plan show --id N
-lpui --porcelain dispatch --plan N [--lane M] [--max-chars 4000]
+lpui --porcelain task brief --id T [--host HOST] [--context-window TOKENS]
+lpui --porcelain dispatch --plan N [--lane M] [--max-chars 0]
 lpui --porcelain trace --plan N
 lpui --porcelain lint --plan N
 lpui --porcelain stats --since 7.days
@@ -656,6 +658,22 @@ edited later, so `plan ready` waits
 until the brief is complete. When you start or resume a task, read
 `lpui task show --id T`: the journal supplies status, claims, notes, and
 commits, and the description supplies the contract.
+
+## Fresh sessions and context budgets
+
+Every task runs in its own session. Do not chain tasks in one conversation and
+do not carry a previous task's context into the next one. Read the fresh brief
+with `lpui task brief --id T`, or use the prompt printed by `dispatch`; each one
+starts with "Start a new session for this task" and is the whole starting
+context.
+
+The brief is measured in estimated tokens against a per-tier context window in
+`agents.json`. The default budget is 25% of the window: fast roles 128k tokens,
+standard and deep roles 200k. Edit the `context` map for the real host/model
+windows. `dispatch` and `plan ready` refuse a task whose fresh brief exceeds
+the budget; split the task or trim its description instead of starting it. End
+the session after one task, leave a handoff note, and start the next task in a
+new session.
 
 ## Milestone and task standards
 

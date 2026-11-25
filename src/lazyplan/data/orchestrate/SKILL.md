@@ -10,10 +10,12 @@ while implementing; you dispatch the plan the human checked off.
 
 ## Before dispatch
 
-1. Run `lpui --porcelain plan show --id P` and `lpui --porcelain lint --plan P`.
-   Stop on open questions, uncovered criteria, or drift without a reason.
+1. Run `lpui --porcelain plan show --id P`, `lpui --porcelain lint --plan P`,
+   and `lpui --porcelain plan ready --id P`. Stop on open questions, uncovered
+   criteria, drift without a reason, or a task over its context budget.
 2. Run `lpui --porcelain dispatch --plan P --json`. Read the waves, lane
-   states, capacity, worktree actions, and one prompt per dispatchable task.
+   states, capacity, worktree actions, and one fresh-session prompt with its
+   measured context budget per dispatchable task.
 3. If the plan is `serial`, dispatch the first incomplete milestone only. If it
    is `parallel`, fill up to `capacity.available` lanes, never beyond
    `max_agents`.
@@ -26,11 +28,12 @@ For each dispatchable item, start one worker in its lane worktree, on its
 branch, with its role profile and the printed prompt. Each lane reports its
 role, tier, effort, and per-host model in `dispatch --json`; start the worker
 with the host's matching managed profile instead of picking a model by hand.
-The worker must:
+Start each worker in a new session. Do not reuse a session that finished a
+different task. The worker must:
 
-- read the full task desc with `lpui task show --id T`; it is the resume
-  contract (approach, touch-points, inputs, commit slice, verification,
-  guardrails), not a title to infer from;
+- read the fresh brief with `lpui task brief --id T`; it is the whole starting
+  context (plan, milestone, resume contract, criteria, touch-points, live
+  notes) and names the session budget;
 - claim exactly the named task with the printed `lpui claim` command;
 - keep one task doing in the lane;
 - commit small green slices, link each with `lpui link --kind task --id T`,
@@ -43,10 +46,12 @@ in the current wave is done or blocked with a recorded reason.
 
 ## Handoffs
 
-A lane agent stops after its task. The next agent in the same lane claims the
-next task, reads the lane note, and continues. QA, refactor, and docs tasks run
-in that order unless the plan says otherwise. A review task is read-only and
-reports findings; it does not edit.
+A lane agent stops after its task. The next agent starts a new session in the
+same lane, reads its own `task brief`, reads the lane note, and continues. QA,
+refactor, and docs tasks run in that order unless the plan says otherwise. A
+review task is read-only and reports findings; it does not edit. If a task's
+brief does not fit the 25% context budget, split the task instead of carrying
+extra context into the session.
 
 ## Integrate and close
 

@@ -999,8 +999,9 @@ The brief is measured in estimated tokens against the role's context window in
 25% of the window. `dispatch` and `plan ready` refuse a task whose fresh brief
 exceeds the budget; split the task or trim its description instead.
 `task brief --host claude` resolves a host-specific window, and
-`--context-window TOKENS` overrides it. Dispatch marks every worker prompt
-`fresh_session` and includes the measured budget.
+`--context-window TOKENS` overrides it. `lpui setup --context-window
+fast=64000` sets the window for every host in a tier. Dispatch marks every
+worker prompt `fresh_session` and includes the measured budget.
 
 ```bash
 lpui --porcelain task brief --id 12

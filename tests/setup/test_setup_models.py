@@ -93,6 +93,12 @@ class ProfileMapSetupTest(unittest.TestCase):
         self.assertEqual(written["profiles"]["scout"]["models"]["opencode"], "provider/scout")
         self.assertEqual(written["tiers"]["fast"]["opencode"], "provider/custom")
 
+    def test_context_window_flag_sets_every_host_in_a_tier(self) -> None:
+        setup.apply_choice(self._choice(context_tiers={"fast": 64_000}), None, self.home, "1.0")
+        written = json.loads(self.map.read_text(encoding="utf-8"))
+        self.assertEqual(set(written["context"]["fast"].values()), {64_000})
+        self.assertEqual(written["context"]["standard"]["claude"], 200_000)
+
     def test_role_flags_change_tier_and_model(self) -> None:
         setup.apply_choice(
             self._choice(

@@ -36,6 +36,16 @@ def _host_key(value: str, roles: bool) -> tuple[str, str, str]:
     return host, name, model
 
 
+def _context_tier(value: str) -> tuple[str, int]:
+    """Parse TIER=TOKENS for --context-window."""
+    tier, sep, tokens = value.partition("=")
+    if not sep or tier not in TIERS:
+        raise argparse.ArgumentTypeError(f"expected TIER=TOKENS with tier {'|'.join(TIERS)}")
+    if not tokens.isdigit() or int(tokens) < 1:
+        raise argparse.ArgumentTypeError("tokens must be a positive integer")
+    return tier, int(tokens)
+
+
 def _tier_model(value: str) -> tuple[str, str, str]:
     return _host_key(value, roles=False)
 
@@ -88,6 +98,14 @@ def add_setup(
         default=[],
         metavar="HOST:ROLE=MODEL",
         help="override one host model for a role; repeatable",
+    )
+    setup.add_argument(
+        "--context-window",
+        action="append",
+        type=_context_tier,
+        default=[],
+        metavar="TIER=TOKENS",
+        help="context window in tokens for every host in a tier; repeatable",
     )
     setup.add_argument(
         "--no-model-review",

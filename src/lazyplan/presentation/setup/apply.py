@@ -62,6 +62,8 @@ def _seed_profile_map(
         choice.role_models,
     )
     context = profiles.load_context(db_path)
+    for tier, tokens in (choice.context_tiers or {}).items():
+        context[tier] = {host: tokens for host in profiles.HOSTS}
     text = profiles.render(updated, effective, context)
     if path.is_file() and textfile.read(path) == text:
         return path, None

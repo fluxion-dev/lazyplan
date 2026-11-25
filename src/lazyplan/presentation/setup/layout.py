@@ -59,6 +59,7 @@ class SetupChoice:
     model_review: bool = True
     profiles_map: dict[str, Profile] | None = None
     tiers_map: dict[str, dict[str, str]] | None = None
+    context_tiers: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)

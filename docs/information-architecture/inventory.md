@@ -72,7 +72,7 @@ python3 tools/ia_inventory.py --check
 | `repos` | --json, --porcelain, --version, --actor, --heal, --no-heal, --kind, --id, --effective |
 | `review` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `seed` | --json, --porcelain, --version, --actor, --heal, --no-heal |
-| `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --agent-tier, --tier-model, --role-model, --no-model-review, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
+| `setup` | --json, --porcelain, --version, --actor, --heal, --no-heal, --placement, --agents, --agent-tier, --tier-model, --role-model, --context-window, --no-model-review, --skills-dir, --no-skills, --hooks, --no-hooks, --agents-pointer, --no-agents-pointer, --yes, --post-upgrade |
 | `share` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --format, --out |
 | `ship` | --json, --porcelain, --version, --actor, --heal, --no-heal, --plan, --max-chars |
 | `stats` | --json, --porcelain, --version, --actor, --heal, --no-heal, --since, --stale-after, --by |

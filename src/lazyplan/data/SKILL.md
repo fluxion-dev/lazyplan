@@ -669,8 +669,9 @@ context.
 
 The brief is measured in estimated tokens against a per-tier context window in
 `agents.json`. The default budget is 25% of the window: fast roles 128k tokens,
-standard and deep roles 200k. Edit the `context` map for the real host/model
-windows. `dispatch` and `plan ready` refuse a task whose fresh brief exceeds
+standard and deep roles 200k. Edit the `context` map, or run
+`lpui setup --context-window fast=64000`, for the real host/model windows.
+`dispatch` and `plan ready` refuse a task whose fresh brief exceeds
 the budget; split the task or trim its description instead of starting it. End
 the session after one task, leave a handoff note, and start the next task in a
 new session.

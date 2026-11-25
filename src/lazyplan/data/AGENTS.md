@@ -28,7 +28,7 @@ Human watches `lpui ui`; agents work via the CLI with `--actor <name>`.
 - Read paths are batched and query-budgeted (`tools/perf_bench.py --check`); do not add per-row queries to tree, list, export, audit, MCP, or TUI refresh.
 - Milestones read As a/I want/so that with Given-When-Then criteria; tasks start with a verb and carry a DoD checklist; cut both from scouted ground only
 - Resume contract: every milestone names Outcome/Scope/Inputs/Slices and every task names Approach/Touch/Inputs/Commit/Verify/Guardrails with at least one real path; formalize, plan apply, and promotion refuse gaps, and lint flags them on later edits
-- Fresh sessions: start every task in a new host session and rebuild from `task brief --id T`; never chain tasks in one conversation. The brief must fit 25% of the tier window in `agents.json` (fast 128k, standard/deep 200k); dispatch and plan ready refuse oversize tasks. End the session after one task and leave a handoff note.
+- Fresh sessions: start every task in a new host session and rebuild from `task brief --id T`; never chain tasks in one conversation. The brief must fit 25% of the tier window in `agents.json` (fast 128k, standard/deep 200k; `setup --context-window TIER=TOKENS`); dispatch and plan ready refuse oversize tasks. End the session after one task and leave a handoff note.
 - Scout before creating anything — no row from unscouted ground; scope lists what is in and out explicitly
 - Implementation requests get an ambiguity hunt first: touch-points, edge cases, non-goals, assumptions — never accept "implement X" at face value
 - Write every row for scanning: paragraphs and sections, no single-blob text, no placeholder content; starters ship empty, fill them with real words

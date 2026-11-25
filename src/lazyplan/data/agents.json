@@ -26,6 +26,32 @@
       "copilot": ""
     }
   },
+  "context": {
+    "fast": {
+      "opencode": 128000,
+      "claude": 128000,
+      "codex": 128000,
+      "gemini": 128000,
+      "cursor": 128000,
+      "copilot": 128000
+    },
+    "standard": {
+      "opencode": 200000,
+      "claude": 200000,
+      "codex": 200000,
+      "gemini": 200000,
+      "cursor": 200000,
+      "copilot": 200000
+    },
+    "deep": {
+      "opencode": 200000,
+      "claude": 200000,
+      "codex": 200000,
+      "gemini": 200000,
+      "cursor": 200000,
+      "copilot": 200000
+    }
+  },
   "profiles": {
     "scout": {"tier": "fast", "model": "", "effort": "", "models": {}},
     "implementer": {"tier": "fast", "model": "", "effort": "", "models": {}},

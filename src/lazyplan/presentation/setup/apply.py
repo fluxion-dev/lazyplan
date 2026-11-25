@@ -61,14 +61,15 @@ def _seed_profile_map(
         choice.tier_models,
         choice.role_models,
     )
-    text = profiles.render(updated, effective)
+    context = profiles.load_context(db_path)
+    text = profiles.render(updated, effective, context)
     if path.is_file() and textfile.read(path) == text:
         return path, None
     backup: Path | None = None
     if path.is_file():
         backup_dir = layout.new_backup_dir(home)
         backup = layout.backup_file(backup_dir, path)
-    profiles.save(db_path, updated, effective)
+    profiles.save(db_path, updated, effective, context)
     return path, backup
 
 

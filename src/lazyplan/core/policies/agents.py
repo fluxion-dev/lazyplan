@@ -25,6 +25,14 @@ CLAUDE_MODELS: dict[str, str] = {
     "deep": "opus",
 }
 
+#: Conservative context windows per tier, in tokens. A user file can override
+#: any tier/host pair in ``agents.json``.
+DEFAULT_CONTEXT: dict[str, int] = {
+    "fast": 128_000,
+    "standard": 200_000,
+    "deep": 200_000,
+}
+
 #: Packaged tier targets: host-specific defaults that a user file can override.
 DEFAULT_MODELS: dict[str, dict[str, str]] = {
     "fast": {

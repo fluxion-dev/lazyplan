@@ -47,6 +47,8 @@ class ProfileMapSetupTest(unittest.TestCase):
         written = json.loads(self.map.read_text(encoding="utf-8"))
         self.assertEqual(written["schema"], 2)
         self.assertEqual(written["tiers"]["fast"]["opencode"], "provider/tiny")
+        self.assertEqual(written["context"]["fast"]["claude"], 128_000)
+        self.assertEqual(written["context"]["standard"]["claude"], 200_000)
         implementer = self.home / ".config/opencode/agent/lazyplan-implementer.md"
         reviewer = self.home / ".config/opencode/agent/lazyplan-reviewer.md"
         self.assertIn("model: provider/tiny", implementer.read_text(encoding="utf-8"))

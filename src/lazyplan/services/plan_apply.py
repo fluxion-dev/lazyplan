@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 from ..core.ports.planning import PlanningPort
-from .plan_document import MilestoneDocument, PlanDocument, PlanDocumentError
+from .plan_detail import PlanDetailError
+from .plan_document import MilestoneDocument, PlanDocument, PlanDocumentError, check_detail
 
 
 def _ensure_key_free(port: PlanningPort, kind: str, key: str) -> None:
@@ -72,6 +73,10 @@ def apply(port: PlanningPort, document: PlanDocument, actor: str = "human") -> d
             raise PlanDocumentError(f"plan key {document.key!r} points at missing row #{existing}")
         return {"plan": plan, "created": False, "counts": _tree_counts(port, plan.id)}
 
+    try:
+        check_detail(document)
+    except PlanDetailError as exc:
+        raise PlanDocumentError(str(exc)) from exc
     counts = {"milestones": 0, "tasks": 0, "criteria": 0}
     with port.transaction():
         _ensure_key_free(port, "plan", document.key)

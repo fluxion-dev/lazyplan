@@ -119,7 +119,7 @@ class TestTraceabilityQA(unittest.TestCase):
         code, text, _err = self._run("lint", "--plan", "1")
         self.assertEqual(code, 0)
         self.assertIn("uncovered-criterion", text)
-        self.assertIn("missing-commit-slice", text)
+        self.assertIn("incomplete-task-brief", text)
         code, _out, _err = self._run("lint", "--plan", "1", "--strict")
         self.assertEqual(code, 2)
 

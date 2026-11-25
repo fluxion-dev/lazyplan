@@ -27,30 +27,61 @@ def document(key: str = "demo", milestone_key: str = "build") -> dict:
             {
                 "key": milestone_key,
                 "title": "Build it",
-                "desc": "As a user, I want the change.",
+                "desc": (
+                    "Outcome: As a user, I want the change, so that the outcome is visible.\n\n"
+                    "Scope: In scope: the reviewed definition. Out of scope: unrelated work.\n\n"
+                    "Inputs: The approved definition and the scouted code path.\n\n"
+                    "Slices: Implement, test, and document in separate green commits."
+                ),
                 "criteria": ["Built."],
                 "tasks": [
                     {
                         "key": "impl",
                         "title": "Implement it",
-                        "desc": "Approach: do the work.\n\nCommit: one slice.\n\nVerify: tests pass.",
+                        "desc": (
+                            "Approach: Change the scouted code path and keep the reviewed behavior.\n\n"
+                            "Touch: src/app.py\n\n"
+                            "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                            "Commit: One implementation slice.\n\n"
+                            "Verify: The relevant test suite passes.\n\n"
+                            "Guardrails: Keep behavior outside the reviewed scope unchanged."
+                        ),
                     },
                     {
                         "key": "qa",
                         "title": "Test it",
-                        "desc": "Approach: add tests.\n\nCommit: test slice.\n\nVerify: tests pass.",
+                        "desc": (
+                            "Approach: Cover each acceptance criterion and edge case.\n\n"
+                            "Touch: tests/test_app.py\n\n"
+                            "Inputs: The implementation slice and the acceptance criteria.\n\n"
+                            "Commit: One test slice.\n\n"
+                            "Verify: The new tests pass.\n\n"
+                            "Guardrails: Do not weaken existing assertions."
+                        ),
                     },
                 ],
             },
             {
                 "key": "ship",
                 "title": "Ship it",
-                "desc": "As a user, I want the release.",
+                "desc": (
+                    "Outcome: As a user, I want the release, so that the change ships.\n\n"
+                    "Scope: In scope: the release notes and commands. Out of scope: new code.\n\n"
+                    "Inputs: The green implementation and its verification commands.\n\n"
+                    "Slices: Document the release in one green commit."
+                ),
                 "tasks": [
                     {
                         "key": "docs",
                         "title": "Document it",
-                        "desc": "Approach: update docs.\n\nCommit: docs slice.\n\nVerify: links resolve.",
+                        "desc": (
+                            "Approach: Document the shipped behavior where users look.\n\n"
+                            "Touch: docs/\n\n"
+                            "Inputs: The final implementation and its verification commands.\n\n"
+                            "Commit: One documentation slice.\n\n"
+                            "Verify: Links and examples resolve.\n\n"
+                            "Guardrails: Do not document behavior the change did not ship."
+                        ),
                     }
                 ],
             },

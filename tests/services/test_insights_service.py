@@ -15,9 +15,29 @@ class TestInsightsFacade(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.store = Store(os.path.join(self.tmp.name, "insights.db"))
         self.plan = self.store.add_plan("P", actor="fixture")
-        milestone = self.store.add_milestone(self.plan.id, "M", actor="fixture")
+        milestone = self.store.add_milestone(
+            self.plan.id,
+            "M",
+            (
+                "Outcome: As a user, I want the change, so that the outcome is visible.\n\n"
+                "Scope: In scope: the reviewed definition. Out of scope: unrelated work.\n\n"
+                "Inputs: The approved definition and the scouted code path.\n\n"
+                "Slices: Implement and verify in separate green commits."
+            ),
+            actor="fixture",
+        )
         self.store.add_task(
-            milestone.id, "T", "Commit slice: one.\n\nVerification: test.", actor="fixture"
+            milestone.id,
+            "T",
+            (
+                "Approach: Change the scouted code path and keep the reviewed behavior.\n\n"
+                "Touch: src/app.py, tests/test_app.py\n\n"
+                "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                "Commit: One implementation slice.\n\n"
+                "Verify: The relevant test suite passes.\n\n"
+                "Guardrails: Keep behavior outside the reviewed scope unchanged."
+            ),
+            actor="fixture",
         )
 
     def tearDown(self) -> None:

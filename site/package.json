@@ -1,7 +1,7 @@
 {
   "name": "lazyplan-site",
   "private": true,
-  "version": "0.52.3",
+  "version": "0.52.4",
   "type": "module",
   "engines": {
     "node": ">=22"

@@ -59,13 +59,26 @@ def sketch_document() -> dict:
             {
                 "key": "slice",
                 "title": "Deliver the slice",
-                "desc": "As a user, I want the approved sketch to become a plan.",
+                "desc": (
+                    "Outcome: As a user, I want the approved sketch to become a plan, so that"
+                    " work starts from the reviewed definition.\n\n"
+                    "Scope: In scope: the reviewed slice. Out of scope: unrelated work.\n\n"
+                    "Inputs: The approved sketch and the scouted code path.\n\n"
+                    "Slices: Implement the slice, then verify it."
+                ),
                 "criteria": ["Slice lands."],
                 "tasks": [
                     {
                         "key": "impl",
                         "title": "Implement the slice",
-                        "desc": "Approach: land the reviewed scope.\n\nVerify: the slice test passes.",
+                        "desc": (
+                            "Approach: Land the reviewed scope on the scouted code path.\n\n"
+                            "Touch: src/app.py, tests/test_app.py\n\n"
+                            "Inputs: The approved sketch; none beyond the plan scope.\n\n"
+                            "Commit: One implementation slice.\n\n"
+                            "Verify: The slice test passes.\n\n"
+                            "Guardrails: Keep behavior outside the reviewed scope unchanged."
+                        ),
                         "criteria": ["Tests pass."],
                     }
                 ],

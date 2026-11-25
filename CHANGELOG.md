@@ -3,7 +3,17 @@
 Notable user-facing changes to lazyplan (`lpui`). Releases before 0.26.0 are
 documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan/releases).
 
-## Unreleased
+## v0.52.4 — 2026-11-25
+
+### Changed
+
+- **Plans now carry a resume contract.** `draft formalize`, `plan apply`, and
+  `draft promote` refuse a plan with no milestone or task, a milestone without
+  Outcome/Scope/Inputs/Slices, or a task without
+  Approach/Touch/Inputs/Commit/Verify/Guardrails, with `Touch:` naming a real
+  path. Lint reports the same gaps on later edits, so `plan
+  ready` waits for a brief an agent can resume cold. Recipes, the packaged
+  agent contract, and the usage guide show the labels.
 
 ### Fixed
 

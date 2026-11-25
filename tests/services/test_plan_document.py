@@ -32,13 +32,25 @@ def document() -> dict:
             {
                 "key": "build",
                 "title": "Build it",
-                "desc": "As a user, I want the change.",
+                "desc": (
+                    "Outcome: As a user, I want the change, so that the outcome is visible.\n\n"
+                    "Scope: In scope: the reviewed definition. Out of scope: unrelated work.\n\n"
+                    "Inputs: The approved definition and the scouted code path.\n\n"
+                    "Slices: Implement, verify, refactor, and document in separate green commits."
+                ),
                 "criteria": ["Built."],
                 "tasks": [
                     {
                         "key": "impl",
                         "title": "Implement it",
-                        "desc": "Approach: do the work.\n\nCommit: one slice.\n\nVerify: tests pass.",
+                        "desc": (
+                            "Approach: Change the scouted code path and keep the reviewed behavior.\n\n"
+                            "Touch: src/app.py, tests/test_app.py\n\n"
+                            "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                            "Commit: One implementation slice.\n\n"
+                            "Verify: The relevant test suite passes.\n\n"
+                            "Guardrails: Keep behavior outside the reviewed scope unchanged."
+                        ),
                         "criteria": ["Tests pass."],
                     }
                 ],

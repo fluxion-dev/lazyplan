@@ -11,38 +11,38 @@
     {
       "key": "fix",
       "title": "Fix the defect",
-      "desc": "As a user, I want the defect removed, so that the expected behavior holds. Add inputs and prerequisites.",
+      "desc": "Outcome: As a user, I want the defect removed, so that the expected behavior holds.\n\nScope: In scope: the failing behavior and its regression. Out of scope: unrelated defects and cleanup.\n\nInputs: A deterministic reproduction and the affected code path.\n\nSlices: Reproduce, fix, guard with a regression test, then refactor and document in separate green commits.",
       "lane_group": 1,
       "agent_role": "implementer",
       "tasks": [
         {
           "key": "reproduce",
           "title": "Reproduce the defect",
-          "desc": "Approach: add a failing test or a deterministic reproduction.\n\nCommit: reproduction slice.\n\nVerify: the reproduction fails for the expected reason.",
+          "desc": "Approach: Write a failing test or a deterministic reproduction that names the expected behavior.\n\nTouch: tests/\n\nInputs: The reported failing behavior and the affected code path.\n\nCommit: One reproduction slice that fails for the expected reason.\n\nVerify: The reproduction fails before the fix and names the defect.\n\nGuardrails: Do not patch the fix into the reproduction commit.",
           "role": "qa"
         },
         {
           "key": "fix",
           "title": "Fix the defect",
-          "desc": "Approach: name the root cause and the smallest safe change.\n\nCommit: fix slice.\n\nVerify: the reproduction passes and the relevant suite stays green.",
+          "desc": "Approach: Name the root cause and make the smallest safe change.\n\nTouch: src/\n\nInputs: The failing reproduction and the scouted root cause.\n\nCommit: One minimal fix slice.\n\nVerify: The reproduction passes and the relevant suite stays green.\n\nGuardrails: Change only the root cause; do not refactor or rename in this slice.",
           "role": "implementer"
         },
         {
           "key": "regression",
           "title": "Guard the fix with a regression test",
-          "desc": "Approach: keep the reproduction as a permanent regression test.\n\nCommit: regression slice.\n\nVerify: the regression test fails without the fix.",
+          "desc": "Approach: Keep the reproduction as a permanent regression test for the defect.\n\nTouch: tests/\n\nInputs: The reproduction and the fix.\n\nCommit: One regression slice that keeps the reproduction as a permanent test.\n\nVerify: The regression test fails without the fix.\n\nGuardrails: Keep the test deterministic and offline.",
           "role": "qa"
         },
         {
           "key": "refactor",
           "title": "Refactor the touched code",
-          "desc": "Approach: leave the fix area cleaner without changing behavior.\n\nCommit: refactor slice.\n\nVerify: the full test suite passes.",
+          "desc": "Approach: Leave the fix area cleaner without changing behavior.\n\nTouch: src/, tests/\n\nInputs: A green fix and its regression test.\n\nCommit: One refactor slice with no behavior change.\n\nVerify: The full test suite passes.\n\nGuardrails: Stop when the tests cannot prove the behavior is unchanged.",
           "role": "refactor"
         },
         {
           "key": "docs",
           "title": "Update the documentation",
-          "desc": "Approach: record the corrected behavior where users will look.\n\nCommit: docs slice.\n\nVerify: links and examples resolve.",
+          "desc": "Approach: Record the corrected behavior where users will look.\n\nTouch: docs/\n\nInputs: The final fix and its verification commands.\n\nCommit: One documentation slice.\n\nVerify: Links and examples resolve against the shipped behavior.\n\nGuardrails: Do not document a fix the change did not ship.",
           "role": "docs"
         }
       ]

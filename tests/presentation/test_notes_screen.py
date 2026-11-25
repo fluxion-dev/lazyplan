@@ -109,6 +109,7 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause(0.05)
                     if isinstance(app.screen, ReleaseNotesScreen):
                         break
+                await pilot.pause()
                 markdown = app.screen.query_one("#notes-body", Markdown)
                 with mock.patch.object(app, "open_url") as opened:
                     markdown.post_message(
@@ -126,6 +127,7 @@ class TestReleaseNotesScreen(unittest.IsolatedAsyncioTestCase):
                     await pilot.pause(0.05)
                     if isinstance(app.screen, ReleaseNotesScreen):
                         break
+                await pilot.pause()
                 markdown = app.screen.query_one("#notes-body", Markdown)
                 with mock.patch.object(app, "open_url", side_effect=RuntimeError("no browser")):
                     markdown.post_message(

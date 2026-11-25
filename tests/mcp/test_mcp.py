@@ -70,11 +70,28 @@ class TestMcpReadTools(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         store = Store(os.path.join(self.tmp.name, "mcp.db"))
         plan = store.add_plan("P", "what", goal="why", actor="fixture", worktree_required=False)
-        milestone = store.add_milestone(plan.id, "M", actor="fixture")
+        milestone = store.add_milestone(
+            plan.id,
+            "M",
+            (
+                "Outcome: As a user, I want the change, so that the outcome is visible.\n\n"
+                "Scope: In scope: the reviewed definition. Out of scope: unrelated work.\n\n"
+                "Inputs: The approved definition and the scouted code path.\n\n"
+                "Slices: Implement and verify in separate green commits."
+            ),
+            actor="fixture",
+        )
         task = store.add_task(
             milestone.id,
             "T",
-            "Commit slice: one.\n\nVerification: pytest.",
+            (
+                "Approach: Change the scouted code path and keep the reviewed behavior.\n\n"
+                "Touch: src/app.py, tests/test_app.py\n\n"
+                "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                "Commit: One implementation slice.\n\n"
+                "Verify: The relevant test suite passes.\n\n"
+                "Guardrails: Keep behavior outside the reviewed scope unchanged."
+            ),
             actor="fixture",
         )
         criterion = store.add_criteria("plan", plan.id, "Works", actor="fixture")

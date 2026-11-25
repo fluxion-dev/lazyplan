@@ -1650,7 +1650,7 @@
   "counts": {
     "cli_commands": 53,
     "doc_files": 9,
-    "doc_headings": 116,
+    "doc_headings": 118,
     "env_names": 12,
     "file_paths": 12,
     "hook_events": 35,
@@ -1668,7 +1668,7 @@
       {
         "file": "README.md",
         "headings": [
-          "lazyplan (`lpui`) \u2014 v0.52.3",
+          "lazyplan (`lpui`) \u2014 v0.52.4",
           "Install",
           "First run",
           "Why it differs",
@@ -1741,6 +1741,7 @@
           "Agent profiles",
           "Porcelain output",
           "Plan documents and recipes",
+          "Resume contract",
           "Visual choices",
           "Drafts",
           "Title",
@@ -1815,6 +1816,7 @@
           "Read first",
           "Templates",
           "Write and criteria",
+          "Resume contract",
           "Milestone and task standards",
           "Human-in-the-loop",
           "Rules"

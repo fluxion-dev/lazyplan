@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from ..core.entities import Milestone, Plan, Task
 from ..core.policies.coordination import patterns_overlap
 from ..core.ports.insights import InsightsPort
+from . import plan_detail
 
 _PLACEHOLDER = re.compile(r"\b(TODO|TBD|FIXME)\b", re.IGNORECASE)
 
@@ -51,27 +52,33 @@ def _open_on_done(store: InsightsPort, kind: str, obj_id: int) -> list[Finding]:
     ]
 
 
+def _milestone_findings(milestone: Milestone) -> list[Finding]:
+    """Resume-contract gaps in one milestone description."""
+    issues = plan_detail.milestone_issues(milestone.description)
+    if not issues:
+        return []
+    return [
+        Finding(
+            "incomplete-milestone-brief",
+            "warn",
+            f"milestone #{milestone.id} resume contract: {plan_detail.describe(issues)}",
+            "milestone",
+            milestone.id,
+        )
+    ]
+
+
 def _task_findings(store: InsightsPort, task: Task) -> list[Finding]:
     """Rules that depend only on one task's description and status."""
     findings: list[Finding] = []
-    desc = task.description.lower()
     task_id = task.id
-    if "commit" not in desc:
+    issues = plan_detail.task_issues(task.description)
+    if issues:
         findings.append(
             Finding(
-                "missing-commit-slice",
+                "incomplete-task-brief",
                 "warn",
-                f"task #{task_id} has no commit slice in its description",
-                "task",
-                task_id,
-            )
-        )
-    if "verif" not in desc:
-        findings.append(
-            Finding(
-                "missing-verification",
-                "warn",
-                f"task #{task_id} has no verification in its description",
+                f"task #{task_id} resume contract: {plan_detail.describe(issues)}",
                 "task",
                 task_id,
             )
@@ -301,6 +308,7 @@ def lint_plan(store: InsightsPort, plan_id: int) -> list[Finding] | None:
         findings.extend(_open_on_done(store, "plan", plan_id))
     findings.extend(_lane_findings(store, plan))
     for milestone in store.list_milestones(plan_id):
+        findings.extend(_milestone_findings(milestone))
         if milestone.status.value == "done":
             findings.extend(_open_on_done(store, "milestone", milestone.id))
         for task in store.list_tasks(milestone.id):

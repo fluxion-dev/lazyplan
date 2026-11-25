@@ -22,15 +22,24 @@ def document(tasks: int = 20) -> dict:
             {
                 "key": prefix,
                 "title": f"Milestone {index + 1}",
-                "desc": f"Slice {index + 1} of the work.",
+                "desc": (
+                    f"Outcome: As a user, I want slice {index + 1}, so that the work lands"
+                    " reviewably.\n\n"
+                    "Scope: In scope: this slice. Out of scope: unrelated work.\n\n"
+                    "Inputs: The approved definition and the scouted code path.\n\n"
+                    "Slices: Implement and verify in separate green commits."
+                ),
                 "tasks": [
                     {
                         "key": f"{prefix}-t{task}",
                         "title": f"Task {index + 1}.{task + 1}",
                         "desc": (
-                            "Approach: one reviewable change.\n\n"
-                            "Commit: one green slice.\n\n"
-                            "Verify: the relevant tests pass."
+                            "Approach: Make one reviewable change on the scouted path.\n\n"
+                            "Touch: src/app.py, tests/test_app.py\n\n"
+                            "Inputs: The approved definition; none beyond the plan scope.\n\n"
+                            "Commit: One green slice.\n\n"
+                            "Verify: The relevant tests pass.\n\n"
+                            "Guardrails: Keep behavior outside the reviewed scope unchanged."
                         ),
                     }
                     for task in range(per_milestone)

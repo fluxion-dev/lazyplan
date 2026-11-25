@@ -124,7 +124,18 @@ class TestMcpReadTools(unittest.TestCase):
             ]["tools"]
         }
         self.assertTrue(
-            {"brief", "list_plans", "show_row", "claims", "audit", "trace", "lint", "info"} <= names
+            {
+                "brief",
+                "task_brief",
+                "list_plans",
+                "show_row",
+                "claims",
+                "audit",
+                "trace",
+                "lint",
+                "info",
+            }
+            <= names
         )
 
     def test_read_tools_return_json(self):
@@ -142,6 +153,9 @@ class TestMcpReadTools(unittest.TestCase):
         self.assertEqual(trace["criteria"][0]["tasks"][0]["task"]["id"], 1)
         lint = json.loads(self._tool("lint", {"plan": 1})["content"][0]["text"])
         self.assertEqual(lint, [])
+        task_brief = json.loads(self._tool("task_brief", {"id": 1})["content"][0]["text"])
+        self.assertTrue(task_brief["fits"])
+        self.assertIn("Start a new session for this task", task_brief["text"])
 
     def test_moving_a_claimed_task_done_releases_the_lease(self):
         moved = self._tool("move_row", {"kind": "task", "id": 1, "to": "done"})

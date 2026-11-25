@@ -7,6 +7,7 @@ import sys
 
 from .... import services
 from ....core.ports.insights import InsightsPort
+from ....infrastructure.profiles import context_windows
 from ...shared import porcelain
 from ...shared.design import msg_error, msg_not_found
 from ..emit import _emit
@@ -56,7 +57,11 @@ def _cmd_plan_ready(store: InsightsPort | None, args: argparse.Namespace, actor:
     if db is None:
         print(msg_error(ValueError("no database")), file=sys.stderr)
         return 2
-    result = services.plan_ready(db, args.id)
+    result = services.plan_ready(
+        db,
+        args.id,
+        context_windows=context_windows(db.db_path),
+    )
     if result is None:
         print(msg_not_found("plan", args.id), file=sys.stderr)
         return 2

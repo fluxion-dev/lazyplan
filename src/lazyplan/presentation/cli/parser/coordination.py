@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from ....core.kinds import KINDS
+from ....core.policies.context import DEFAULT_TASK_CONTEXT_PERCENT
 from .common import plan_id_arg
 
 
@@ -98,9 +99,16 @@ def add_dispatch(
     dp.add_argument(
         "--max-chars",
         type=int,
-        default=4000,
+        default=0,
         metavar="N",
-        help="prompt budget in characters (default: 4000)",
+        help="cap each prompt in characters (default: 0, the full brief)",
+    )
+    dp.add_argument(
+        "--context-percent",
+        type=int,
+        default=DEFAULT_TASK_CONTEXT_PERCENT,
+        metavar="N",
+        help=f"task context budget percentage (default: {DEFAULT_TASK_CONTEXT_PERCENT})",
     )
 
 

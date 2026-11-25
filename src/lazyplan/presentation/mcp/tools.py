@@ -292,15 +292,7 @@ class ToolsMixin(
                 ),
                 self._tool_brief,
             ),
-            (
-                _tool(
-                    "dispatch",
-                    "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
-                    {"plan": _id(), "lane": _id(), "max_chars": {"type": "integer"}},
-                    ["plan"],
-                ),
-                self._tool_dispatch,
-            ),
+            *self._dispatch_read_registry(),
             (
                 _tool(
                     "list_plans",

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 from lazyplan.core.entities import Status
-from lazyplan.services import dispatch
+from lazyplan.services import dispatch, task_brief
 from lazyplan.store import Store
 
 
@@ -147,6 +147,30 @@ class DispatchManifestTest(unittest.TestCase):
         (item,) = manifest["dispatchable"]
         self.assertLessEqual(len(item["prompt"]), 120)
         self.assertTrue(item["prompt"].endswith("…"))
+
+    def test_fresh_session_brief_and_context_budget(self) -> None:
+        self._parallel_plan()
+        manifest = dispatch.build(
+            self.store,
+            self.plan.id,
+            context_windows={"implementer": 128_000, "qa": 128_000, "integrator": 128_000},
+        )
+        self.assertTrue(manifest["fresh_session"])
+        item = manifest["dispatchable"][0]
+        self.assertTrue(item["fresh_session"])
+        self.assertTrue(item["context"]["fits"])
+        self.assertIn("Start a new session for this task", item["prompt"])
+        self.assertIn("## Session commands", item["prompt"])
+
+    def test_oversize_task_blocks_dispatch(self) -> None:
+        _lanes, tasks = self._parallel_plan()
+        self.store.update_task(tasks[0], description="x" * 6000)
+        with self.assertRaisesRegex(task_brief.ContextBudgetError, "fresh brief uses"):
+            dispatch.build(
+                self.store,
+                self.plan.id,
+                context_windows={"implementer": 1000, "qa": 1000, "integrator": 1000},
+            )
 
     def test_missing_plan_raises(self) -> None:
         with self.assertRaises(KeyError):

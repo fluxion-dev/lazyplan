@@ -144,6 +144,7 @@ from .system import (
 from .system import (
     _cmd_ship as _cmd_ship,
 )
+from .task_brief import _cmd_task_brief
 from .touch import (
     _cmd_touch_add,
     _cmd_touch_list,
@@ -177,6 +178,7 @@ _GROUP_CMDS: dict[tuple[str, str], str] = {
     ("task", "add"): "add-task",
     ("task", "edit"): "update",
     ("task", "show"): "show",
+    ("task", "brief"): "task-brief",
     ("task", "list"): "list",
     ("task", "move"): "status",
     ("task", "delete"): "delete",
@@ -317,6 +319,7 @@ _COMMANDS: dict[str, Callable[[AppPort, Namespace, str], int]] = {
     "pr-unlink": _cmd_pr_unlink,
     "pr-refresh": _cmd_pr_refresh,
     "task-start": _cmd_task_start,
+    "task-brief": _cmd_task_brief,
     "task-finish": _cmd_task_finish,
     "task-block": _cmd_task_block,
     "task-unblock": _cmd_task_unblock,

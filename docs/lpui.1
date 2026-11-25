@@ -580,7 +580,12 @@ one lane milestone
 .RS
 .TP
 .B \-\-max\-chars N
-prompt budget in characters (default: 4000)
+cap each prompt in characters (default: 0, the full brief)
+.RE
+.RS
+.TP
+.B \-\-context\-percent N
+task context budget percentage (default: 25)
 .RE
 .TP
 .B lpui claim
@@ -1368,7 +1373,7 @@ report drift without automatic repair for this command
 .RS
 .TP
 .B  ACTION
-what to do with a task Choices: add, edit, show, list, move, delete, block, unblock, start, finish\. Required\.
+what to do with a task Choices: add, edit, show, brief, list, move, delete, block, unblock, start, finish\. Required\.
 .RE
 .TP
 .B lpui issue

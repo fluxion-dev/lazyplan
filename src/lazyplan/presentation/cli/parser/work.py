@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 
 from ....core.entities import Status
+from ....core.policies.agents import HOSTS
+from ....core.policies.context import DEFAULT_TASK_CONTEXT_PERCENT
 from ....core.policies.lanes import (
     AGENT_ROLES,
     DEFAULT_AGENT_ROLE,
@@ -372,6 +374,27 @@ def add_noun_groups(
     _a = _actions.add_parser("show", help="show one task", parents=[common])
     _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
     _a.add_argument("--files", action="store_true", help="list changed files per commit")
+    _a = _actions.add_parser(
+        "brief", help="print the fresh-session brief for one task", parents=[common]
+    )
+    _a.add_argument("--id", type=int, required=True, metavar="ID", help="task id")
+    _a.add_argument(
+        "--host", choices=list(HOSTS), default="", help="resolve the window for one host"
+    )
+    _a.add_argument(
+        "--context-window",
+        type=int,
+        default=0,
+        metavar="TOKENS",
+        help="override the model context window",
+    )
+    _a.add_argument(
+        "--percent",
+        type=int,
+        default=DEFAULT_TASK_CONTEXT_PERCENT,
+        metavar="N",
+        help=f"budget percentage (default: {DEFAULT_TASK_CONTEXT_PERCENT})",
+    )
     _a = _actions.add_parser("list", help="list one milestone's tasks as a tree", parents=[common])
     _a.add_argument("--milestone", type=int, required=True, metavar="ID", help="milestone id")
     _plan_list_flags(_a)

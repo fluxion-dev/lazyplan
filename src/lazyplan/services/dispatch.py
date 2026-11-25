@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from typing import Any
 
 from ..core.entities import Claim, Milestone, Plan, Task
+from ..core.policies.context import DEFAULT_CONTEXT_WINDOW, DEFAULT_TASK_CONTEXT_PERCENT
 from ..core.policies.worktrees import quote_path
 from ..core.ports.insights import InsightsPort
+from . import task_brief
+from .task_brief import TaskBrief
 from .worktrees import lane_worktree_entries
 
-DEFAULT_MAX_CHARS = 4000
+DEFAULT_MAX_CHARS = 0
 
 
 def build(
@@ -18,6 +22,8 @@ def build(
     plan_id: int,
     lane_id: int | None = None,
     max_chars: int = DEFAULT_MAX_CHARS,
+    context_windows: Mapping[str, int] | None = None,
+    context_percent: int = DEFAULT_TASK_CONTEXT_PERCENT,
 ) -> dict[str, Any]:
     """Build the dispatch manifest for one plan without writing anything."""
     plan = store.get_plan(plan_id)
@@ -43,6 +49,8 @@ def build(
         current,
         max_chars,
         store.list_repos("plan", plan.id),
+        context_windows or {},
+        context_percent,
     )
     selected = [lane for lane in lanes if lane_id is None or lane["milestone_id"] == lane_id]
     active = sum(1 for lane in lanes if lane["claim"] is not None)
@@ -62,6 +70,8 @@ def build(
             "worktree_required": plan.worktree_required,
         },
         "capacity": {"max": cap, "active": active, "available": available},
+        "context_percent": context_percent,
+        "fresh_session": True,
         "wave": current,
         "waves": _waves(groups, lanes, current),
         "lanes": selected,
@@ -81,6 +91,8 @@ def _lane_views(
     current: int | None,
     max_chars: int,
     repos: list[dict],
+    context_windows: Mapping[str, int],
+    context_percent: int,
 ) -> tuple[list[dict[str, Any]], dict[int, Task | None]]:
     """Build one lane view per milestone and its next task."""
     lanes: list[dict[str, Any]] = []
@@ -95,14 +107,31 @@ def _lane_views(
         blocked = (
             [] if state == "done" else _lane_blockers(milestone, tasks, worktrees, claim, current)
         )
-        prompt = (
-            _prompt(plan, milestone, lane_next, worktrees, max_chars)
-            if lane_next is not None
-            else ""
-        )
+        brief = None
+        prompt = ""
+        if lane_next is not None:
+            window = context_windows.get(lane_next.role, DEFAULT_CONTEXT_WINDOW)
+            brief = task_brief.build(
+                store,
+                lane_next.id,
+                window,
+                context_percent,
+                extra=_session_extra(plan, milestone, lane_next, worktrees),
+            )
+            brief.require_fits()
+            prompt = _prompt(brief, max_chars)
         lanes.append(
             _lane_payload(
-                store, milestone, tasks, worktrees, claim, lane_next, state, blocked, prompt
+                store,
+                milestone,
+                tasks,
+                worktrees,
+                claim,
+                lane_next,
+                state,
+                blocked,
+                prompt,
+                brief,
             )
         )
     return lanes, next_by_lane
@@ -140,6 +169,7 @@ def _lane_payload(
     state: str,
     blocked: list[str],
     prompt: str,
+    brief: TaskBrief | None,
 ) -> dict[str, Any]:
     """One JSON-safe lane view."""
     return {
@@ -167,6 +197,8 @@ def _lane_payload(
             else None
         ),
         "blocked": blocked,
+        "fresh_session": brief is not None,
+        "context": _context_payload(brief) if brief is not None else None,
         "prompt": prompt,
     }
 
@@ -292,41 +324,60 @@ def _dispatchable(
         "claim_command": (
             f"lpui claim --id {task.id} --worktree {quote_path(path)}" if path else ""
         ),
+        "fresh_session": lane["fresh_session"],
+        "context": lane["context"],
         "prompt": lane["prompt"],
     }
 
 
-def _prompt(
+def _session_extra(
     plan: Plan,
     milestone: Milestone,
-    task: Task | None,
+    task: Task,
     worktrees: list[dict[str, Any]],
-    max_chars: int,
 ) -> str:
-    """A bounded worker prompt for one lane task."""
-    if task is None:
-        return ""
+    """Exact lane, claim, link, and finish commands for one worker."""
     paths = [row["worktree_path"] for row in worktrees if row["registered"]] or [
         row["worktree_path"] for row in worktrees
     ]
     branches = [row["branch"] for row in worktrees if row["registered"]] or [
         row["branch"] for row in worktrees
     ]
+    claim = (
+        f"lpui claim --id {task.id} --worktree {quote_path(paths[0])}"
+        if paths
+        else f"lpui claim --id {task.id}"
+    )
     lines = [
         f"Lane M{milestone.id} {milestone.title!r}, wave {milestone.lane_group},"
         f" role {milestone.agent_role}, plan P{plan.id} {plan.name!r}.",
         f"Work only in {', '.join(paths) or 'the lane checkout'}"
         f" on {', '.join(branches) or 'the lane branch'}.",
-        f"Task T{task.id}: {task.title} ({task.role}).",
-        task.description,
-        "Commit small green slices and link each with"
-        f" `lpui link --kind task --id {task.id}`; note handoffs; finish with"
-        f" `lpui task finish --id {task.id}`.",
+        f"Claim: `{claim}`.",
+        f"Link each commit: `lpui link --kind task --id {task.id}`.",
+        f"Finish: `lpui task finish --id {task.id}`.",
     ]
-    text = "\n\n".join(part for part in lines if part.strip())
-    if len(text) <= max_chars:
+    return "\n".join(lines)
+
+
+def _prompt(brief: TaskBrief, max_chars: int) -> str:
+    """A full worker prompt, optionally capped by an explicit caller budget."""
+    text = brief.text
+    if max_chars <= 0 or len(text) <= max_chars:
         return text
     return text[: max(1, max_chars - 1)].rstrip() + "…"
+
+
+def _context_payload(brief: TaskBrief) -> dict[str, Any]:
+    """One JSON-safe context budget for a lane or dispatchable task."""
+    return {
+        "window": brief.window,
+        "budget": brief.budget,
+        "budget_percent": brief.budget_percent,
+        "tokens": brief.tokens,
+        "percent": brief.percent,
+        "fits": brief.fits,
+    }
 
 
 def _waves(

@@ -8,6 +8,7 @@ import os
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
+from pathlib import Path
 
 from lazyplan.presentation.cli.main import main as lpui_main
 from lazyplan.store import Store
@@ -72,6 +73,11 @@ class DispatchCliTest(unittest.TestCase):
         for host in ("opencode", "claude", "codex", "gemini", "cursor", "copilot"):
             self.assertIn(host, data["profiles"]["reviewer"]["models"])
         self.assertEqual(data["dispatchable"][0]["profile"]["tier"], "fast")
+        self.assertTrue(data["fresh_session"])
+        self.assertTrue(data["dispatchable"][0]["fresh_session"])
+        self.assertTrue(data["dispatchable"][0]["context"]["fits"])
+        self.assertIn("Start a new session for this task", data["dispatchable"][0]["prompt"])
+        self.assertEqual(data["profiles"]["reviewer"]["context_window"], 200_000)
 
     def test_porcelain_rows(self) -> None:
         code, out, err = self._run("--porcelain", "dispatch", "--plan", str(self.plan.id))
@@ -104,6 +110,30 @@ class DispatchCliTest(unittest.TestCase):
         self.assertEqual([lane["milestone_id"] for lane in data["lanes"]], [self.lanes[0]])
         (item,) = data["dispatchable"]
         self.assertLessEqual(len(item["prompt"]), 120)
+
+    def test_oversize_brief_blocks_dispatch(self) -> None:
+        Path(self.root, "agents.json").write_text(
+            json.dumps(
+                {
+                    "schema": 2,
+                    "context": {
+                        "fast": {
+                            "opencode": 500,
+                            "claude": 500,
+                            "codex": 500,
+                            "gemini": 500,
+                            "cursor": 500,
+                            "copilot": 500,
+                        }
+                    },
+                    "profiles": {},
+                }
+            ),
+            encoding="utf-8",
+        )
+        code, _out, err = self._run("dispatch", "--plan", str(self.plan.id))
+        self.assertEqual(code, 2)
+        self.assertIn("fresh brief uses", err)
 
     def test_missing_plan_is_an_error(self) -> None:
         code, _, err = self._run("dispatch", "--plan", "999")

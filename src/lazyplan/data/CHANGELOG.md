@@ -5,6 +5,16 @@ documented on the [GitHub releases page](https://github.com/fluxion-dev/lazyplan
 
 ## Unreleased
 
+### Added
+
+- **Every task starts with a measured fresh-session brief.** `task brief` and
+  each dispatch prompt build a self-contained starting context from the plan,
+  milestone, task contract, criteria, touch-points, and live notes. The brief
+  must fit 25% of the role's context window in the new `agents.json` `context`
+  map (fast 128k by default, standard and deep 200k); `dispatch` and
+  `plan ready` refuse a task that exceeds it, and workers end the session after
+  one task.
+
 ### Fixed
 
 - **The release smoke probes PyPI's JSON index.** The gate waits on the same

@@ -49,7 +49,8 @@ class TestReadyService(unittest.TestCase):
         assert result is not None
         self.assertTrue(result.ready)
         self.assertEqual(
-            [check.id for check in result.checks], ["lint", "coverage", "questions", "worktrees"]
+            [check.id for check in result.checks],
+            ["lint", "context", "coverage", "questions", "worktrees"],
         )
         self.assertTrue(all(check.ok for check in result.checks))
 
@@ -59,6 +60,15 @@ class TestReadyService(unittest.TestCase):
         assert result is not None
         lint_check = next(check for check in result.checks if check.id == "lint")
         self.assertFalse(lint_check.ok)
+        self.assertFalse(result.ready)
+
+    def test_context_failure(self) -> None:
+        self.store.update_task(self.task.id, description="x" * 6000)
+        result = ready.check(self.store, self.plan.id, context_windows={"implementer": 1000})
+        assert result is not None
+        context = next(check for check in result.checks if check.id == "context")
+        self.assertFalse(context.ok)
+        self.assertIn("tokens of a 250 budget", context.findings[0]["message"])
         self.assertFalse(result.ready)
 
     def test_coverage_failure(self) -> None:

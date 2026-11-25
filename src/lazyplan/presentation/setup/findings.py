@@ -132,6 +132,7 @@ def choice_from_args(
         role_tiers=dict(getattr(args, "agent_tier", []) or []) or None,
         tier_models=_group_host_keys(getattr(args, "tier_model", [])) or None,
         role_models=_group_host_keys(getattr(args, "role_model", [])) or None,
+        context_tiers=dict(getattr(args, "context_window", []) or []) or None,
         model_review=bool(getattr(args, "model_review", True)),
     )
 

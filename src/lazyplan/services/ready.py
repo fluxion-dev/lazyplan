@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 
+from ..core.policies.context import DEFAULT_CONTEXT_WINDOW, DEFAULT_TASK_CONTEXT_PERCENT
 from ..core.policies.maintenance import is_archived_row
 from ..core.policies.questions import open_count, open_questions
 from ..core.ports.insights import InsightsPort
-from . import lint
+from . import lint, task_brief
 from .worktrees import worktree_gate
+
+_CONTEXT_EXTRA = "Claim the task, work in the lane checkout, link each commit, and finish the task."
 
 
 @dataclass(frozen=True)
@@ -51,7 +55,13 @@ class ReadyResult:
         }
 
 
-def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:
+def check(
+    port: InsightsPort,
+    plan_id: int,
+    *,
+    context_windows: Mapping[str, int] | None = None,
+    context_percent: int = DEFAULT_TASK_CONTEXT_PERCENT,
+) -> ReadyResult | None:
     """Check one plan for readiness; None when the plan is missing or archived."""
     plan = port.get_plan(plan_id)
     if plan is None or is_archived_row(plan):
@@ -62,6 +72,12 @@ def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:
         not findings,
         "clean" if not findings else f"{len(findings)} findings",
         tuple(finding.to_dict() for finding in findings),
+    )
+    context_check = _context_check(
+        port,
+        plan_id,
+        context_windows or {},
+        context_percent,
     )
     criteria = port.list_criteria("plan", plan_id)
     uncovered = [criterion for criterion in criteria if not port.criterion_tasks(criterion.id)]
@@ -88,4 +104,49 @@ def check(port: InsightsPort, plan_id: int) -> ReadyResult | None:
     else:
         worktree_detail = f"{len(repos)}/{len(repos)} registered"
     worktree_check = ReadyCheck("worktrees", not blocker, worktree_detail)
-    return ReadyResult(plan_id, (lint_check, coverage, question_check, worktree_check))
+    return ReadyResult(
+        plan_id,
+        (lint_check, context_check, coverage, question_check, worktree_check),
+    )
+
+
+def _context_check(
+    port: InsightsPort,
+    plan_id: int,
+    windows: Mapping[str, int],
+    percent: int,
+) -> ReadyCheck:
+    """Every task's fresh brief must fit its role's context budget."""
+    tasks = [
+        task
+        for milestone in port.list_milestones(plan_id)
+        for task in port.list_tasks(milestone.id)
+        if task.status.value != "done"
+    ]
+    findings: list[dict] = []
+    for task in tasks:
+        window = windows.get(task.role, DEFAULT_CONTEXT_WINDOW)
+        brief = task_brief.build(port, task.id, window, percent, extra=_CONTEXT_EXTRA)
+        if brief.fits:
+            continue
+        findings.append(
+            {
+                "id": task.id,
+                "message": (
+                    f"T{task.id} uses {brief.tokens:,} tokens of a {brief.budget:,} budget"
+                    f" ({brief.percent}% of {window:,})"
+                ),
+                "task": task.title,
+                "tokens": brief.tokens,
+                "window": brief.window,
+                "budget": brief.budget,
+                "percent": brief.percent,
+            }
+        )
+    total = len(tasks)
+    detail = (
+        f"{total - len(findings)}/{total} tasks fit the {percent}% context budget"
+        if total
+        else "no tasks"
+    )
+    return ReadyCheck("context", not findings, detail, tuple(findings))

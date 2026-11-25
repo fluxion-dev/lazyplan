@@ -5,6 +5,7 @@ from __future__ import annotations
 from . import attribution as attribution
 from . import drafts as drafts
 from . import maintenance as maintenance
+from . import task_brief as task_brief
 from .base import GateError
 from .collaboration import (
     add_comment,
@@ -214,6 +215,7 @@ __all__ = [
     "ReadyCheck",
     "ReadyResult",
     "plan_ready",
+    "task_brief",
     "add_question",
     "list_questions",
     "resolve_question",

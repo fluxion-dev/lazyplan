@@ -178,6 +178,65 @@ class ProfileMapTest(unittest.TestCase):
         with self.assertRaisesRegex(profiles.ProfileError, "unknown host"):
             profiles.resolve(profiles.Profile(role="qa"), "wizard")
 
+    def test_context_defaults_and_overrides(self) -> None:
+        defaults = profiles.default_context()
+        self.assertEqual(defaults["fast"]["claude"], 128_000)
+        self.assertEqual(defaults["deep"]["claude"], 200_000)
+        self._write(
+            {
+                "profiles": {"qa": {"tier": "standard"}},
+                "context": {"standard": {"claude": 32_000}},
+            }
+        )
+        context = profiles.load_context(self.db)
+        self.assertEqual(context["standard"]["claude"], 32_000)
+        self.assertEqual(context["standard"]["opencode"], 200_000)
+        self.assertEqual(
+            profiles.resolve_context(
+                profiles.Profile(role="qa", tier="standard"), "claude", context
+            ),
+            32_000,
+        )
+        self.assertEqual(
+            profiles.resolve_context(
+                profiles.Profile(role="qa", tier="standard"), "opencode", context
+            ),
+            200_000,
+        )
+
+    def test_context_rejects_bad_values(self) -> None:
+        cases = (
+            {"profiles": {}, "context": {"turbo": {"claude": 1000}}},
+            {"profiles": {}, "context": {"fast": {"wizard": 1000}}},
+            {"profiles": {}, "context": {"fast": {"claude": 0}}},
+            {"profiles": {}, "context": {"fast": {"claude": True}}},
+            {"profiles": {}, "context": {"fast": {"claude": "1000"}}},
+        )
+        for payload in cases:
+            with self.subTest(payload=payload):
+                self._write(payload)
+                with self.assertRaises(profiles.ProfileError):
+                    profiles.load_context(self.db)
+
+    def test_save_preserves_context_and_dispatch_reports_minimum(self) -> None:
+        self._write(
+            {
+                "profiles": {"qa": {"tier": "standard"}},
+                "context": {"standard": {"claude": 32_000}},
+            }
+        )
+        loaded, tiers = profiles.load_all(self.db)
+        profiles.save(self.db, loaded, tiers)
+        written = json.loads(Path(self.path).read_text(encoding="utf-8"))
+        self.assertEqual(written["context"]["standard"]["claude"], 32_000)
+        self.assertEqual(written["context"]["standard"]["opencode"], 200_000)
+        windows = profiles.context_windows(self.db)
+        self.assertEqual(windows["qa"], 32_000)
+        self.assertEqual(profiles.context_windows(self.db, host="opencode")["qa"], 200_000)
+        payload = profiles.dispatch_profiles(self.db)
+        self.assertEqual(payload["qa"]["context"]["claude"], 32_000)
+        self.assertEqual(payload["qa"]["context_window"], 32_000)
+
     def test_per_host_override_wins_over_all_host_and_tier(self) -> None:
         profile = profiles.Profile(
             role="reviewer",

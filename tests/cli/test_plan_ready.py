@@ -79,8 +79,8 @@ class PlanReadyCliTest(unittest.TestCase):
         code, out, err = self._run("--porcelain", "plan", "ready", "--id", str(self.plan.id))
         self.assertEqual(code, 0, err)
         rows = [line.split("\t") for line in out.splitlines()]
-        self.assertEqual([row[0] for row in rows], ["check", "check", "check", "check"])
-        self.assertEqual([row[2] for row in rows], ["pass", "pass", "pass", "pass"])
+        self.assertEqual([row[0] for row in rows], ["check"] * 5)
+        self.assertEqual([row[2] for row in rows], ["pass"] * 5)
 
     def test_unknown_plan_and_missing_database(self) -> None:
         code, _out, err = self._run("plan", "ready", "--id", "999")

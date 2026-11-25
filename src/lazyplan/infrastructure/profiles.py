@@ -19,6 +19,7 @@ from pathlib import Path
 
 from ..core.policies.agents import (
     CLAUDE_MODELS,
+    DEFAULT_CONTEXT,
     DEFAULT_MODELS,
     DEFAULT_ROLE_TIERS,
     HOSTS,
@@ -33,7 +34,7 @@ DEFAULT_TIERS = DEFAULT_ROLE_TIERS
 FILE_NAME = "agents.json"
 SCHEMA = 2
 _PROFILE_FIELDS = {"tier", "model", "effort", "models"}
-_TOP_FIELDS = {"schema", "tiers", "profiles"}
+_TOP_FIELDS = {"schema", "tiers", "profiles", "context"}
 
 
 class ProfileError(ValueError):
@@ -76,6 +77,28 @@ def default_tiers() -> dict[str, dict[str, str]]:
     """The packaged tier-to-host model table."""
     _profiles, tiers = _parse(data_text(FILE_NAME), "packaged agents.json")
     return tiers
+
+
+def default_context() -> dict[str, dict[str, int]]:
+    """The packaged tier-to-host context windows."""
+    return _parse_context({}, "packaged agents.json")
+
+
+def load_context(db_path: str | Path) -> dict[str, dict[str, int]]:
+    """The effective context window table for one database."""
+    path = path_for(db_path)
+    if not path.is_file():
+        return default_context()
+    try:
+        text = textfile.read(path)
+    except OSError as exc:
+        raise ProfileError(f"cannot read {path}: {exc}") from exc
+    _parse(text, str(path))
+    try:
+        raw = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ProfileError(f"{path}: invalid JSON: {exc.msg}") from exc
+    return _parse_context(raw.get("context"), str(path))
 
 
 def load(db_path: str | Path) -> dict[str, Profile]:
@@ -140,19 +163,52 @@ def resolve(
     }
 
 
+def resolve_context(
+    profile: Profile,
+    host: str,
+    context: Mapping[str, Mapping[str, int]] | None = None,
+) -> int:
+    """Resolve one role's context window for a host."""
+    if host not in HOSTS:
+        raise ProfileError(f"unknown host {host!r}; expected {'|'.join(HOSTS)}")
+    tier_map = (context or default_context()).get(profile.tier, {})
+    value = int(tier_map.get(host, 0) or 0)
+    return value or DEFAULT_CONTEXT.get(profile.tier, 0)
+
+
+def context_windows(db_path: str | Path, host: str = "") -> dict[str, int]:
+    """Resolved role windows, keyed by role; the minimum across hosts when omitted."""
+    profiles, _tiers = load_all(db_path)
+    context = load_context(db_path)
+    if host and host not in HOSTS:
+        raise ProfileError(f"unknown host {host!r}; expected {'|'.join(HOSTS)}")
+    return {
+        role: (
+            resolve_context(profile, host, context)
+            if host
+            else min(resolve_context(profile, item, context) for item in HOSTS)
+        )
+        for role, profile in profiles.items()
+    }
+
+
 def resolve_all(
     profiles: Mapping[str, Profile],
     tiers: Mapping[str, Mapping[str, str]] | None = None,
     models: Mapping[str, str] | None = None,
+    context: Mapping[str, Mapping[str, int]] | None = None,
 ) -> dict[str, dict[str, object]]:
     """Resolve every role for every host using one map."""
     out: dict[str, dict[str, object]] = {}
     for role, profile in profiles.items():
         resolved = {host: resolve(profile, host, models, tiers)["model"] for host in HOSTS}
+        windows = {host: resolve_context(profile, host, context) for host in HOSTS}
         out[role] = {
             "tier": profile.tier,
             "effort": profile.effort,
             "models": resolved,
+            "context": windows,
+            "context_window": min(windows.values()) if windows else 0,
         }
         out[role].update(resolved)
     return out
@@ -163,7 +219,7 @@ def dispatch_profiles(
 ) -> dict[str, dict[str, object]]:
     """Resolved role profiles for the dispatch manifest."""
     profiles, tiers = load_all(db_path)
-    return resolve_all(profiles, tiers, opencode_models(home or Path.home()))
+    return resolve_all(profiles, tiers, opencode_models(home or Path.home()), load_context(db_path))
 
 
 def opencode_models(home: Path, repo_root: Path | None = None) -> dict[str, str]:
@@ -190,12 +246,14 @@ def save(
     db_path: str | Path,
     profiles: Mapping[str, Profile],
     tiers: Mapping[str, Mapping[str, str]],
+    context: Mapping[str, Mapping[str, int]] | None = None,
 ) -> Path:
     """Write one normalized schema 2 map atomically and return its path."""
     path = path_for(db_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    windows = context if context is not None else load_context(db_path)
     tmp = path.with_suffix(".json.tmp")
-    textfile.write(tmp, render(profiles, tiers))
+    textfile.write(tmp, render(profiles, tiers, windows))
     os.replace(tmp, path)
     return path
 
@@ -203,12 +261,18 @@ def save(
 def render(
     profiles: Mapping[str, Profile],
     tiers: Mapping[str, Mapping[str, str]],
+    context: Mapping[str, Mapping[str, int]] | None = None,
 ) -> str:
     """Render the normalized JSON text for a map."""
+    windows = context if context is not None else default_context()
     payload = {
         "schema": SCHEMA,
         "tiers": {
             tier: {host: str((tiers.get(tier) or {}).get(host, "") or "") for host in HOSTS}
+            for tier in TIERS
+        },
+        "context": {
+            tier: {host: int((windows.get(tier) or {}).get(host, 0) or 0) for host in HOSTS}
             for tier in TIERS
         },
         "profiles": {
@@ -269,6 +333,30 @@ def _parse(
             models=models,
         )
     return out, tiers
+
+
+def _parse_context(raw: object, source: str) -> dict[str, dict[str, int]]:
+    """Parse an optional context window table; absent entries keep tier defaults."""
+    out = {tier: {host: int(DEFAULT_CONTEXT[tier]) for host in HOSTS} for tier in TIERS}
+    if raw is None:
+        return out
+    if not isinstance(raw, dict):
+        raise ProfileError(f"{source}: 'context' must be an object")
+    unknown = sorted(set(raw) - set(TIERS))
+    if unknown:
+        raise ProfileError(f"{source}: unknown context tiers: {unknown}")
+    for tier, entry in raw.items():
+        if not isinstance(entry, dict):
+            raise ProfileError(f"{source}: context tier {tier!r} must be an object")
+        for host, value in entry.items():
+            if host not in HOSTS:
+                raise ProfileError(f"{source}: context tier {tier!r} has unknown host {host!r}")
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ProfileError(
+                    f"{source}: context tier {tier!r} host {host!r} must be a positive integer"
+                )
+            out[tier][host] = value
+    return out
 
 
 def _parse_tiers(raw: object, source: str) -> dict[str, dict[str, str]]:

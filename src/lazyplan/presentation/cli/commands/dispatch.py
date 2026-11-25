@@ -17,17 +17,21 @@ from ..emit import _emit
 def _cmd_dispatch(store: InsightsPort, args: argparse.Namespace, actor: str) -> int:
     """Print the dispatch manifest for one plan."""
     del actor
+    profiles = dispatch_profiles(store.db_path)
+    windows = {role: int(str(row.get("context_window") or 0)) for role, row in profiles.items()}
     try:
         manifest = dispatch.build(
             store,
             args.plan,
             lane_id=args.lane,
             max_chars=args.max_chars,
+            context_windows=windows,
+            context_percent=args.context_percent,
         )
     except (KeyError, ValueError) as exc:
         print(msg_error(exc), file=sys.stderr)
         return 2
-    manifest["profiles"] = dispatch_profiles(store.db_path)
+    manifest["profiles"] = profiles
     for item in manifest["dispatchable"]:
         item["profile"] = manifest["profiles"].get(item["role"], {})
     if args.json:
@@ -80,6 +84,12 @@ def _render(manifest: dict) -> str:
             lines.append(
                 f"  M{item['lane_id']} T{item['task_id']} {item['title']} ({item['role']})"
             )
+            context = item.get("context") or {}
+            if context:
+                lines.append(
+                    f"    fresh session · {context['tokens']:,}/{context['budget']:,} tokens"
+                    f" ({context['percent']}% of {context['window']:,})"
+                )
             if item["claim_command"]:
                 lines.append(f"    {item['claim_command']}")
     if manifest["actions"]:

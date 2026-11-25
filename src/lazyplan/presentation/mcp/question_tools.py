@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from lazyplan import services
+from lazyplan.infrastructure.profiles import context_windows
 
 from .base import McpBase
 from .handlers import question_note
@@ -95,7 +96,12 @@ class QuestionToolsMixin(McpBase):
         return [vars(row) for row in rows]
 
     def _tool_plan_ready(self, args: dict) -> object:
-        result = services.plan_ready(self._need_store(), int(args["id"]))
+        store = self._need_store()
+        result = services.plan_ready(
+            store,
+            int(args["id"]),
+            context_windows=context_windows(store.db_path),
+        )
         if result is None:
             raise KeyError(f"plan {args['id']} not found")
         return result.to_dict()

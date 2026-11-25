@@ -50,6 +50,9 @@
       "description": "Plan lanes, waves, capacity, worktree actions, and worker prompts.",
       "inputSchema": {
         "properties": {
+          "context_percent": {
+            "type": "integer"
+          },
           "lane": {
             "type": "integer"
           },
@@ -66,6 +69,33 @@
         "type": "object"
       },
       "name": "dispatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true
+      },
+      "description": "Fresh-session task brief with its context budget.",
+      "inputSchema": {
+        "properties": {
+          "context_window": {
+            "type": "integer"
+          },
+          "host": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "percent": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "name": "task_brief"
     },
     {
       "annotations": {
